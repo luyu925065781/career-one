@@ -1,0 +1,41 @@
+{
+  "name": "career-one",
+  "version": "1.0.0",
+  "description": "择程AI（career-one）一键安装器：面向中国大陆用户的本地优先 AI 求职工作台",
+  "bin": {
+    "career-one": "bin/cli.mjs"
+  },
+  "type": "module",
+  "files": [
+    "bin/cli.mjs",
+    "bin/skill-entrypoints.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "career-one",
+    "claude-code",
+    "job-search",
+    "scaffold",
+    "create",
+    "cli"
+  ],
+  "author": {
+    "name": "NumberX",
+    "url": "https://github.com/luyu925065781"
+  },
+  "homepage": "https://github.com/luyu925065781/career-one#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luyu925065781/career-one.git",
+    "directory": "scaffolder"
+  },
+  "bugs": {
+    "url": "https://github.com/luyu925065781/career-one/issues"
+  },
+  "license": "MIT",
+  "dependencies": {}
+}

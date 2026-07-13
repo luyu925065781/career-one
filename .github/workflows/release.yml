@@ -1,0 +1,28 @@
+name: Release Readiness
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-distributions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install root dependencies
+        run: npm install --ignore-scripts
+      - name: Verify system contracts
+        run: node test-all.mjs --quick
+      - name: Build Codex and WorkBuddy packages
+        run: npm run build:distributions
+      - name: Upload marketplace packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: career-one-marketplace-packages
+          path: dist/marketplaces/
+          if-no-files-found: error

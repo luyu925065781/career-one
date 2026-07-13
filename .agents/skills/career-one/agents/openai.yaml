@@ -1,0 +1,7 @@
+interface:
+  display_name: "择程AI"
+  short_description: "本地优先的中文 AI 求职工作台"
+  brand_color: "#FACC15"
+  default_prompt: "使用 $career-one 在本地建立我的中文求职工作区。"
+policy:
+  allow_implicit_invocation: true
