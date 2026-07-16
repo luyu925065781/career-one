@@ -91,7 +91,7 @@ export function BetaBanner() {
 
   return (
     <>
-      <div className="fixed bottom-3 left-3 z-[70] flex items-center gap-2 rounded-full border border-brand/30 bg-surface/90 px-3 py-1.5 text-xs shadow-lg backdrop-blur-md">
+      <div className="fixed bottom-3 right-3 z-[70] flex items-center gap-2 rounded-full border border-brand/30 bg-surface/90 px-3 py-1.5 text-xs shadow-lg backdrop-blur-md">
         <span className="flex items-center gap-1.5 font-medium text-brand-text">
           <span className="size-1.5 animate-pulse rounded-full bg-brand" /> {meta.version} · {releaseChannelLabel(meta.channel as ReleaseChannel)}
         </span>

@@ -255,6 +255,13 @@ for (const [href, label] of [
   );
 }
 
+const appShell = read("web/src/components/app-shell.tsx");
+assert.doesNotMatch(appShell, /AssistantConsole/, "专注插件阶段不得在全局壳层显示问助手入口");
+
+const betaBanner = read("web/src/components/beta/beta-banner.tsx");
+assert.match(betaBanner, /fixed bottom-3 right-3/, "版本与反馈模块必须固定在页面右下角");
+assert.doesNotMatch(betaBanner, /fixed bottom-3 left-3/, "版本与反馈模块不得继续占用页面左下角");
+
 const configForm = read("web/src/components/config-form.tsx");
 assert.match(
   configForm,
