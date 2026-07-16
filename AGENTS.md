@@ -80,6 +80,17 @@ Parse the JSON output:
 用户也可以随时说“检查更新”或“更新择程AI”来强制检查。
 To rollback: `node update-system.mjs rollback`
 
+## Release Channels and Feature Gates
+
+`release.config.json` is the single source of truth for release version, channel, and Web feature maturity. Read `docs/RELEASES.md` before changing release behavior.
+
+- `main` is the stable baseline. A stable version has no prerelease suffix and may only be prepared from `main`.
+- `develop` is the integrated development baseline. Development versions use `-dev.N` or `-next.N`.
+- Beta versions use `-alpha.N`, `-beta.N`, or `-rc.N`.
+- Feature stages are `stable`, `beta`, `development`, or `hidden`. Do not add page-local environment switches.
+- Stable installs update only from the latest stable GitHub Release; development installs follow `develop`.
+- Before release, run `npm run release:verify -- --channel <channel>`, the full root suite, Web tests, typecheck, and production build.
+
 ## 择程AI是什么
 
 择程AI是面向中国大陆用户的本地优先 AI 求职工作台，支持简历建档、岗位评估、可视化报告、定制简历、招聘渠道扫描、面试准备和投递进度管理。它遵循[开放 Agent Skill 标准](https://agentskills.io)，由用户自己的 Codex、Claude Code、OpenCode、TRAE、Qwen、Copilot、Kimi、Antigravity 或 Grok 等 Agent 驱动。

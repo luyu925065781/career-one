@@ -20,7 +20,7 @@ test("portable distribution sources exist", () => {
 
 test("runtime manifest includes system essentials and excludes user data", async () => {
   const { RUNTIME_PATHS, USER_DATA_PATHS } = await import(pathToFileURL(MANIFEST_MODULE).href);
-  for (const required of ["AGENTS.md", "doctor.mjs", "package.json", "modes/", "templates/", "start-web.mjs", "web/src/", "web/package.json"]) {
+  for (const required of ["AGENTS.md", "doctor.mjs", "package.json", "release.config.json", "release.mjs", "modes/", "templates/", "start-web.mjs", "web/src/", "web/package.json"]) {
     assert.ok(RUNTIME_PATHS.includes(required), `runtime must include ${required}`);
   }
   for (const forbidden of USER_DATA_PATHS) {

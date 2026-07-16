@@ -2581,7 +2581,7 @@ if (fileExists('VERSION')) {
   // VERSION may carry a release-please marker, e.g. "1.9.0 # x-release-please-version".
   // Validate the first whitespace-delimited token, mirroring update-system.mjs parseVersionFile().
   const version = readFile('VERSION').trim().split(/\s+/)[0];
-  if (/^\d+\.\d+\.\d+$/.test(version)) {
+  if (/^\d+\.\d+\.\d+(?:-(?:dev|next|alpha|beta|rc)(?:\.[0-9A-Za-z-]+)*)?$/.test(version)) {
     pass(`VERSION is valid semver: ${version}`);
   } else {
     fail(`VERSION is not valid semver: "${version}"`);
@@ -4995,7 +4995,7 @@ console.log('\n16. update-system SEMVER_RE');
 try {
   // Importing must not trigger the CLI (the import.meta.url guard); it
   // exposes SEMVER_RE, which the releases-API fallback uses on release.tag_name.
-  const { SEMVER_RE } = await import(pathToFileURL(join(ROOT, 'update-system.mjs')).href);
+  const { SEMVER_RE, compareVersions } = await import(pathToFileURL(join(ROOT, 'update-system.mjs')).href);
   const parse = (tag) => String(tag).trim().match(SEMVER_RE)?.[1] ?? null;
 
   // Release Please tags carry the component prefix (career-one-v1.9.0); the
@@ -5011,6 +5011,16 @@ try {
     pass('SEMVER_RE still parses plain v-prefixed and bare semver tags');
   } else {
     fail(`SEMVER_RE regressed on plain tags (v1.9.0 → ${parse('v1.9.0')}, 1.9.0 → ${parse('1.9.0')})`);
+  }
+
+  if (
+    parse('career-one-v1.9.0-beta.2') === '1.9.0-beta.2' &&
+    compareVersions('1.9.0-beta.2', '1.9.0-beta.1') > 0 &&
+    compareVersions('1.9.0', '1.9.0-rc.1') > 0
+  ) {
+    pass('updater parses and orders prerelease SemVer versions');
+  } else {
+    fail('updater prerelease SemVer parsing or ordering is incorrect');
   }
 
   // Non-semver input must not match.

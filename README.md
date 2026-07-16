@@ -91,7 +91,7 @@ codex    # 打开你的 AI CLI —— 它会在首次启动时引导你完成设
 
 > **这个系统本来就是设计给 Codex 或你选择的 AI 编码 CLI 直接定制的。** modes、职业原型、评分权重、谈判脚本，直接告诉 Codex 要改什么就行。它读取的正是自己会使用的那些文件，所以知道该改哪里。
 
-完整配置指南见 [docs/SETUP.md](docs/SETUP.md)。
+完整配置指南见 [docs/SETUP.md](docs/SETUP.md)。维护正式版、内测版和开发版时，请遵循 [docs/RELEASES.md](docs/RELEASES.md)。
 
 ## Codex 集成
 

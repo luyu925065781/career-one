@@ -11,6 +11,7 @@ import { WorkerPills } from "@/components/jobs/worker-pills";
 import { UsageMeter } from "@/components/usage-meter";
 import { NAV_ITEMS, isActivePath } from "@/lib/nav-items";
 import { useJobs } from "@/components/jobs/job-store";
+import { releaseDisplayLabel } from "@/lib/release";
 
 // Mobile navigation (< md): a glass top bar + a right-side slide-over drawer that
 // mirrors the desktop sidebar (nav + workers + usage + theme). Premium details:
@@ -181,7 +182,7 @@ export function MobileNav() {
         <div className="co-msafe mt-auto space-y-3 border-t border-border px-4 pt-4">
           <UsageMeter />
           <div className="flex items-center justify-between">
-            <span className={`font-display text-sm text-faint`}>本地优先 · v0</span>
+            <span className="font-display text-sm text-faint">本地优先 · {releaseDisplayLabel()}</span>
             <ThemeToggle />
           </div>
         </div>

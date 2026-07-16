@@ -16,6 +16,7 @@ import { BetaBanner } from "@/components/beta/beta-banner";
 import { WorkerPills } from "@/components/jobs/worker-pills";
 import { UsageMeter } from "@/components/usage-meter";
 import { NAV_ITEMS, isActivePath } from "@/lib/nav-items";
+import { releaseDisplayLabel } from "@/lib/release";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -64,7 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="mt-auto space-y-3 pt-4">
             <UsageMeter />
             <div className="flex items-center justify-between px-1">
-              <span className={`font-display text-sm text-faint`}>本地优先 · v0</span>
+              <span className="font-display text-sm text-faint">本地优先 · {releaseDisplayLabel()}</span>
               <ThemeToggle />
             </div>
           </div>

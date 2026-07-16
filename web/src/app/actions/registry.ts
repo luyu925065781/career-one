@@ -11,6 +11,7 @@
 import type { Application, InboxJob } from "@/lib/career-one";
 import type { Job } from "@/components/jobs/job-store";
 import { validateStoryMarkdown } from "@/lib/story-bank.mjs";
+import { isPathEnabled } from "@/lib/release";
 
 export const AUTO_FIRE_MAX = 3; // fire ≤3 evaluations silently; confirm above that
 export const BATCH_CAP = 12; // hard ceiling on a single fan-out
@@ -95,7 +96,10 @@ function isAllowedPath(p: string): boolean {
   if (/^(https?:)?\/\//i.test(p)) return false;
   const path = p.split(/[?#]/)[0];
   if (path === "/") return true;
-  return /^\/(explore|pipeline|portals|analytics|cv|config|apply|jobs|interview)(\/[^/]+)?$/.test(path);
+  if (!/^\/(explore|cn-diagnose|pipeline|portals|analytics|cv|config|apply|jobs|interview)(\/[^/]+)?$/.test(path)) {
+    return false;
+  }
+  return isPathEnabled(path);
 }
 
 function genBatchId(): string {

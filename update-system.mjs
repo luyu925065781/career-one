@@ -30,14 +30,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
 
 const CANONICAL_REPO = 'https://github.com/luyu925065781/career-one.git';
-const RAW_VERSION_URL = 'https://raw.githubusercontent.com/luyu925065781/career-one/main/VERSION';
-const RELEASES_API = 'https://api.github.com/repos/luyu925065781/career-one/releases/latest';
+const RAW_VERSION_URL = (ref) => `https://raw.githubusercontent.com/luyu925065781/career-one/${encodeURIComponent(ref)}/VERSION`;
+const RELEASES_LATEST_API = 'https://api.github.com/repos/luyu925065781/career-one/releases/latest';
+const RELEASES_API = 'https://api.github.com/repos/luyu925065781/career-one/releases?per_page=30';
 
 // Matches a semver, with or without a leading `v` and an optional
 // Release Please component prefix (e.g. `career-one-v1.9.0` → `1.9.0`).
 // Anchoring on `(?:^|-)` lets the releases-API fallback parse our tags,
 // which Release Please always prefixes with the component name.
-export const SEMVER_RE = /(?:^|-)v?(\d+\.\d+\.\d+)$/i;
+export const SEMVER_RE = /(?:^|-)v?(\d+\.\d+\.\d+(?:-(?:dev|next|alpha|beta|rc)(?:\.[0-9A-Za-z-]+)*)?)$/i;
 // 120s: local git commands are normally instant, but a cloud-evicted working
 // tree (iCloud "optimize storage", OneDrive dehydration) can stall a plain
 // `git status` for a minute of pure I/O wait re-materializing files (#1393).
@@ -112,6 +113,7 @@ const SYSTEM_PATHS = [
   'CODEX.md',
   'OPENCODE.md',
   'AGENTS.md',
+  'DESIGN.md',
   'GEMINI.md',
   'KIMI.md',
   'build-dashboard.mjs',
@@ -120,6 +122,7 @@ const SYSTEM_PATHS = [
   'web/public/',
   'web/package.json',
   'web/package-lock.json',
+  'web/release.config.json',
   'web/next.config.mjs',
   'web/postcss.config.mjs',
   'web/tsconfig.json',
@@ -173,6 +176,7 @@ const SYSTEM_PATHS = [
   'invite-match.mjs',
   'invite-match.test.mjs',
   'agent-inbox.mjs',
+  'agent-runs.mjs',
   'followup-seed.mjs',
   'followup-seed-tests.mjs',
   'gemini-eval.mjs',
@@ -217,6 +221,8 @@ const SYSTEM_PATHS = [
   '.trae/skills/',
   'docs/',
   'writing-samples/README.md',
+  'release.config.json',
+  'release.mjs',
   'VERSION',
   'DATA_CONTRACT.md',
   'CONTRIBUTING.md',
@@ -281,6 +287,8 @@ const BOOTSTRAP_PATHS = [
   'agent-inbox.mjs',
   'agent-inbox-tests.mjs',
   'agent-runs.mjs',
+  'release.config.json',
+  'release.mjs',
 ];
 
 // User layer paths — NEVER touch these (safety check)
@@ -316,14 +324,52 @@ function localVersion() {
   return existsSync(vPath) ? parseVersionFile(readFileSync(vPath, 'utf-8')) : '0.0.0';
 }
 
-function compareVersions(a, b) {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
+function parseSemver(value) {
+  const match = String(value || '').match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/);
+  if (!match) return null;
+  return {
+    core: match.slice(1, 4).map(Number),
+    prerelease: match[4] ? match[4].split('.') : [],
+  };
+}
+
+export function compareVersions(a, b) {
+  const pa = parseSemver(a);
+  const pb = parseSemver(b);
+  if (!pa || !pb) throw new Error(`Invalid semver comparison: ${a} vs ${b}`);
   for (let i = 0; i < 3; i++) {
-    if ((pa[i] || 0) < (pb[i] || 0)) return -1;
-    if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+    if (pa.core[i] < pb.core[i]) return -1;
+    if (pa.core[i] > pb.core[i]) return 1;
+  }
+  if (pa.prerelease.length === 0 && pb.prerelease.length === 0) return 0;
+  if (pa.prerelease.length === 0) return 1;
+  if (pb.prerelease.length === 0) return -1;
+  const length = Math.max(pa.prerelease.length, pb.prerelease.length);
+  for (let i = 0; i < length; i++) {
+    const left = pa.prerelease[i];
+    const right = pb.prerelease[i];
+    if (left === undefined) return -1;
+    if (right === undefined) return 1;
+    if (left === right) continue;
+    const leftNumeric = /^\d+$/.test(left);
+    const rightNumeric = /^\d+$/.test(right);
+    if (leftNumeric && rightNumeric) return Number(left) < Number(right) ? -1 : 1;
+    if (leftNumeric !== rightNumeric) return leftNumeric ? -1 : 1;
+    return left < right ? -1 : 1;
   }
   return 0;
+}
+
+function configuredReleaseChannel() {
+  const override = process.env.CAREER_ONE_UPDATE_CHANNEL;
+  if (['stable', 'beta', 'development'].includes(override)) return override;
+  try {
+    const config = JSON.parse(readFileSync(join(ROOT, 'release.config.json'), 'utf8'));
+    if (['stable', 'beta', 'development'].includes(config.channel)) return config.channel;
+  } catch {
+    // Older installations predate release.config.json and are stable by default.
+  }
+  return 'stable';
 }
 
 function updateBackupBranchName(version, date = new Date()) {
@@ -600,6 +646,61 @@ function curlGet(url, extraArgs = []) {
   });
 }
 
+function parseRemoteVersion(raw) {
+  const token = parseVersionFile(String(raw || ''));
+  return token.match(SEMVER_RE)?.[1] || '';
+}
+
+function releaseTarget(release, acceptedPrerelease) {
+  if (!release || release.draft || Boolean(release.prerelease) !== acceptedPrerelease) return null;
+  const ref = String(release.tag_name || '').trim();
+  const version = ref.match(SEMVER_RE)?.[1] || '';
+  if (!version) return null;
+  if (acceptedPrerelease && !/-(?:alpha|beta|rc)(?:\.|$)/i.test(version)) return null;
+  if (!acceptedPrerelease && version.includes('-')) return null;
+  return {
+    version,
+    ref,
+    changelog: String(release.body || ''),
+  };
+}
+
+async function resolveUpdateTarget(channel = configuredReleaseChannel()) {
+  if (channel === 'development') {
+    const raw = await curlGet(RAW_VERSION_URL('develop'));
+    if (raw === null) return { status: 'offline', channel };
+    const version = parseRemoteVersion(raw);
+    if (!version) return { status: 'no-remote-version', channel };
+    return { status: 'ok', channel, version, ref: 'develop', changelog: '' };
+  }
+
+  const url = channel === 'beta' ? RELEASES_API : RELEASES_LATEST_API;
+  const raw = await curlGet(url, [
+    '--header', 'Accept: application/vnd.github.v3+json',
+    '--header', 'User-Agent: career-one-update-checker',
+  ]);
+  if (raw === null) return { status: 'offline', channel };
+
+  try {
+    const payload = JSON.parse(raw);
+    if (channel === 'stable') {
+      const target = releaseTarget(payload, false);
+      return target
+        ? { status: 'ok', channel, ...target }
+        : { status: 'no-remote-version', channel };
+    }
+    const targets = (Array.isArray(payload) ? payload : [])
+      .map((release) => releaseTarget(release, true))
+      .filter(Boolean)
+      .sort((a, b) => compareVersions(b.version, a.version));
+    return targets[0]
+      ? { status: 'ok', channel, ...targets[0] }
+      : { status: 'no-remote-version', channel };
+  } catch {
+    return { status: 'no-remote-version', channel };
+  }
+}
+
 async function check() {
   // Respect dismiss flag
   if (existsSync(join(ROOT, '.update-dismissed'))) {
@@ -608,73 +709,30 @@ async function check() {
   }
 
   const local = localVersion();
-  let remote = '';
-  let releaseVersion = '';
-  let changelog = '';
-
-  // Use curl instead of fetch() so the check works inside the Claude Code
-  // sandbox (see curlGet() above for rationale).  Two sources are tried;
-  // both failing is the only true-offline signal.
-  const [rawVersion, releaseRaw] = await Promise.all([
-    curlGet(RAW_VERSION_URL),
-    curlGet(RELEASES_API, [
-      '--header', 'Accept: application/vnd.github.v3+json',
-      '--header', 'User-Agent: career-one-update-checker',
-    ]),
-  ]);
-
-  if (rawVersion !== null) {
-    try {
-      const raw = parseVersionFile(rawVersion);
-      const match = raw.match(SEMVER_RE);
-      remote = match ? match[1] : '';
-    } catch {
-      // Unparseable body; treat as no VERSION source
-    }
-  }
-
-  if (releaseRaw !== null) {
-    try {
-      const release = JSON.parse(releaseRaw);
-      changelog = release.body || '';
-      const rawTag = String(release.tag_name || '').trim();
-      const match = rawTag.match(SEMVER_RE);
-      releaseVersion = match ? match[1] : '';
-    } catch {
-      // Unparseable body; treat as no release source
-    }
-  }
-
-  if (!remote && !releaseVersion) {
-    // Both curl calls returned null → genuine network failure.
-    // If one returned non-null but unparseable, remote/releaseVersion are
-    // empty strings, which still reaches the offline branch — that's the
-    // right conservative behaviour (no version = can't determine status).
-    const bothNetworkFailed = rawVersion === null && releaseRaw === null;
-    const status = bothNetworkFailed ? 'offline' : 'no-remote-version';
-    console.log(JSON.stringify({ status, local }));
+  const target = await resolveUpdateTarget();
+  if (target.status !== 'ok') {
+    console.log(JSON.stringify({ status: target.status, local, channel: target.channel }));
     return;
   }
 
-  // Use the higher version between VERSION file and GitHub Release
-  // (handles cases where VERSION file is not bumped after a release,
-  // or the raw host is unreachable but the API is).
-  if (!remote) {
-    remote = releaseVersion;
-  } else if (releaseVersion && compareVersions(releaseVersion, remote) > 0) {
-    remote = releaseVersion;
-  }
-
-  if (compareVersions(local, remote) >= 0) {
-    console.log(JSON.stringify({ status: 'up-to-date', local, remote }));
+  if (compareVersions(local, target.version) >= 0) {
+    console.log(JSON.stringify({
+      status: 'up-to-date',
+      local,
+      remote: target.version,
+      channel: target.channel,
+      ref: target.ref,
+    }));
     return;
   }
 
   console.log(JSON.stringify({
     status: 'update-available',
     local,
-    remote,
-    changelog: changelog.slice(0, 500),
+    remote: target.version,
+    channel: target.channel,
+    ref: target.ref,
+    changelog: target.changelog.slice(0, 500),
   }));
 }
 
@@ -698,6 +756,14 @@ async function apply() {
   }
 
   try {
+    const forcedRef = process.env.CAREER_ONE_UPDATE_REF;
+    const target = forcedRef
+      ? { status: 'ok', ref: forcedRef, channel: configuredReleaseChannel() }
+      : await resolveUpdateTarget();
+    if (target.status !== 'ok' || !target.ref) {
+      throw new Error(`No ${target.channel || configuredReleaseChannel()} update target is available.`);
+    }
+
     // 1. Backup: create branch + stash uncommitted work (#915 bug 3).
     // The branch only captures committed state; any uncommitted edits are
     // invisible to `git branch` and can be lost if the update aborts.
@@ -719,8 +785,8 @@ async function apply() {
     }
 
     // 2. Fetch from canonical repo
-    console.log('Fetching latest from upstream...');
-    git('fetch', CANONICAL_REPO, 'main');
+    console.log(`Fetching ${target.channel} update from upstream (${target.ref})...`);
+    git('fetch', CANONICAL_REPO, target.ref);
 
     if (!isReexec) {
       const timeout = reexecTimeoutMs();
@@ -739,6 +805,7 @@ async function apply() {
             ...process.env,
             CAREER_ONE_UPDATE_REEXEC: '1',
             CAREER_ONE_UPDATE_BACKUP_BRANCH: backupBranch,
+            CAREER_ONE_UPDATE_REF: target.ref,
           },
         });
         return;

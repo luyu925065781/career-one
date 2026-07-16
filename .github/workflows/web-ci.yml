@@ -1,17 +1,20 @@
 name: Web CI
 
-# CI for the experimental web UI (web/). Informative by design: it is NOT a
-# required check for the core — a red here never blocks a core merge, and core
-# changes never trigger it. The web/ tree versions and releases as its own
-# release-please component.
+# Web 工作台的发布门禁。main/develop 上涉及 Web 或发布配置的改动必须通过
+# 测试、类型检查和生产构建；是否设为 required check 由仓库分支保护控制。
 on:
   pull_request:
+    branches: [main, develop]
     paths:
       - 'web/**'
+      - 'release.config.json'
+      - 'release.mjs'
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'web/**'
+      - 'release.config.json'
+      - 'release.mjs'
 
 permissions:
   contents: read
@@ -31,5 +34,6 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - run: npm test
       - run: npx tsc --noEmit
       - run: npm run build
