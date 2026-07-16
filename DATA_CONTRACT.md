@@ -27,11 +27,12 @@ These files contain your personal data, customizations, and work product. Update
 | `data/scan-history.tsv` | Your scan history |
 | `data/scan-runs.tsv` | Your per-run scan counters (appended by `scan.mjs`, read by `stats.mjs`) |
 | `data/follow-ups.md` | Your follow-up history |
+| `data/agent-runs.json` | Local Agent/Web task history, progress, artifacts, and approval references |
 | `data/offers/*` | Your received offers/contracts, promise notes, prep reports, and reply drafts (PII — gitignored, written by the `offer-prep` mode) |
 | `data/salary-observations.tsv` | Your append-only compensation observation log: `{tracker#}\t{date}\t{desired\|advertised\|actual}\t{amount}\t{currency}\t{source}\t{note}`. Written by interactive modes when a figure is stated/confirmed; never edited in place. Advertised figures come from reports' `advertised_comp` instead — reports are themselves observation sources. Read by `salary-gap.mjs` |
 | `writing-samples/*` | Your personal writing samples for style calibration (except `writing-samples/README.md`, which is system-owned documentation delivered by updates) |
 | `reports/*` | Your evaluation reports |
-| `output/*` | Your generated PDFs |
+| `output/*` | Your generated PDFs and local pending-change proposal drafts |
 | `jds/*` | Your saved job descriptions |
 
 ## System Layer (safe to auto-update)
@@ -83,6 +84,8 @@ These files contain system logic, scripts, templates, and instructions that impr
 | `batch/batch-prompt.md` | Batch worker prompt |
 | `batch/batch-runner.sh` | Batch orchestrator |
 | `dashboard/*` | Go TUI dashboard |
+| `start-web.mjs` | Local Web workbench launcher and contextual page opener |
+| `web/src/*`, `web/public/*`, `web/package*.json`, `web/*.mjs`, `web/tsconfig.json` | Web workbench source, assets, configuration, and dependency lockfile |
 | `templates/*` | Base templates |
 | `fonts/*` | Self-hosted fonts |
 | `.agents/skills/*` | Canonical open Agent Skill definitions |

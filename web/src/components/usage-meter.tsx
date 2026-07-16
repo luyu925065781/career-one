@@ -9,6 +9,7 @@ type Usage = { window5h: { tokens: number }; window7d: { tokens: number } };
 // Soft budgets (tunable via localStorage `career-one:usage-budget`). The bar
 // colour is the "brake" signal — set these to your plan's real limits.
 const DEFAULT_BUDGET = { w5: 140_000_000, w7: 1_000_000_000 };
+const CONFIG_CHANGED_EVENT = "career-one:config-changed";
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
@@ -27,14 +28,24 @@ export function UsageMeter() {
   const [budget, setBudget] = useState(DEFAULT_BUDGET);
 
   useEffect(() => {
-    try {
-      const cfg = localStorage.getItem("career-one:config");
-      setCli(cfg ? JSON.parse(cfg).cliId || null : null);
-      const b = localStorage.getItem("career-one:usage-budget");
-      if (b) setBudget({ ...DEFAULT_BUDGET, ...JSON.parse(b) });
-    } catch {
-      /* ignore */
+    function readConfig() {
+      try {
+        const cfg = localStorage.getItem("career-one:config");
+        setCli(cfg ? JSON.parse(cfg).cliId || null : null);
+        const b = localStorage.getItem("career-one:usage-budget");
+        if (b) setBudget({ ...DEFAULT_BUDGET, ...JSON.parse(b) });
+      } catch {
+        /* ignore */
+      }
     }
+
+    readConfig();
+    window.addEventListener("storage", readConfig);
+    window.addEventListener(CONFIG_CHANGED_EVENT, readConfig);
+    return () => {
+      window.removeEventListener("storage", readConfig);
+      window.removeEventListener(CONFIG_CHANGED_EVENT, readConfig);
+    };
   }, []);
 
   useEffect(() => {

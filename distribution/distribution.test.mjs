@@ -20,7 +20,7 @@ test("portable distribution sources exist", () => {
 
 test("runtime manifest includes system essentials and excludes user data", async () => {
   const { RUNTIME_PATHS, USER_DATA_PATHS } = await import(pathToFileURL(MANIFEST_MODULE).href);
-  for (const required of ["AGENTS.md", "doctor.mjs", "package.json", "modes/", "templates/"]) {
+  for (const required of ["AGENTS.md", "doctor.mjs", "package.json", "modes/", "templates/", "start-web.mjs", "web/src/", "web/package.json"]) {
     assert.ok(RUNTIME_PATHS.includes(required), `runtime must include ${required}`);
   }
   for (const forbidden of USER_DATA_PATHS) {
@@ -45,10 +45,13 @@ test("Codex and WorkBuddy builds share one Skill and initialize a clean workspac
     for (const skillRoot of [built.workbuddy, join(built.codex, "skills", "career-one")]) {
       assert.ok(existsSync(join(skillRoot, "scripts", "career-one.mjs")));
       assert.ok(existsSync(join(skillRoot, "assets", "runtime", "doctor.mjs")));
+      assert.ok(existsSync(join(skillRoot, "assets", "runtime", "agent-runs.mjs")));
+      assert.ok(existsSync(join(skillRoot, "assets", "runtime", "start-web.mjs")));
+      assert.ok(existsSync(join(skillRoot, "assets", "runtime", "web", "package.json")));
+      assert.ok(existsSync(join(skillRoot, "assets", "runtime", "web", "src", "app", "jobs", "page.tsx")));
       assert.ok(!existsSync(join(skillRoot, "assets", "runtime", "cv.md")));
       assert.ok(!existsSync(join(skillRoot, "assets", "runtime", "config", "profile.yml")));
       assert.ok(!existsSync(join(skillRoot, "assets", "runtime", "portals.yml")));
-      assert.ok(!existsSync(join(skillRoot, "assets", "runtime", "web")));
     }
 
     const workspace = join(fixture, "workspace");
@@ -57,10 +60,31 @@ test("Codex and WorkBuddy builds share one Skill and initialize a clean workspac
     });
     assert.ok(existsSync(join(workspace, "AGENTS.md")));
     assert.ok(existsSync(join(workspace, "doctor.mjs")));
+    assert.ok(existsSync(join(workspace, "agent-runs.mjs")));
+    assert.ok(existsSync(join(workspace, "start-web.mjs")));
+    assert.ok(existsSync(join(workspace, "web", "package.json")));
+    assert.ok(existsSync(join(workspace, "web", "src", "app", "jobs", "page.tsx")));
     assert.ok(existsSync(join(workspace, ".agents", "skills", "career-one", "SKILL.md")));
     assert.ok(!existsSync(join(workspace, "cv.md")));
     assert.ok(!existsSync(join(workspace, "config", "profile.yml")));
     assert.ok(!existsSync(join(workspace, "portals.yml")));
+
+    execFileSync(process.execPath, [
+      join(built.workbuddy, "scripts", "career-one.mjs"),
+      "run",
+      "start",
+      "--workspace",
+      workspace,
+      "--intent",
+      "evaluate-job",
+      "--title",
+      "分发包任务测试",
+      "--source",
+      "agent",
+    ], { encoding: "utf8" });
+    const run = JSON.parse(readFileSync(join(workspace, "data", "agent-runs.json"), "utf8")).runs[0];
+    assert.equal(run.status, "running");
+    assert.equal(run.source, "agent");
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Compass, ChevronDown, RotateCcw, AlertTriangle, Sparkles, Settings, Save, Check } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
-import { instrumentSerif } from "@/lib/fonts";
 import type { Application, InboxJob } from "@/lib/career-one";
 import { paramsToFilters, paramsToAi, type ExploreFilters } from "@/lib/explore";
 import { FilterBuilder } from "./filter-builder";
@@ -108,7 +107,7 @@ export function ExplorerView({
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2.5">
             <Compass className="size-6 text-icon-brand" />
-            <h1 className={`${instrumentSerif.className} text-3xl text-foreground`}>发现岗位</h1>
+            <h1 className={`font-display text-3xl text-foreground`}>发现岗位</h1>
             <span className="rounded-full border border-brand/30 bg-brand-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-text">新</span>
           </div>
           <div className="w-full sm:ml-auto sm:w-auto">
@@ -309,7 +308,7 @@ function EmptyState({ tone, title, body, note, onRerun, rerunLabel }: { tone: "g
       <div className={cn("mx-auto grid size-12 place-items-center rounded-full", tone === "good" ? "bg-emerald-500/12 text-emerald-500" : "bg-brand-soft text-brand")}>
         <Sparkles className="size-6" />
       </div>
-      <h2 className={`${instrumentSerif.className} mt-4 text-2xl text-foreground`}>{title}</h2>
+      <h2 className={`font-display mt-4 text-2xl text-foreground`}>{title}</h2>
       <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">{body}</p>
       {note && <p className="mx-auto mt-1 max-w-md text-[12px] text-faint">{note}</p>}
       <button onClick={onRerun} className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-outline-border bg-outline-bg px-3.5 py-2 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover">
@@ -384,7 +383,7 @@ function FailedCard({ msg, onRetry }: { msg: string; onRetry: () => void }) {
         <div className="mx-auto grid size-12 place-items-center rounded-full bg-brand-soft text-brand">
           <Compass className="size-6" />
         </div>
-        <h2 className={`${instrumentSerif.className} mt-4 text-2xl text-foreground`}>岗位发现需要完整工作区</h2>
+        <h2 className={`font-display mt-4 text-2xl text-foreground`}>岗位发现需要完整工作区</h2>
         <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">
           当前择程AI工作区可能只有数据文件，或版本较旧。请先更新完整工具，或者直接在求职进度中粘贴岗位链接进行评估。
         </p>
@@ -417,7 +416,7 @@ function BlockedCard() {
       <div className="mx-auto grid size-12 place-items-center rounded-full bg-brand-soft text-brand">
         <Sparkles className="size-6" />
       </div>
-      <h2 className={`${instrumentSerif.className} mt-4 text-2xl text-foreground`}>AI 搜索需要 Agent CLI</h2>
+      <h2 className={`font-display mt-4 text-2xl text-foreground`}>AI 搜索需要 Agent CLI</h2>
       <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">
         请连接 Codex、Claude Code、OpenCode 等 Agent CLI。没有 CLI 时仍可使用算法扫描。
       </p>

@@ -4,6 +4,8 @@
 > 上游：数字超体公司设计系统
 > 实现证据优先级：已实现 UI 页面 > 设计规范文档 > 历史组件样式
 
+公司级、跨 Agent 的机器可读设计规范见 [`DESIGN.md`](DESIGN.md)。本文件是该规范在择程AI中的产品级语义映射与实现说明；若基础 Token 冲突，以 `DESIGN.md` 为准，若择程AI组件行为和实现位置冲突，以本文件及实际代码为准。
+
 ## 1. Token 分层
 
 设计 Token 分为两层：
@@ -114,7 +116,7 @@
 | 小号正文 | 14px | 400 | muted |
 | 微型文字 | 12px | 400 | faint |
 
-中文无衬线字体顺序：`Inter`, `PingFang SC`, `Microsoft YaHei`, `system-ui`, `sans-serif`。
+数字超体公司级字体规范：英文采用 SF Pro 风格，中文采用思源黑体。择程AI作为具体产品使用系统自带 UI 字体，不内嵌品牌字体文件：Apple 平台优先 `-apple-system`、`BlinkMacSystemFont`、`PingFang SC`，Windows 优先 `Segoe UI`、`Microsoft YaHei`，其他平台回退到 `system-ui`、`sans-serif`。
 
 ## 6. 间距与圆角
 

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, CircleHelp, Sparkles, ArrowRight } from "lucide-react";
-import { instrumentSerif } from "@/lib/fonts";
 import { HeroGlow } from "@/components/hero-glow";
 import type { Application, InboxJob } from "@/lib/career-one";
 import type { DiscoveredOffer } from "@/lib/explore";
@@ -80,7 +79,7 @@ export function TodayDashboard({
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
             <span className="text-faint">//</span> 今日 · <span className="tabular-nums">{dateLabel}</span>
           </p>
-          <h1 className={`${instrumentSerif.className} mt-3 text-4xl leading-[1.05] text-landing md:text-5xl`}>
+          <h1 className={`font-display mt-3 text-4xl leading-[1.05] text-landing md:text-5xl`}>
             {allClear ? (
               <>今日待办已清空。</>
             ) : (
@@ -102,7 +101,7 @@ export function TodayDashboard({
               </>
             )}
           </h1>
-          <p className="mt-4 max-w-xl text-sm text-muted">
+          <p className="mt-4 w-full text-sm text-muted">
             {allClear ? "择程AI会继续整理市场机会，并在出现合适岗位时提醒你。" : "今天需要处理的岗位发现、投递决策和跟进都在这里。"}
           </p>
           <div className="mt-6 flex flex-wrap gap-2.5">

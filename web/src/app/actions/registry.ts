@@ -10,6 +10,7 @@
 
 import type { Application, InboxJob } from "@/lib/career-one";
 import type { Job } from "@/components/jobs/job-store";
+import { validateStoryMarkdown } from "@/lib/story-bank.mjs";
 
 export const AUTO_FIRE_MAX = 3; // fire ≤3 evaluations silently; confirm above that
 export const BATCH_CAP = 12; // hard ceiling on a single fan-out
@@ -45,6 +46,7 @@ export type ActionCtx = {
   applyExplore?: (patch: Record<string, unknown>, opts?: { merge?: boolean; run?: boolean }) => void; // build a FREE discovery search
   writeProfile?: (patch: Record<string, unknown>) => void; // merge-safe config/profile.yml write
   writePortals?: (roles: string[], location?: string[]) => void; // merge-safe portals.yml title_filter write
+  writeStory?: (storyId: string, storyMarkdown: string, baseHash: string) => void; // single-story, version-checked merge
 };
 
 export type ProfilePatch = {
@@ -80,7 +82,7 @@ export type DoneInfo = { jobIds?: string[]; batchId?: string; note?: string };
 export type DispatchResult =
   | ({ status: "done" } & DoneInfo)
   | { status: "ignored"; note?: string }
-  | { status: "confirm"; summary: string; run: () => DoneInfo };
+  | { status: "confirm"; summary: string; preview?: string; run: () => DoneInfo };
 
 // ── helpers ──────────────────────────────────────────────────────────────
 const isStr = (v: unknown): v is string => typeof v === "string" && v.length > 0;
@@ -93,7 +95,7 @@ function isAllowedPath(p: string): boolean {
   if (/^(https?:)?\/\//i.test(p)) return false;
   const path = p.split(/[?#]/)[0];
   if (path === "/") return true;
-  return /^\/(explore|pipeline|portals|analytics|cv|config|apply|jobs)(\/[^/]+)?$/.test(path);
+  return /^\/(explore|pipeline|portals|analytics|cv|config|apply|jobs|interview)(\/[^/]+)?$/.test(path);
 }
 
 function genBatchId(): string {
@@ -338,6 +340,35 @@ const ACTIONS: Record<string, ActionDef> = {
         run: () => {
           ctx.writePortals!(roles, location);
           return { note: "扫描目标已更新。" };
+        },
+      };
+    },
+  },
+
+  // The configured Agent can only PROPOSE one story block. The app validates
+  // its immutable ID and shows a confirm card before the server-side merge.
+  setStory: {
+    sideEffect: "write",
+    run: (raw, ctx) => {
+      if (!ctx.writeStory) return { status: "ignored", note: "当前无法写入面试故事" };
+      const storyId = typeof raw.storyId === "string" ? raw.storyId.trim().toUpperCase() : "";
+      const storyMarkdown = typeof raw.storyMarkdown === "string" ? raw.storyMarkdown : "";
+      const baseHash = typeof raw.baseHash === "string" ? raw.baseHash : "";
+      if (!/^S\d+$/.test(storyId)) return { status: "ignored", note: "故事编号无效" };
+      if (!/^[a-f0-9]{64}$/.test(baseHash)) return { status: "ignored", note: "故事库版本信息无效，请重新生成草稿" };
+      if (new TextEncoder().encode(storyMarkdown).length > 100_000) return { status: "ignored", note: "故事草稿过大" };
+      const validation = validateStoryMarkdown(storyMarkdown, storyId);
+      if (!validation.ok) return { status: "ignored", note: validation.error };
+      const summary = typeof raw.summary === "string"
+        ? raw.summary.replace(/\s+/g, " ").trim().slice(0, 180)
+        : `优化 ${storyId} 的 STAR+Reflection 表达`;
+      return {
+        status: "confirm",
+        summary: `确认用 AI 草稿更新 ${storyId}？${summary ? `（${summary}）` : ""}`,
+        preview: storyMarkdown,
+        run: () => {
+          ctx.writeStory!(storyId, storyMarkdown, baseHash);
+          return { note: `已确认，正在安全保存 ${storyId}。` };
         },
       };
     },

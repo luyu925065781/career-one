@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, X, FileText, Compass, ShieldCheck, Coins } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { instrumentSerif } from "@/lib/fonts";
 import { parseReport, scoreTone, legitimacyTone } from "@/lib/format";
 import { useJobs, type Job } from "@/components/jobs/job-store";
 
@@ -132,7 +131,7 @@ export function FirstScoreView() {
 
           <div className="mt-4 flex items-start gap-4">
             <div className="min-w-0 flex-1">
-              <h2 className={`${instrumentSerif.className} truncate text-2xl leading-tight text-foreground`}>{role || company}</h2>
+              <h2 className={`font-display truncate text-2xl leading-tight text-foreground`}>{role || company}</h2>
               {role && <p className="truncate text-sm text-muted">{company}</p>}
             </div>
             {score != null && (
@@ -151,7 +150,7 @@ export function FirstScoreView() {
           </div>
 
           {/* THE WHY — the hero. A sentence that read THIS CV against THIS job. */}
-          <blockquote className={`${instrumentSerif.className} mt-5 border-l-2 border-brand/40 pl-4 text-[19px] leading-snug text-foreground`}>
+          <blockquote className={`font-display mt-5 border-l-2 border-brand/40 pl-4 text-[19px] leading-snug text-foreground`}>
             <Sparkles className="mb-1 inline size-4 text-icon-brand" /> {why}
           </blockquote>
 

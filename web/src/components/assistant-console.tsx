@@ -23,10 +23,11 @@ type Part =
   | { type: "note"; text: string }
   | { type: "card"; jobId: string }
   | { type: "batch"; batchId: string; jobIds: string[] }
-  | { type: "confirm"; cid: string; summary: string; state: "pending" | "done" | "cancelled" };
+  | { type: "confirm"; cid: string; summary: string; preview?: string; state: "pending" | "done" | "cancelled" };
 type Msg = { role: "user" | "assistant"; parts: Part[] };
 
 const CONFIG_KEY = "career-one:config";
+const CONFIG_CHANGED_EVENT = "career-one:config-changed";
 const CHAT_KEY = "career-one:chat";
 // back-compat shims — the old directives still work, mapped onto the registry
 const NAV_RE = /<<\s*go:\s*(\/[a-z0-9/_-]*)\s*>>/gi;
@@ -96,6 +97,7 @@ function describePage(p: string): string {
     return `The user is viewing the EVALUATION REPORT for application #${m[1]}. If they say "this offer", "apply", "evaluate it", "draft a cover letter", they mean application #${m[1]} — read reports/${m[1]}-*.md or the matching data/applications.md row and act on THAT one.`;
   if (p === "/analytics") return "Analytics — funnel, score distribution, top companies.";
   if (p === "/cv") return "CV editor (cv.md).";
+  if (p === "/interview") return "Interview story bank — the user is reviewing and maintaining interview-prep/story-bank.md.";
   if (p === "/config") return "Config — CLI / engine setup.";
   if (p === "/apply") return "Apply — the form-proxy: the user is reviewing a job application re-rendered in plain language, pre-filled from their CV. You can write/revise answers via setApplyField.";
   if (p.startsWith("/jobs/")) return "Watching a running worker / evaluation in progress.";
@@ -164,7 +166,11 @@ export function AssistantConsole() {
     }
     read();
     window.addEventListener("storage", read);
-    return () => window.removeEventListener("storage", read);
+    window.addEventListener(CONFIG_CHANGED_EVENT, read);
+    return () => {
+      window.removeEventListener("storage", read);
+      window.removeEventListener(CONFIG_CHANGED_EVENT, read);
+    };
   }, []);
 
   // restore + persist conversation
@@ -182,7 +188,12 @@ export function AssistantConsole() {
     try {
       const serializable = messages
         .slice(-30)
-        .map((m) => ({ role: m.role, parts: m.parts.filter((p) => p.type !== "confirm" || p.state !== "pending") }));
+        .map((m) => ({
+          role: m.role,
+          parts: m.parts
+            .filter((p) => p.type !== "confirm" || p.state !== "pending")
+            .map((p) => (p.type === "confirm" ? { ...p, preview: undefined } : p)),
+        }));
       localStorage.setItem(CHAT_KEY, JSON.stringify(serializable));
     } catch {
       /* ignore */
@@ -274,6 +285,23 @@ export function AssistantConsole() {
       writePortals: (roles, location) => {
         fetch("/api/portals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roles, location }) }).catch(() => {});
       },
+      writeStory: (storyId, storyMarkdown, baseHash) => {
+        fetch("/api/cv", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ target: "story-bank", storyId, storyMarkdown, baseHash }),
+        })
+          .then(async (response) => {
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.error || "保存失败");
+            appendParts([{ type: "note", text: `${storyId} 已保存，其他故事保持原样，并已为旧版本创建本地备份。` }]);
+            router.refresh();
+          })
+          .catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : "保存失败";
+            appendParts([{ type: "note", text: `⚠️ ${message}` }]);
+          });
+      },
     };
   }
 
@@ -285,7 +313,7 @@ export function AssistantConsole() {
     } else if (res.status === "confirm") {
       const cid = `c-${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
       confirmRuns.current.set(cid, res.run);
-      appendParts([{ type: "confirm", cid, summary: res.summary, state: "pending" }]);
+      appendParts([{ type: "confirm", cid, summary: res.summary, preview: res.preview, state: "pending" }]);
     }
   }
 
@@ -303,6 +331,7 @@ export function AssistantConsole() {
           if (info.batchId && info.jobIds.length > 1) parts.push({ type: "batch", batchId: info.batchId, jobIds: info.jobIds });
           else parts.push(...info.jobIds.map((jobId) => ({ type: "card" as const, jobId })));
         }
+        if (info?.note) parts.push({ type: "note", text: info.note });
         return { ...m, parts };
       }),
     );
@@ -660,6 +689,16 @@ function PartView({
     return (
       <div className="rounded-xl border border-brand/40 bg-brand-soft p-2.5">
         <div className="text-xs font-medium text-foreground">{part.summary}</div>
+        {part.preview && (
+          <details className="mt-2 rounded-lg border border-border bg-surface/75">
+            <summary className="cursor-pointer px-2.5 py-2 text-xs font-medium text-muted transition-colors hover:text-foreground">
+              查看完整草稿
+            </summary>
+            <div className="report-prose max-h-64 overflow-auto border-t border-border px-3 py-2 text-xs">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.preview}</ReactMarkdown>
+            </div>
+          </details>
+        )}
         {part.state === "pending" ? (
           <div className="mt-2 flex gap-2">
             <button

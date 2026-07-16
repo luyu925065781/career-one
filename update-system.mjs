@@ -115,6 +115,14 @@ const SYSTEM_PATHS = [
   'GEMINI.md',
   'KIMI.md',
   'build-dashboard.mjs',
+  'start-web.mjs',
+  'web/src/',
+  'web/public/',
+  'web/package.json',
+  'web/package-lock.json',
+  'web/next.config.mjs',
+  'web/postcss.config.mjs',
+  'web/tsconfig.json',
   'generate-pdf.mjs',
   'generate-latex.mjs',
   'archive-posting.mjs',
@@ -272,6 +280,7 @@ const BOOTSTRAP_PATHS = [
   'config/plugins.example.yml',
   'agent-inbox.mjs',
   'agent-inbox-tests.mjs',
+  'agent-runs.mjs',
 ];
 
 // User layer paths — NEVER touch these (safety check)
@@ -893,6 +902,13 @@ async function apply() {
       execSync('npm install --silent', { cwd: ROOT, timeout: NPM_INSTALL_TIMEOUT_MS });
     } catch {
       console.log('npm install skipped (may need manual run)');
+    }
+    try {
+      if (existsSync(join(ROOT, 'web', 'package.json'))) {
+        execSync('npm install --silent', { cwd: join(ROOT, 'web'), timeout: NPM_INSTALL_TIMEOUT_MS });
+      }
+    } catch {
+      console.log('web npm install skipped (run manually: cd web && npm install)');
     }
 
     // 5b. Ensure Playwright browser binary is up to date after npm install

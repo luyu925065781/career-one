@@ -1,6 +1,5 @@
 "use client";
 
-import { instrumentSerif } from "@/lib/fonts";
 import { HeroGlow } from "@/components/hero-glow";
 import { CvIngest } from "@/components/cv/cv-ingest";
 
@@ -21,10 +20,10 @@ export function FirstRunHome() {
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
             <span className="text-faint">//</span> 本地优先 · 你的电脑
           </p>
-          <h1 className={`${instrumentSerif.className} mt-3 text-4xl leading-[1.05] text-landing md:text-5xl`}>
+          <h1 className={`font-display mt-3 text-4xl leading-[1.05] text-landing md:text-5xl`}>
             导入简历，60 秒发现值得关注的岗位。
           </h1>
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted">
+          <p className="mt-4 w-full text-[15px] leading-relaxed text-muted">
             无需注册账号。你的 Agent 在本机解析简历，再从实时招聘市场寻找匹配岗位。
             <span className="text-foreground">发现岗位不消耗 tokens</span>，只有在你主动诊断岗位时才调用模型。
           </p>

@@ -1,6 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
+import Lightbox from "yet-another-react-lightbox";
+import Counter from "yet-another-react-lightbox/plugins/counter";
+import Inline from "yet-another-react-lightbox/plugins/inline";
+import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   AlertTriangle,
   BrainCircuit,
@@ -8,6 +13,7 @@ import {
   Copy,
   ExternalLink,
   FileText,
+  History,
   ImageUp,
   Loader2,
   MessageSquareText,
@@ -20,7 +26,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
-import { instrumentSerif } from "@/lib/fonts";
 
 type DiagnoseResult = {
   company: string;
@@ -44,17 +49,51 @@ type DiagnoseResult = {
 type ApiResponse = {
   ok?: boolean;
   result?: DiagnoseResult;
-  files?: { htmlRel?: string; htmlAbs?: string; htmlUrl?: string; screenshotRels?: string[] };
+  files?: { htmlRel?: string; htmlUrl?: string; screenshotRels?: string[] };
   warnings?: string[];
   error?: string;
 };
 
-type Engine = "quick" | "codex";
 type InputMode = "jd" | "screenshots";
 type ScreenshotInput = { id: string; name: string; dataUrl: string };
+type DiagnosisStage = "preparing" | "starting-agent" | "analyzing" | "validating" | "writing-report";
+type ProgressEvent = { type: "progress"; stage: DiagnosisStage; label: string; detail?: string };
+type DiagnosisTaskStatus = "running" | "stopping" | "completed" | "failed" | "stopped";
+type DiagnosisTask = {
+  id: string;
+  status: DiagnosisTaskStatus;
+  progress: ProgressEvent;
+  cliId: string;
+  agentName: string;
+  inputMode: InputMode;
+  company: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  result?: DiagnoseResult;
+  files?: ApiResponse["files"];
+  error?: string;
+  legacy?: boolean;
+};
+type DiagnosisApiEnvelope = {
+  ok?: boolean;
+  task?: DiagnosisTask;
+  active?: DiagnosisTask | null;
+  history?: DiagnosisTask[];
+  error?: string;
+};
 
 const MAX_SCREENSHOTS = 3;
 const MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024;
+const CONFIG_CHANGED_EVENT = "career-one:config-changed";
+const DIAGNOSIS_STAGES: Array<{ id: DiagnosisStage; label: string }> = [
+  { id: "preparing", label: "准备岗位材料" },
+  { id: "starting-agent", label: "启动所选 Agent" },
+  { id: "analyzing", label: "分析岗位与个人事实" },
+  { id: "validating", label: "校验诊断结果" },
+  { id: "writing-report", label: "生成本地报告" },
+];
 
 function scoreTone(score: number): string {
   if (score >= 4.2) return "text-emerald-500";
@@ -72,6 +111,135 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+function formatElapsed(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return minutes > 0 ? `${minutes} 分 ${String(rest).padStart(2, "0")} 秒` : `${rest} 秒`;
+}
+
+function isActiveTask(task: DiagnosisTask): boolean {
+  return task.status === "running" || task.status === "stopping";
+}
+
+function responseFromTask(task: DiagnosisTask): ApiResponse {
+  return { ok: task.status === "completed", result: task.result, files: task.files, warnings: [] };
+}
+
+function formatTaskTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "时间未知";
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function ScreenshotLightboxDialog({
+  open,
+  index,
+  slides,
+  onClose,
+  onAfterClose,
+  onIndexChange,
+}: {
+  open: boolean;
+  index: number;
+  slides: Array<{ src: string; alt: string; title: string }>;
+  onClose: () => void;
+  onAfterClose: () => void;
+  onIndexChange: (index: number) => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (open) {
+      if (!dialog.open) dialog.showModal();
+      closeButtonRef.current?.focus();
+      const previousOverflow = document.documentElement.style.overflow;
+      document.documentElement.style.overflow = "hidden";
+      return () => {
+        document.documentElement.style.overflow = previousOverflow;
+      };
+    }
+
+    if (dialog.open) dialog.close();
+  }, [open]);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-label="岗位截图预览"
+      className="fixed inset-0 m-0 h-dvh w-screen max-h-none max-w-none bg-transparent p-4 open:flex open:items-center open:justify-center backdrop:bg-black/65 backdrop:backdrop-blur-sm sm:p-8"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClose={onAfterClose}
+      onKeyDownCapture={(event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="flex h-[min(82dvh,760px)] w-[min(92vw,1120px)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-black shadow-2xl">
+        <div className="flex min-h-14 items-center justify-between gap-4 border-b border-white/10 bg-neutral-950 px-4 text-white sm:px-5">
+          <span className="min-w-0 truncate text-sm font-medium">
+            {slides[index]?.title || "岗位截图"}
+          </span>
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={onClose}
+            className="grid size-9 shrink-0 place-items-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            aria-label="关闭"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1">
+          {open && slides.length > 0 && (
+            <Lightbox
+              open
+              close={onClose}
+              index={index}
+              slides={slides}
+              plugins={[Inline, Zoom, Counter]}
+              inline={{ style: { width: "100%", height: "100%" } }}
+              carousel={{ finite: true, imageFit: "contain" }}
+              zoom={{ scrollToZoom: true, maxZoomPixelRatio: 3, zoomInMultiplier: 2 }}
+              labels={{
+                Previous: "上一张",
+                Next: "下一张",
+                Close: "关闭",
+                Slide: "图片",
+                Carousel: "岗位截图",
+                Lightbox: "岗位截图查看器",
+                "Photo gallery": "岗位截图",
+                "{index} of {total}": "第 {index} 张，共 {total} 张",
+                "Zoom in": "放大",
+                "Zoom out": "缩小",
+              }}
+              on={{ view: ({ index: nextIndex }) => onIndexChange(nextIndex) }}
+              styles={{ container: { backgroundColor: "rgb(0 0 0 / 0.94)" } }}
+            />
+          )}
+        </div>
+      </div>
+    </dialog>
+  );
+}
+
 function BulletList({ items, tone }: { items: string[]; tone: "good" | "risk" | "question" }) {
   const Icon = tone === "good" ? CheckCircle2 : tone === "risk" ? AlertTriangle : MessageSquareText;
   const color = tone === "good" ? "text-icon-success" : tone === "risk" ? "text-icon-danger" : "text-icon-info";
@@ -87,6 +255,81 @@ function BulletList({ items, tone }: { items: string[]; tone: "good" | "risk" | 
   );
 }
 
+function DiagnosisProgressPanel({
+  progress,
+  agentName,
+  elapsedSeconds,
+}: {
+  progress: ProgressEvent;
+  agentName: string;
+  elapsedSeconds: number;
+}) {
+  const currentIndex = Math.max(0, DIAGNOSIS_STAGES.findIndex((stage) => stage.id === progress.stage));
+  const isLongWait = elapsedSeconds >= 45;
+  const isNearTimeout = elapsedSeconds >= 180;
+
+  return (
+    <Card elevated className="flex min-h-[520px] flex-col bg-surface/55">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
+        <div>
+          <div className="mb-4 inline-flex size-12 items-center justify-center rounded-xl border border-brand/25 bg-brand-soft">
+            <Loader2 className="size-5 animate-spin text-icon-brand" />
+          </div>
+          <h2 className={`font-display text-4xl text-landing`}>AI 岗位诊断进行中</h2>
+          <div role="status" aria-live="polite" aria-atomic="true">
+            <p className="mt-3 text-sm leading-6 text-muted">{progress.label}</p>
+            {progress.detail && <p className="mt-1 text-xs leading-5 text-faint">{progress.detail}</p>}
+          </div>
+        </div>
+        <div className="grid shrink-0 gap-2 text-right text-xs">
+          <span className="rounded-md border border-border bg-background px-3 py-2 font-medium text-foreground">{agentName}</span>
+          <span className="tabular-nums text-faint">已用 {formatElapsed(elapsedSeconds)}</span>
+        </div>
+      </div>
+
+      <ol className="my-6 grid gap-2" aria-label="岗位诊断进度">
+        {DIAGNOSIS_STAGES.map((stage, index) => {
+          const complete = index < currentIndex;
+          const current = index === currentIndex;
+          return (
+            <li
+              key={stage.id}
+              className={cn(
+                "flex min-h-12 items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors",
+                current ? "border-brand/35 bg-brand-soft text-foreground" : "border-border bg-background/65",
+                complete ? "text-muted" : !current && "text-faint",
+              )}
+            >
+              <span className="grid size-6 shrink-0 place-items-center">
+                {complete ? (
+                  <CheckCircle2 className="size-5 text-icon-success" aria-hidden="true" />
+                ) : current ? (
+                  <Loader2 className="size-4 animate-spin text-icon-brand" aria-hidden="true" />
+                ) : (
+                  <span className="size-2 rounded-full bg-border" aria-hidden="true" />
+                )}
+              </span>
+              <span className={cn(current && "font-semibold")}>{stage.label}</span>
+              {current && <span className="ml-auto text-xs text-brand-text">进行中</span>}
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className={cn(
+        "mt-auto rounded-xl border p-4 text-xs leading-6",
+        isNearTimeout ? "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300" : "border-border bg-background/70 text-faint",
+      )}>
+        {isNearTimeout
+          ? "任务已接近 4 分钟超时上限。可以继续等待，也可以停止后缩短 JD 或减少截图重试。"
+          : isLongWait
+            ? "Agent 进程仍在运行。视觉识别和证据匹配通常需要 1–4 分钟；离开此页面不会停止诊断。"
+            : "任务由本地 AI 服务持续执行，离开此页面不会停止诊断；返回后会自动恢复进度。"}
+      </div>
+    </Card>
+  );
+}
+
 function ResultPanel({ response }: { response: ApiResponse | null }) {
   const result = response?.result;
   if (!result) {
@@ -96,13 +339,13 @@ function ResultPanel({ response }: { response: ApiResponse | null }) {
           <div className="mb-5 inline-flex size-12 items-center justify-center rounded-xl border border-border bg-surface">
             <Radar className="size-5 text-icon-brand" />
           </div>
-          <h2 className={`${instrumentSerif.className} text-4xl text-landing`}>等待诊断输入</h2>
+          <h2 className={`font-display text-4xl text-landing`}>等待诊断输入</h2>
           <p className="mt-4 max-w-xl text-sm leading-7 text-muted">
-            生成后这里会出现评分、正向信号、剩余风险、追问问题、BOSS 打招呼话术和本地 HTML 报告链接。
+            生成后这里会出现评分、正向信号、剩余风险、追问问题、面试开场话术和本地 HTML 报告链接。
           </p>
         </div>
         <div className="rounded-xl border border-border bg-surface/70 p-4 text-xs leading-6 text-faint">
-          第一版会保存报告到 <code className="font-mono text-brand-text">markets/china-mainland/output/</code>。规则分析即时可用；Codex 深度分析会在检测到本机 CLI 时尝试运行。
+          报告会保存到 <code className="font-mono text-brand-text">markets/china-mainland/output/</code>。AI 会读取择程AI评估规则与当前工作区内已确认的用户事实，完成证据化岗位匹配。
         </div>
       </Card>
     );
@@ -122,7 +365,7 @@ function ResultPanel({ response }: { response: ApiResponse | null }) {
               <span>·</span>
               <span>confidence {result.confidence}</span>
             </div>
-            <h2 className={`${instrumentSerif.className} max-w-2xl text-4xl leading-tight text-landing`}>{result.role}</h2>
+            <h2 className={`font-display max-w-2xl text-4xl leading-tight text-landing`}>{result.role}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">{result.scoreNote}</p>
           </div>
           <div className="shrink-0 rounded-2xl border border-border bg-background p-5 text-center">
@@ -183,7 +426,7 @@ function ResultPanel({ response }: { response: ApiResponse | null }) {
 
       <Card className="bg-surface/55">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-base font-semibold">BOSS 首轮沟通话术</h3>
+          <h3 className="text-base font-semibold">面试开场话术</h3>
           <Button variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(result.openingMessage)}>
             <Copy className="size-3.5" />
             复制
@@ -195,22 +438,255 @@ function ResultPanel({ response }: { response: ApiResponse | null }) {
   );
 }
 
+function DiagnosisHistory({
+  tasks,
+  activeTaskId,
+  onViewResult,
+}: {
+  tasks: DiagnosisTask[];
+  activeTaskId: string | null;
+  onViewResult: (task: DiagnosisTask) => void;
+}) {
+  const statusLabel: Record<DiagnosisTaskStatus, string> = {
+    running: "诊断中",
+    stopping: "停止中",
+    completed: "已完成",
+    failed: "失败",
+    stopped: "已停止",
+  };
+
+  return (
+    <Card elevated className="bg-surface/65">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+            <History className="size-5 text-icon-brand" />
+            <span>诊断记录</span>
+          </h2>
+          <p className="mt-1 text-xs leading-5 text-faint">任务状态和 HTML 报告保存在当前电脑，重新打开页面仍可查看。</p>
+        </div>
+        <span className="text-xs tabular-nums text-faint">{tasks.length} 条</span>
+      </div>
+
+      {tasks.length === 0 ? (
+        <p className="py-8 text-center text-sm text-faint">完成第一次岗位诊断后，记录会显示在这里。</p>
+      ) : (
+        <div className="divide-y divide-border">
+          {tasks.map((task) => {
+            const active = task.id === activeTaskId && isActiveTask(task);
+            const failed = task.status === "failed" || task.status === "stopped";
+            return (
+              <div key={task.id} className="grid gap-3 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={cn(
+                      "rounded-md px-2 py-1 text-[11px] font-semibold",
+                      active ? "bg-brand-soft text-brand-text" : failed ? "bg-red-500/10 text-red-600 dark:text-red-300" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+                    )}>
+                      {statusLabel[task.status]}
+                    </span>
+                    {task.result && <span className={cn("text-sm font-semibold tabular-nums", scoreTone(task.result.score))}>{task.result.score.toFixed(1)}/5</span>}
+                    <span className="text-xs text-faint">{formatTaskTime(task.updatedAt)}</span>
+                    <span className="text-xs text-faint">{task.agentName}</span>
+                  </div>
+                  <p className="mt-2 truncate text-sm font-semibold text-foreground">{task.company} · {task.role}</p>
+                  {active && <p className="mt-1 text-xs text-brand-text">{task.progress.label}，离开页面后仍会继续。</p>}
+                  {task.error && <p className="mt-1 text-xs text-red-600 dark:text-red-300">{task.error}</p>}
+                </div>
+                <div className="flex flex-wrap gap-2 lg:justify-end">
+                  {task.result && (
+                    <Button variant="outline" size="sm" onClick={() => onViewResult(task)}>
+                      查看结果
+                    </Button>
+                  )}
+                  {task.files?.htmlUrl && (
+                    <a
+                      className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-hover"
+                      href={task.files.htmlUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <ExternalLink className="size-3.5" />
+                      打开报告
+                    </a>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export function CnDiagnoseView() {
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [jdText, setJdText] = useState("");
-  const [inputMode, setInputMode] = useState<InputMode>("jd");
+  const [inputMode, setInputMode] = useState<InputMode>("screenshots");
   const [screenshots, setScreenshots] = useState<ScreenshotInput[]>([]);
-  const [loading, setLoading] = useState<Engine | null>(null);
+  const [previewIndex, setPreviewIndex] = useState(-1);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<ProgressEvent>({
+    type: "progress",
+    stage: "preparing",
+    label: "正在准备岗位材料",
+  });
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [cliId, setCliId] = useState<string | null>(null);
+  const [selectedCliName, setSelectedCliName] = useState<string | null>(null);
   const [response, setResponse] = useState<ApiResponse | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeAgentName, setActiveAgentName] = useState<string | null>(null);
+  const [taskCreatedAt, setTaskCreatedAt] = useState<string | null>(null);
+  const [history, setHistory] = useState<DiagnosisTask[]>([]);
   const [error, setError] = useState("");
   const jdTabRef = useRef<HTMLButtonElement>(null);
   const screenshotsTabRef = useRef<HTMLButtonElement>(null);
+  const previewTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const canRun = useMemo(
     () => inputMode === "jd" ? Boolean(jdText.trim()) : screenshots.length > 0,
     [inputMode, jdText, screenshots.length],
   );
+  const lightboxSlides = useMemo(
+    () => screenshots.map((screenshot, index) => ({
+      src: screenshot.dataUrl,
+      alt: `岗位截图 ${index + 1}：${screenshot.name}`,
+      title: screenshot.name,
+    })),
+    [screenshots],
+  );
+
+  const watchTask = useCallback((task: DiagnosisTask) => {
+    setActiveTaskId(task.id);
+    setActiveAgentName(task.agentName);
+    setTaskCreatedAt(task.createdAt);
+    setProgress(task.progress);
+    setLoading(true);
+    setError("");
+  }, []);
+
+  const refreshTaskIndex = useCallback(async (restoreActive = false) => {
+    const res = await fetch("/api/cn-diagnose", { cache: "no-store" });
+    const json = (await res.json().catch(() => ({}))) as DiagnosisApiEnvelope;
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+    const tasks = json.history ?? [];
+    setHistory(tasks);
+    if (restoreActive && json.active && isActiveTask(json.active)) {
+      watchTask(json.active);
+    } else if (restoreActive) {
+      const latest = tasks.find((task) => task.status === "completed" && task.result);
+      if (latest) setResponse(responseFromTask(latest));
+    }
+    return json;
+  }, [watchTask]);
+
+  useEffect(() => {
+    function readConfig() {
+      try {
+        const config = JSON.parse(localStorage.getItem("career-one:config") || "{}") as { cliId?: unknown };
+        setCliId(typeof config.cliId === "string" && config.cliId.trim() ? config.cliId : null);
+      } catch {
+        setCliId(null);
+      }
+    }
+
+    readConfig();
+    window.addEventListener("storage", readConfig);
+    window.addEventListener(CONFIG_CHANGED_EVENT, readConfig);
+    return () => {
+      window.removeEventListener("storage", readConfig);
+      window.removeEventListener(CONFIG_CHANGED_EVENT, readConfig);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void refreshTaskIndex(true).catch((err) => {
+      if (!cancelled) setError(err instanceof Error ? err.message : "无法读取岗位诊断记录");
+    });
+    return () => { cancelled = true; };
+  }, [refreshTaskIndex]);
+
+  useEffect(() => {
+    if (!cliId) {
+      setSelectedCliName(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    fetch("/api/clis", { signal: controller.signal })
+      .then((result) => {
+        if (!result.ok) throw new Error("CLI registry unavailable");
+        return result.json() as Promise<{ clis?: Array<{ id: string; name: string }> }>;
+      })
+      .then(({ clis }) => {
+        setSelectedCliName(clis?.find((cli) => cli.id === cliId)?.name ?? null);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setSelectedCliName(null);
+      });
+
+    return () => controller.abort();
+  }, [cliId]);
+
+  useEffect(() => {
+    if (!loading) return;
+    const startedAt = taskCreatedAt ? Date.parse(taskCreatedAt) : Date.now();
+    const updateElapsed = () => setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+    updateElapsed();
+    const timer = window.setInterval(() => {
+      updateElapsed();
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [loading, taskCreatedAt]);
+
+  useEffect(() => {
+    if (!activeTaskId) return;
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/cn-diagnose?taskId=${encodeURIComponent(activeTaskId)}`, { cache: "no-store" });
+        const json = (await res.json().catch(() => ({}))) as DiagnosisApiEnvelope;
+        if (!res.ok || !json.task) throw new Error(json.error || `HTTP ${res.status}`);
+        if (cancelled) return;
+        const task = json.task;
+        setActiveAgentName(task.agentName);
+        setProgress(task.progress);
+        setTaskCreatedAt(task.createdAt);
+        setHistory((current) => [task, ...current.filter((item) => item.id !== task.id)]);
+        if (isActiveTask(task)) {
+          timer = window.setTimeout(poll, 1200);
+          return;
+        }
+
+        setLoading(false);
+        setActiveTaskId(null);
+        setActiveAgentName(null);
+        if (task.status === "completed" && task.result) {
+          setResponse(responseFromTask(task));
+          setError("");
+        } else {
+          setError(task.error || (task.status === "stopped" ? "已停止本次岗位诊断" : "AI 岗位诊断失败，请重试"));
+        }
+        void refreshTaskIndex(false).catch(() => undefined);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "无法读取岗位诊断进度");
+        timer = window.setTimeout(poll, 2000);
+      }
+    };
+
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [activeTaskId, refreshTaskIndex]);
 
   function selectInputMode(nextMode: InputMode, moveFocus = false) {
     setInputMode(nextMode);
@@ -226,22 +702,21 @@ export function CnDiagnoseView() {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
     const nextMode = event.key === "Home"
-      ? "jd"
+      ? "screenshots"
       : event.key === "End"
-        ? "screenshots"
+        ? "jd"
         : currentMode === "jd" ? "screenshots" : "jd";
     selectInputMode(nextMode, true);
   }
 
-  async function onFiles(fileList: FileList | null) {
-    if (!fileList?.length) return;
+  const addScreenshotFiles = useCallback(async (selected: File[]) => {
+    if (!selected.length) return;
     const remaining = MAX_SCREENSHOTS - screenshots.length;
     if (remaining <= 0) {
       setError(`最多上传 ${MAX_SCREENSHOTS} 张岗位截图`);
       return;
     }
 
-    const selected = Array.from(fileList);
     const invalidType = selected.find((file) => !["image/png", "image/jpeg", "image/webp"].includes(file.type));
     if (invalidType) {
       setError("仅支持 PNG、JPG 和 WebP 图片");
@@ -260,32 +735,59 @@ export function CnDiagnoseView() {
     const startedAt = Date.now();
     const next = await Promise.all(selected.map(async (file, index) => ({
       id: `${startedAt}-${index}-${file.name}`,
-      name: file.name,
+      name: file.name || `粘贴截图-${screenshots.length + index + 1}`,
       dataUrl: await readFileAsDataUrl(file),
     })));
     setScreenshots((current) => [...current, ...next].slice(0, MAX_SCREENSHOTS));
     setError("");
-  }
+  }, [screenshots.length]);
+
+  useEffect(() => {
+    if (inputMode !== "screenshots") return;
+
+    function handlePaste(event: ClipboardEvent) {
+      const clipboardItems = event.clipboardData?.items;
+      if (!clipboardItems) return;
+
+      const imageFiles = Array.from(clipboardItems)
+        .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+        .map((item) => item.getAsFile())
+        .filter((file): file is File => file !== null);
+
+      if (!imageFiles.length) return;
+      event.preventDefault();
+      void addScreenshotFiles(imageFiles);
+    }
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [addScreenshotFiles, inputMode]);
 
   function removeScreenshot(id: string) {
     setScreenshots((current) => current.filter((screenshot) => screenshot.id !== id));
     setError("");
   }
 
-  async function run(engine: Engine) {
+  function closeScreenshotPreview() {
+    setPreviewIndex(-1);
+  }
+
+  async function run() {
     if (!canRun) return;
-    if (inputMode === "screenshots" && engine === "quick") {
-      setError("岗位截图需要 Agent 视觉分析，请使用 Codex 深度");
+    if (!cliId) {
+      setError("请先在设置中连接并选择 Agent CLI");
       return;
     }
-    setLoading(engine);
+    setLoading(true);
     setError("");
+    setResponse(null);
+    setProgress({ type: "progress", stage: "preparing", label: "正在准备岗位材料" });
     try {
       const res = await fetch("/api/cn-diagnose", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          engine,
+          cliId,
           inputMode,
           company,
           role,
@@ -294,14 +796,42 @@ export function CnDiagnoseView() {
           screenshotDataUrls: inputMode === "screenshots" ? screenshots.map((screenshot) => screenshot.dataUrl) : undefined,
         }),
       });
-      const json = (await res.json()) as ApiResponse;
-      if (!res.ok || json.error) throw new Error(json.error || `HTTP ${res.status}`);
-      setResponse(json);
+      const json = (await res.json().catch(() => ({}))) as DiagnosisApiEnvelope;
+      if (res.status === 409 && json.task && isActiveTask(json.task)) {
+        watchTask(json.task);
+        setError(json.error || "已有岗位诊断正在运行");
+        return;
+      }
+      if (!res.ok || !json.task) throw new Error(json.error || `HTTP ${res.status}`);
+      watchTask(json.task);
+      setHistory((current) => [json.task!, ...current.filter((task) => task.id !== json.task!.id)]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "诊断失败");
-    } finally {
-      setLoading(null);
+      setLoading(false);
+      const message = err instanceof Error ? err.message : "诊断失败";
+      setError(/network error|failed to fetch/i.test(message)
+        ? "无法连接本地 AI 服务，请确认前端服务仍在运行后重试"
+        : message);
     }
+  }
+
+  async function stopRun() {
+    if (!activeTaskId) return;
+    setProgress((current) => ({ ...current, label: "正在停止本地 Agent", detail: "等待当前 Agent 进程安全退出" }));
+    try {
+      const res = await fetch(`/api/cn-diagnose?taskId=${encodeURIComponent(activeTaskId)}`, { method: "DELETE" });
+      const json = (await res.json().catch(() => ({}))) as DiagnosisApiEnvelope;
+      if (!res.ok && res.status !== 409) throw new Error(json.error || `HTTP ${res.status}`);
+      if (json.task) setProgress(json.task.progress);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "无法停止岗位诊断");
+    }
+  }
+
+  function viewHistoricalResult(task: DiagnosisTask) {
+    if (!task.result) return;
+    setResponse(responseFromTask(task));
+    setError("");
+    requestAnimationFrame(() => document.getElementById("diagnosis-result")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   return (
@@ -309,10 +839,10 @@ export function CnDiagnoseView() {
       <div className="mx-auto grid max-w-7xl gap-6">
         <header className="relative overflow-hidden rounded-3xl border border-border bg-surface p-6 shadow-sm">
           <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_70%_20%,rgba(221,118,39,.18),transparent_35%),radial-gradient(circle_at_40%_80%,rgba(16,185,129,.14),transparent_32%)] lg:block" />
-          <div className="relative max-w-4xl">
-            <h1 className={`${instrumentSerif.className} text-5xl leading-none text-landing sm:text-6xl`}>岗位诊断</h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-muted">
-              填写岗位描述 JD，或上传岗位截图，生成岗位诊断、沟通话术和本地 HTML 报告。适合先筛机会，再决定是否写入求职进度。
+          <div className="relative w-full">
+            <h1 className={`font-display text-5xl leading-none text-landing sm:text-6xl`}>岗位诊断</h1>
+            <p className="mt-4 w-full text-sm leading-7 text-muted">
+              上传岗位截图，或填写岗位描述 JD，生成岗位诊断、沟通话术和本地 HTML 报告。适合先筛机会，再决定是否写入求职进度。
             </p>
           </div>
         </header>
@@ -321,24 +851,6 @@ export function CnDiagnoseView() {
           <section className="grid gap-4">
             <Card elevated className="bg-surface/70">
               <div role="tablist" aria-label="岗位输入方式" className="grid grid-cols-2 rounded-xl border border-border bg-background p-1">
-                <button
-                  ref={jdTabRef}
-                  type="button"
-                  role="tab"
-                  id="job-input-tab-jd"
-                  aria-selected={inputMode === "jd"}
-                  aria-controls="job-input-panel-jd"
-                  tabIndex={inputMode === "jd" ? 0 : -1}
-                  onClick={() => selectInputMode("jd")}
-                  onKeyDown={(event) => onTabKeyDown(event, "jd")}
-                  className={cn(
-                    "flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
-                    inputMode === "jd" ? "bg-brand-soft text-brand-text" : "text-muted hover:bg-surface-hover hover:text-foreground",
-                  )}
-                >
-                  <FileText className={cn("size-4", inputMode === "jd" ? "text-icon-brand" : "text-icon-muted")} />
-                  岗位描述 JD
-                </button>
                 <button
                   ref={screenshotsTabRef}
                   type="button"
@@ -357,6 +869,24 @@ export function CnDiagnoseView() {
                   <ImageUp className={cn("size-4", inputMode === "screenshots" ? "text-icon-brand" : "text-icon-muted")} />
                   岗位截图
                   {screenshots.length > 0 && <span className="rounded-full bg-surface px-1.5 py-0.5 text-[11px] tabular-nums text-muted">{screenshots.length}</span>}
+                </button>
+                <button
+                  ref={jdTabRef}
+                  type="button"
+                  role="tab"
+                  id="job-input-tab-jd"
+                  aria-selected={inputMode === "jd"}
+                  aria-controls="job-input-panel-jd"
+                  tabIndex={inputMode === "jd" ? 0 : -1}
+                  onClick={() => selectInputMode("jd")}
+                  onKeyDown={(event) => onTabKeyDown(event, "jd")}
+                  className={cn(
+                    "flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
+                    inputMode === "jd" ? "bg-brand-soft text-brand-text" : "text-muted hover:bg-surface-hover hover:text-foreground",
+                  )}
+                >
+                  <FileText className={cn("size-4", inputMode === "jd" ? "text-icon-brand" : "text-icon-muted")} />
+                  岗位描述 JD
                 </button>
               </div>
 
@@ -381,9 +911,9 @@ export function CnDiagnoseView() {
                     )}>
                       <UploadCloud className="mb-2 size-6 text-icon-brand" />
                       <span className="text-sm font-medium text-foreground">
-                        {screenshots.length < MAX_SCREENSHOTS ? "上传岗位截图" : "已上传 3 张截图"}
+                        {screenshots.length < MAX_SCREENSHOTS ? "上传或粘贴岗位截图" : "已上传 3 张截图"}
                       </span>
-                      <span className="mt-1 text-xs text-faint">PNG / JPG / WebP · 最多 3 张 · 单张不超过 8 MB</span>
+                      <span className="mt-1 text-xs text-faint">⌘V / Ctrl+V · PNG / JPG / WebP · 最多 3 张 · 单张不超过 8 MB</span>
                       <input
                         type="file"
                         multiple
@@ -391,7 +921,7 @@ export function CnDiagnoseView() {
                         disabled={screenshots.length >= MAX_SCREENSHOTS}
                         className="hidden"
                         onChange={(event) => {
-                          void onFiles(event.target.files);
+                          void addScreenshotFiles(Array.from(event.target.files ?? []));
                           event.currentTarget.value = "";
                         }}
                       />
@@ -401,7 +931,24 @@ export function CnDiagnoseView() {
                       <div className="grid grid-cols-3 gap-2" aria-label={`已上传 ${screenshots.length} 张岗位截图`}>
                         {screenshots.map((screenshot, index) => (
                           <div key={screenshot.id} className="group relative overflow-hidden rounded-xl border border-border bg-background">
-                            <img src={screenshot.dataUrl} alt={`岗位截图 ${index + 1}：${screenshot.name}`} className="aspect-[4/3] w-full object-contain" />
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                previewTriggerRef.current = event.currentTarget;
+                                setPreviewIndex(index);
+                              }}
+                              className="relative block aspect-[4/3] w-full cursor-zoom-in overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50"
+                              aria-label={`查看岗位截图 ${index + 1}：${screenshot.name}`}
+                            >
+                              <Image
+                                src={screenshot.dataUrl}
+                                alt={`岗位截图 ${index + 1}：${screenshot.name}`}
+                                fill
+                                sizes="(max-width: 640px) 30vw, 130px"
+                                className="object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                                unoptimized
+                              />
+                            </button>
                             <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-background/90 px-2 py-1.5 text-[11px] text-muted backdrop-blur-sm">
                               <span className="min-w-0 truncate">{index + 1}. {screenshot.name}</span>
                               <button
@@ -418,6 +965,14 @@ export function CnDiagnoseView() {
                       </div>
                     )}
                     <p className="text-xs leading-5 text-faint">Agent 会按顺序读取并合并这些截图中的同一份岗位信息；请勿混入不同岗位。</p>
+                    <ScreenshotLightboxDialog
+                      open={previewIndex >= 0}
+                      index={previewIndex >= 0 ? previewIndex : 0}
+                      slides={lightboxSlides}
+                      onClose={closeScreenshotPreview}
+                      onAfterClose={() => previewTriggerRef.current?.focus()}
+                      onIndexChange={setPreviewIndex}
+                    />
                   </div>
                 )}
 
@@ -434,24 +989,38 @@ export function CnDiagnoseView() {
               </div>
             </Card>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button disabled={!canRun || !!loading || inputMode === "screenshots"} onClick={() => run("quick")} className="min-h-12">
-                {loading === "quick" ? <Loader2 className="size-4 animate-spin" /> : <Radar className="size-4" />}
-                规则诊断
+            {loading ? (
+              <Button variant="outline" onClick={stopRun} className="min-h-12 w-full">
+                <X className="size-4" /><span>停止诊断</span>
               </Button>
-              <Button disabled={!canRun || !!loading} variant="secondary" onClick={() => run("codex")} className="min-h-12">
-                {loading === "codex" ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-                Codex 深度
+            ) : (
+              <Button disabled={!canRun || loading} onClick={run} className="min-h-12 w-full">
+                <Sparkles className="size-4" />
+                AI 岗位诊断
               </Button>
-            </div>
-            {inputMode === "screenshots" && !error && <p className="text-center text-xs leading-5 text-faint">截图需要 Agent 视觉分析，因此仅支持 Codex 深度。</p>}
+            )}
+            {!error && (
+              <p className="text-center text-xs leading-5 text-faint">
+                {cliId ? `由设置中选择的 Agent（${selectedCliName ?? cliId}）读取岗位信息、评估规则和用户层事实后生成。` : <><a href="/config" className="font-medium text-brand-text hover:underline">前往设置连接 Agent CLI</a> 后开始诊断。</>}
+              </p>
+            )}
             {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">{error}</div>}
           </section>
 
-          <section>
-            <ResultPanel response={response} />
+          <section id="diagnosis-result" className="scroll-mt-6">
+            {loading ? (
+              <DiagnosisProgressPanel progress={progress} agentName={activeAgentName ?? selectedCliName ?? cliId ?? "Agent"} elapsedSeconds={elapsedSeconds} />
+            ) : (
+              <ResultPanel response={response} />
+            )}
           </section>
         </div>
+
+        <DiagnosisHistory
+          tasks={history}
+          activeTaskId={activeTaskId}
+          onViewResult={viewHistoricalResult}
+        />
       </div>
     </div>
   );

@@ -124,6 +124,7 @@ To rollback: `node update-system.mjs rollback`
 | `salary-gap.mjs` | Desired/advertised/actual compensation gap analyzer — folds report `advertised_comp` + `data/salary-observations.tsv` (JSON or `--summary`) |
 | `data/salary-observations.tsv` | Append-only salary observation log (user layer) |
 | `data/follow-ups.md` | Follow-up history tracker |
+| `agent-runs.mjs` | Shared local Agent/Web task registry and preview-before-apply proposal CLI (`run start/progress/complete/fail/propose/approve/reject`) |
 | `scan.mjs` | Zero-token portal scanner — hits Greenhouse/Ashby/Lever APIs directly, zero LLM cost |
 | `check-liveness.mjs` | Job posting liveness checker |
 | `liveness-core.mjs` | Shared liveness logic (expired signals win over generic Apply text) |

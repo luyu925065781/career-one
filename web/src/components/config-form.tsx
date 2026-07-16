@@ -31,7 +31,7 @@ const PROVIDERS = [
 ] as const;
 
 const STORAGE_KEY = "career-one:config";
-const LEGACY_STORAGE_KEY = "career-one:config";
+const CONFIG_CHANGED_EVENT = "career-one:config-changed";
 
 export function ConfigForm() {
   const [mode, setMode] = useState<Mode>("cli");
@@ -45,7 +45,7 @@ export function ConfigForm() {
   // Load saved prefs
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const v = JSON.parse(raw);
         // key/manual are not wired yet (nothing reads them) → never restore into
@@ -67,20 +67,27 @@ export function ConfigForm() {
       .then((d) => {
         const list: Cli[] = d.clis ?? [];
         setClis(list);
-        // auto-select first installed if nothing chosen yet
-        setCliId((prev) => prev || list.find((c) => c.installed)?.id || "");
       })
       .catch(() => setClis([]));
   }, []);
 
-  function save() {
+  function persistConfig(nextCliId = cliId) {
     // The API key is deliberately NOT persisted: nothing reads it yet (the
     // key/manual panel is unwired) and a secret must never sit in clear-text
     // localStorage. Keys belong in the user's own CLI/provider config.
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode, cliId, provider, logos }));
-    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify({ mode, cliId, provider, logos }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode, cliId: nextCliId, provider, logos }));
+    window.dispatchEvent(new Event(CONFIG_CHANGED_EVENT));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  function selectCli(nextCliId: string) {
+    setCliId(nextCliId);
+    persistConfig(nextCliId);
+  }
+
+  function save() {
+    persistConfig();
   }
 
   const installed = clis?.filter((c) => c.installed) ?? [];
@@ -88,7 +95,7 @@ export function ConfigForm() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <h1 className="font-display text-2xl tracking-tight text-landing">设置</h1>
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 w-full text-sm text-muted">
         择程AI使用你自己的 Agent，在当前电脑上处理简历和求职数据。
       </p>
 
@@ -128,7 +135,7 @@ export function ConfigForm() {
             <p className="mb-1 text-sm text-muted">
               择程AI调用你已经登录的 Agent，不需要在这里粘贴任何密钥。
             </p>
-            <p className="mb-3 text-xs text-faint">支持 Codex、Claude Code、WorkBuddy、TRAE、OpenCode 等 Agent。</p>
+            <p className="mb-3 text-xs text-faint">支持 Codex、Claude Code、WorkBuddy、TRAE、OpenCode 等 Agent。点击后立即设为默认 Agent。</p>
             {clis === null ? (
               <div className="flex items-center gap-2 text-sm text-muted">
                 <Loader2 className="size-4 animate-spin" /> 正在检查本机已安装的 Agent…
@@ -164,7 +171,7 @@ export function ConfigForm() {
                       <button
                         type="button"
                         disabled={!c.installed}
-                        onClick={() => setCliId(c.id)}
+                        onClick={() => selectCli(c.id)}
                         className={cn(
                           "flex flex-1 items-center gap-2 text-left max-sm:min-h-[44px]",
                           c.installed ? "" : "cursor-default",

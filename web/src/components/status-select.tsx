@@ -1,18 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
-import { CANONICAL_STATES, CANONICAL_STATE_LABELS } from "@/lib/format";
+import { CANONICAL_STATES, CANONICAL_STATE_LABELS, statusDot } from "@/lib/format";
+import { cn } from "@/lib/cn";
 
 // Status writeback control. Updates the existing tracker row (status cell) via
 // /api/status — never adds rows. Reverts on failure; confirms with the
 // terminal-popup animation.
-export function StatusSelect({ n, current }: { n: string; current: string }) {
+export function StatusSelect({
+  n,
+  current,
+  showLabel = true,
+  compact = false,
+  ariaLabel = "更新求职状态",
+}: {
+  n: string;
+  current: string;
+  showLabel?: boolean;
+  compact?: boolean;
+  ariaLabel?: string;
+}) {
   const [status, setStatus] = useState(current);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setStatus(current);
+  }, [current]);
 
   async function onChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const next = e.target.value;
@@ -38,13 +55,18 @@ export function StatusSelect({ n, current }: { n: string; current: string }) {
 
   const known = (CANONICAL_STATES as readonly string[]).includes(status);
   return (
-    <span className="inline-flex items-center gap-2">
-      <label className="text-xs text-faint">状态</label>
+    <span className={cn("inline-flex items-center", compact ? "gap-1.5" : "gap-2")}>
+      {showLabel && <span className="text-xs text-faint">状态</span>}
+      {compact && <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", statusDot(status))} />}
       <select
+        aria-label={ariaLabel}
         value={status}
         onChange={onChange}
         disabled={busy}
-        className="rounded-md border border-border bg-surface px-2.5 py-1 text-sm text-foreground outline-none transition-colors focus:border-brand/50 disabled:opacity-50 max-sm:min-h-[44px]"
+        className={cn(
+          "rounded-md border border-border bg-surface px-2.5 py-1 text-sm text-foreground outline-none transition-colors focus:border-brand/50 disabled:opacity-50 max-sm:min-h-[44px]",
+          compact && "min-w-[7.25rem] border-outline-border bg-outline-bg px-2 py-1 text-xs hover:border-outline-border-hover hover:bg-outline-bg-hover",
+        )}
       >
         {!known && <option value={status}>{status}</option>}
         {CANONICAL_STATES.map((s) => (
@@ -53,11 +75,16 @@ export function StatusSelect({ n, current }: { n: string; current: string }) {
           </option>
         ))}
       </select>
-      {saved && (
-        <span className="animate-terminal-popup inline-flex items-center gap-1 text-xs font-medium text-brand">
-          <Check className="size-3" /> 已保存
+      {saved && (compact ? (
+        <span role="status" className="animate-terminal-popup inline-flex text-icon-success">
+          <Check aria-hidden="true" className="size-3.5" />
+          <span className="sr-only">状态已保存</span>
         </span>
-      )}
+      ) : (
+        <span role="status" className="animate-terminal-popup inline-flex items-center gap-1 text-xs font-medium text-brand">
+          <Check aria-hidden="true" className="size-3" /> 已保存
+        </span>
+      ))}
     </span>
   );
 }

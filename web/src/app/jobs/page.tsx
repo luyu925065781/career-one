@@ -15,6 +15,7 @@ const TONE_CHIP = {
 
 const STATUS_LABEL: Record<string, string> = {
   running: "运行中",
+  waiting: "待确认",
   done: "已完成",
   error: "出错",
 };
@@ -25,13 +26,13 @@ export default function JobsHistory() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
       <div className="flex items-end justify-between">
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="font-display text-2xl tracking-tight text-landing">Agent 任务</h1>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 w-full text-sm text-muted">
             持久记录每次 Agent 执行，共 <span className="tabular-nums">{jobs.length}</span> 条。
           </p>
         </div>
-        {jobs.some((j) => j.status !== "running") && (
+        {jobs.some((j) => j.status === "done" || j.status === "error") && (
           <button
             onClick={clearFinished}
             className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
@@ -43,7 +44,7 @@ export default function JobsHistory() {
 
       {jobs.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-12 text-center text-sm text-muted">
-          还没有 Agent 任务。在待处理岗位中点击<span className="text-foreground">开始评估</span>即可创建任务。
+          还没有 Agent 任务。你可以在 Codex 等 Agent 中使用择程AI，或从 Web 工作台发起岗位评估。
         </div>
       ) : (
         <ul className="mt-6 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface/40">
@@ -54,6 +55,8 @@ export default function JobsHistory() {
                 <Link href={`/jobs/${j.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-hover">
                   {j.status === "running" ? (
                     <Loader2 className="size-4 shrink-0 animate-spin text-icon-brand" />
+                  ) : j.status === "waiting" ? (
+                    <AlertTriangle className="size-4 shrink-0 text-icon-warning" />
                   ) : j.status === "error" ? (
                     <AlertTriangle className="size-4 shrink-0 text-icon-danger" />
                   ) : (
@@ -64,6 +67,7 @@ export default function JobsHistory() {
                     {(j.subtitle || j.result?.summary) && (
                       <div className="truncate text-xs text-muted">{j.result?.summary || j.subtitle}</div>
                     )}
+                    <div className="mt-0.5 text-[11px] text-faint">{j.source === "agent" ? "Agent 原生入口" : "Web 工作台"}</div>
                   </div>
                   {j.result?.score != null && (
                     <span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums", TONE_CHIP[tone])}>

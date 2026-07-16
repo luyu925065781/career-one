@@ -7,14 +7,16 @@ import { Search, ChevronsUpDown, X, Compass, ArrowRight } from "lucide-react";
 import type { Application, InboxJob } from "@/lib/career-one";
 import { Badge } from "@/components/ui/badge";
 import { CompanyLogo } from "@/components/company-logo";
-import { canonStatus, scoreNum, scoreTone, statusDot } from "@/lib/format";
+import { StatusSelect } from "@/components/status-select";
+import { canonStatus, scoreNum, scoreTone } from "@/lib/format";
 import { InboxTriage } from "@/components/inbox/inbox-triage";
 import { cn } from "@/lib/cn";
 
-// INBOX (the triage queue) is the default tab; the rest filter the tracker.
+// ALL leads the navigation and is the default at the bare /pipeline route;
+// INBOX stays explicit so the pending-job triage flow remains directly addressable.
 const TABS = [
-  "INBOX",
   "ALL",
+  "INBOX",
   "EVALUATED",
   "APPLIED",
   "RESPONDED",
@@ -50,17 +52,6 @@ const SORT_LABELS: Record<SortKey, string> = {
   date: "日期",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  EVALUATED: "已评估",
-  APPLIED: "已投递",
-  RESPONDED: "已回复",
-  INTERVIEW: "面试中",
-  OFFER: "Offer",
-  REJECTED: "被拒",
-  DISCARDED: "已放弃",
-  SKIP: "跳过",
-};
-
 export function PipelineView({
   applications,
   inbox,
@@ -76,7 +67,7 @@ export function PipelineView({
   // tiles' deep links AND the assistant's filterPipeline/navigate actions drive
   // the table identically (no useState mirror → no desync).
   const pTab = (params.get("tab") ?? "").toUpperCase();
-  const tab: Tab = (TABS as readonly string[]).includes(pTab) ? (pTab as Tab) : "INBOX";
+  const tab: Tab = (TABS as readonly string[]).includes(pTab) ? (pTab as Tab) : "ALL";
   const pMin = parseFloat(params.get("min") ?? "");
   const minFilter: number | null = Number.isFinite(pMin) ? pMin : null;
   const pSort = params.get("sort") ?? "";
@@ -157,9 +148,9 @@ export function PipelineView({
   return (
     <div className="mx-auto max-w-6xl px-6 py-8 max-sm:pb-24">
       <div className="flex items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="font-display text-2xl tracking-tight text-landing">求职进度</h1>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 w-full text-sm text-muted">
             待评估 <span className="tabular-nums">{pendingInbox.length}</span> 个 ·{" "}
             已跟踪 <span className="tabular-nums">{applications.length}</span> 个
           </p>
@@ -190,7 +181,7 @@ export function PipelineView({
           return (
             <button
               key={t}
-              onClick={() => setParams({ tab: t === "INBOX" ? null : t })}
+              onClick={() => setParams({ tab: t === "ALL" ? null : t })}
               className={cn(
                 "-mb-px inline-flex items-center justify-center border-b-2 px-3 py-2 text-xs font-medium transition-colors max-sm:min-h-[44px]",
                 tab === t
@@ -261,11 +252,14 @@ export function PipelineView({
                   <td className="px-4 py-3">
                     <Badge tone={scoreTone(r.score)}>{r.score || "—"}</Badge>
                   </td>
-                  <td className="px-4 py-3 text-muted">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className={cn("size-1.5 shrink-0 rounded-full", statusDot(r.status))} />
-                      {STATUS_LABELS[canonStatus(r.status)] ?? r.status}
-                    </span>
+                  <td className="px-4 py-2.5">
+                    <StatusSelect
+                      n={r.n}
+                      current={r.status}
+                      showLabel={false}
+                      compact
+                      ariaLabel={`更新 ${r.company} · ${r.role} 的求职状态`}
+                    />
                   </td>
                   <td className="px-4 py-3 text-faint tabular-nums">{r.date}</td>
                 </tr>

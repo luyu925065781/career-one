@@ -10,8 +10,8 @@ export default function PortalsPage() {
         <Radar className="size-6 text-icon-brand" />
         <h1 className="font-display text-2xl tracking-tight text-landing">岗位来源</h1>
       </div>
-      <p className="mt-1.5 max-w-xl text-sm text-muted">
-        分别管理中国大陆招聘平台、目标公司和搜索规则。所有设置保存在本机，并由择程AI的扫描与 Agent 工作流共同使用。
+      <p className="mt-1.5 w-full text-sm text-muted">
+        管理招聘平台、目标公司和搜索规则。所有设置保存在本机，并由择程AI的扫描与 Agent 工作流共同使用。
       </p>
       <p className="mt-1.5 text-xs text-faint">
         数据来自 <code className="text-muted">portals.yml</code>，可以直接编辑，也可以让助手修改。

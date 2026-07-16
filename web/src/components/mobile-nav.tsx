@@ -9,7 +9,6 @@ import { CoMark } from "@/components/co-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { WorkerPills } from "@/components/jobs/worker-pills";
 import { UsageMeter } from "@/components/usage-meter";
-import { instrumentSerif } from "@/lib/fonts";
 import { NAV_ITEMS, isActivePath } from "@/lib/nav-items";
 import { useJobs } from "@/components/jobs/job-store";
 
@@ -39,7 +38,7 @@ export function MobileNav() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
   const { jobs } = useJobs();
-  const running = jobs.filter((j) => j.status === "running").length;
+  const running = jobs.filter((j) => j.status === "running" || j.status === "waiting").length;
 
   // Close on route change.
   useEffect(() => {
@@ -138,7 +137,7 @@ export function MobileNav() {
         onTouchEnd={onTouchEnd}
       >
         <div className="flex items-center justify-between px-4 py-3">
-          <span className={`${instrumentSerif.className} text-lg text-landing`}>菜单</span>
+          <span className={`font-display text-lg text-landing`}>菜单</span>
           <button
             type="button"
             onClick={() => setOpen(false)}
@@ -182,7 +181,7 @@ export function MobileNav() {
         <div className="co-msafe mt-auto space-y-3 border-t border-border px-4 pt-4">
           <UsageMeter />
           <div className="flex items-center justify-between">
-            <span className={`${instrumentSerif.className} text-sm text-faint`}>本地优先 · v0</span>
+            <span className={`font-display text-sm text-faint`}>本地优先 · v0</span>
             <ThemeToggle />
           </div>
         </div>

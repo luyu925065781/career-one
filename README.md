@@ -114,6 +114,23 @@ npm run build:distributions
 
 安装包只包含系统规则、脚本和模板。首次运行时在用户选择的目录创建本地工作区，再由 Agent 对话生成 `cv.md`、画像和岗位配置；这些个人数据不会进入 Skill 或 Plugin 包。
 
+### Agent 原生入口 + Web 工作台
+
+择程AI以 Agent 原生入口为主：评估、扫描、简历维护和面试准备都可以直接在 Codex 等 Agent 中完成，不依赖浏览器。Web 工作台是同一份本地数据的可视化伴侣，用来查看任务进度、打开报告，以及确认 Agent 提出的文件修改。
+
+```bash
+npm run dev:web
+```
+
+也可以直接对 Agent 说“打开择程AI工作台”，或使用便携入口启动并打开任务中心：
+
+```bash
+node .agents/skills/career-one/scripts/career-one.mjs web
+node .agents/skills/career-one/scripts/career-one.mjs web --page /jobs/<任务ID>
+```
+
+打开 Web 后进入“Agent 任务”即可看到 Agent 与 Web 发起的统一任务记录。Agent 会在任务开始时立即给出当前任务链接；岗位诊断完成后给出 `/pipeline/{报告编号}`，简历任务给出 `/cv`，面试故事任务给出 `/interview`。Agent 对 `cv.md`、个人配置、面试故事等用户文件的修改会先生成提案；只有用户在任务详情中确认后才会写入文件。如果 Web 没有启动，Agent 仍可独立完成任务，并在对话中给出结果和待确认事项。
+
 ### 交互式 Codex
 
 ```bash

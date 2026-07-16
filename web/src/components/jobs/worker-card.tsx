@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, X, Loader2, AlertTriangle } from "lucide-react";
+import { Check, X, Loader2, AlertTriangle, Clock3 } from "lucide-react";
 import type { Job } from "@/components/jobs/job-store";
 import { cn } from "@/lib/cn";
 
@@ -64,6 +64,7 @@ export const TONE = {
 
 export function pillTone(j: Job): keyof typeof TONE {
   if (j.status === "error") return "bad";
+  if (j.status === "waiting") return "warn";
   if (j.status === "done") return j.result?.tone ?? "muted";
   return "muted";
 }
@@ -93,6 +94,8 @@ export function WorkerCard({
       <div className="flex items-center gap-2">
         {job.status === "running" ? (
           <Loader2 className="size-3 shrink-0 animate-spin text-icon-brand" />
+        ) : job.status === "waiting" ? (
+          <Clock3 className={cn("size-3 shrink-0", tone.icon)} />
         ) : job.status === "error" ? (
           <AlertTriangle className={cn("size-3 shrink-0", tone.icon)} />
         ) : (
@@ -121,9 +124,9 @@ export function WorkerCard({
           <div className={cn("h-full w-full rounded-full", tone.bar)} />
         )}
       </div>
-      {(bottom || running) && (
+      {(bottom || running || job.status === "waiting") && (
         <div className={cn("mt-1 truncate text-faint", inline ? "text-xs" : "text-[10px]")}>
-          {running ? `${last ?? "执行中"} · ${fmtElapsed(elapsed)}` : bottom}
+          {running ? `${last ?? "执行中"} · ${fmtElapsed(elapsed)}` : job.status === "waiting" ? "等待你确认修改" : bottom}
         </div>
       )}
       {authError && (

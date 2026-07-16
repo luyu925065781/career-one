@@ -22,6 +22,15 @@ function splitQuestions(value) {
   return value.split(/[；;]/).map((item) => item.trim()).filter(Boolean);
 }
 
+/**
+ * @param {string} id
+ * @param {string} title
+ * @returns {{
+ *   id: string, title: string, status: string, tags: string[], questions: string[],
+ *   source: string, updatedAt: string, situation: string[], task: string[],
+ *   action: string[], result: string[], reflection: string[]
+ * }}
+ */
 function emptyStory(id, title) {
   return {
     id,
@@ -112,4 +121,142 @@ export function parseStoryBank(markdown) {
   });
 
   return { title, stories };
+}
+
+/**
+ * Validate the human/Agent editable Markdown before it replaces the user-owned
+ * story bank. Incomplete STAR sections are allowed (that is what 待完善 means),
+ * but the document identity and story headings must remain machine-readable.
+ *
+ * @param {string} markdown
+ * @returns {{ok: true} | {ok: false, error: string}}
+ */
+export function validateStoryBankMarkdown(markdown) {
+  if (typeof markdown !== "string" || !markdown.trim()) {
+    return { ok: false, error: "故事库不能为空。" };
+  }
+  const firstLine = markdown.trimStart().split(/\r?\n/, 1)[0].trim();
+  if (firstLine !== "# 面试故事库") {
+    return { ok: false, error: "一级标题必须是“# 面试故事库”。" };
+  }
+
+  const headings = [...markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
+  const malformed = headings.find((heading) => !/^S\d+\s*[·|-]\s*.+$/i.test(heading));
+  if (malformed) {
+    return { ok: false, error: `故事标题“${malformed}”不符合“## S01 · 标题”格式。` };
+  }
+
+  const parsed = parseStoryBank(markdown);
+  if (parsed.stories.length !== headings.length) {
+    return { ok: false, error: "部分故事标题无法解析，请检查编号和分隔符。" };
+  }
+  const ids = new Set();
+  for (const story of parsed.stories) {
+    if (ids.has(story.id)) return { ok: false, error: `故事编号重复：${story.id}。` };
+    ids.add(story.id);
+  }
+  return { ok: true };
+}
+
+function cleanInline(value) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function cleanLines(value) {
+  const values = Array.isArray(value) ? value : String(value ?? "").split(/\r?\n/);
+  return values.map((line) => cleanInline(line).replace(/^[-*]\s+/, "")).filter(Boolean);
+}
+
+/**
+ * Serialize one story, without the document-level heading. This is the only
+ * payload accepted by the per-story editor and Agent action.
+ *
+ * @param {ReturnType<typeof emptyStory>} story
+ * @returns {string}
+ */
+export function serializeStoryMarkdown(story) {
+  const id = cleanInline(story?.id).toUpperCase();
+  const title = cleanInline(story?.title);
+  const metadata = [
+    ["状态", cleanInline(story?.status) || "待完善"],
+    ["能力标签", cleanLines(story?.tags).join("、")],
+    ["适用问题", cleanLines(story?.questions).join("；")],
+    ["事实来源", cleanInline(story?.source)],
+    ["更新日期", cleanInline(story?.updatedAt)],
+  ].filter(([, value]) => value);
+  const sections = [
+    ["S 情境", cleanLines(story?.situation)],
+    ["T 任务", cleanLines(story?.task)],
+    ["A 行动", cleanLines(story?.action)],
+    ["R 结果", cleanLines(story?.result)],
+    ["Reflection 反思", cleanLines(story?.reflection)],
+  ];
+
+  const parts = [
+    `## ${id} · ${title}`,
+    metadata.map(([label, value]) => `- **${label}：** ${value}`).join("\n"),
+    ...sections.map(([heading, lines]) => {
+      const content = lines.length > 0 ? lines.map((line) => `- ${line}`).join("\n") : "";
+      return `### ${heading}\n\n${content}`.trimEnd();
+    }),
+  ];
+  return parts.join("\n\n").trim();
+}
+
+/**
+ * Validate a single story block and, when supplied, require its immutable ID.
+ *
+ * @param {string} storyMarkdown
+ * @param {string} [expectedId]
+ * @returns {{ok: true} | {ok: false, error: string}}
+ */
+export function validateStoryMarkdown(storyMarkdown, expectedId) {
+  if (typeof storyMarkdown !== "string" || !storyMarkdown.trim()) {
+    return { ok: false, error: "故事内容不能为空。" };
+  }
+  const trimmed = storyMarkdown.trim();
+  if (!/^##\s+S\d+\s*[·|-]\s*.+$/im.test(trimmed.split(/\r?\n/, 1)[0])) {
+    return { ok: false, error: "故事必须以“## S01 · 标题”开头。" };
+  }
+  if (/^#\s+/m.test(trimmed)) {
+    return { ok: false, error: "单个故事不能包含故事库一级标题。" };
+  }
+  const headings = [...trimmed.matchAll(/^##\s+(.+)$/gm)];
+  if (headings.length !== 1) {
+    return { ok: false, error: "单次维护只能包含一个故事。" };
+  }
+  const wrapped = `# 面试故事库\n\n${trimmed}\n`;
+  const bankValidation = validateStoryBankMarkdown(wrapped);
+  if (!bankValidation.ok) return bankValidation;
+  const [story] = parseStoryBank(wrapped).stories;
+  const normalizedExpected = cleanInline(expectedId).toUpperCase();
+  if (normalizedExpected && story.id !== normalizedExpected) {
+    return { ok: false, error: `故事编号必须是 ${normalizedExpected}，不能改为 ${story.id}。` };
+  }
+  return { ok: true };
+}
+
+/**
+ * Merge one validated story block into the full document while preserving the
+ * prefix and every non-target story byte-for-byte.
+ *
+ * @param {string} markdown
+ * @param {string} storyId
+ * @param {string} storyMarkdown
+ * @returns {string}
+ */
+export function replaceStoryInMarkdown(markdown, storyId, storyMarkdown) {
+  const normalizedId = cleanInline(storyId).toUpperCase();
+  if (!/^S\d+$/.test(normalizedId)) throw new Error("故事编号无效。");
+  const headings = [...String(markdown ?? "").matchAll(/^##\s+(S\d+)\s*[·|-]\s*.+$/gmi)];
+  const targetIndex = headings.findIndex((match) => match[1].toUpperCase() === normalizedId);
+  if (targetIndex < 0) throw new Error(`故事 ${normalizedId} 不存在，请刷新页面后重试。`);
+  const validation = validateStoryMarkdown(storyMarkdown, normalizedId);
+  if (!validation.ok) throw new Error(validation.error);
+
+  const start = headings[targetIndex].index;
+  const end = headings[targetIndex + 1]?.index ?? markdown.length;
+  const currentBlock = markdown.slice(start, end);
+  const trailing = currentBlock.match(/(?:\r?\n[\t ]*)+$/)?.[0] ?? "\n";
+  return `${markdown.slice(0, start)}${storyMarkdown.trim()}${trailing}${markdown.slice(end)}`;
 }

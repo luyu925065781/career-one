@@ -1,4 +1,5 @@
 import { BookOpenCheck, CircleAlert, CircleCheck, Database, Target } from "lucide-react";
+import { StoryActions } from "@/components/cv-editor";
 import { readStoryBank, type InterviewStory } from "@/lib/career-one";
 import { cn } from "@/lib/cn";
 
@@ -12,16 +13,18 @@ export default function InterviewStoryBankPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8 max-sm:pb-24">
-      <header className="flex items-start gap-3">
-        <BookOpenCheck className="mt-0.5 size-6 shrink-0 text-icon-brand" />
-        <div>
-          <h1 className="font-display text-2xl tracking-normal text-landing">面试故事库</h1>
-          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted">
-            从已核验经历中沉淀的 STAR+Reflection 主故事，按不同岗位和面试问题灵活调用。
-          </p>
-          <p className="mt-1 text-xs text-faint">
-            本地数据：<code className="font-mono text-muted">interview-prep/story-bank.md</code>
-          </p>
+      <header>
+        <div className="flex min-w-0 items-start gap-3">
+          <BookOpenCheck className="mt-0.5 size-6 shrink-0 text-icon-brand" />
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-2xl tracking-normal text-landing">面试故事库</h1>
+            <p className="mt-1.5 w-full text-sm leading-6 text-muted">
+              从已核验经历中沉淀的 STAR+Reflection 主故事，按不同岗位和面试问题灵活调用。
+            </p>
+            <p className="mt-1 text-xs text-faint">
+              本地数据：<code className="font-mono text-muted">interview-prep/story-bank.md</code>
+            </p>
+          </div>
         </div>
       </header>
 
@@ -87,15 +90,18 @@ function StoryCard({ story }: { story: InterviewStory }) {
             </div>
             <h2 className="mt-2 text-lg font-semibold leading-7 text-foreground">{story.title}</h2>
           </div>
-          <span className={cn(
-            "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-            usable
-              ? "border-emerald-500/25 bg-emerald-500/10 text-icon-success"
-              : "border-amber-500/25 bg-amber-500/10 text-icon-warning",
-          )}>
-            {usable ? <CircleCheck className="size-3.5" /> : <CircleAlert className="size-3.5" />}
-            {story.status}
-          </span>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <StoryActions story={story} />
+            <span className={cn(
+              "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
+              usable
+                ? "border-emerald-500/25 bg-emerald-500/10 text-icon-success"
+                : "border-amber-500/25 bg-amber-500/10 text-icon-warning",
+            )}>
+              {usable ? <CircleCheck className="size-3.5" /> : <CircleAlert className="size-3.5" />}
+              {story.status}
+            </span>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-1.5">

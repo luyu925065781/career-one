@@ -131,15 +131,15 @@ export async function POST(req: Request) {
   // For write-needing kinds, snapshot reports/ so we can verify the worker
   // actually persisted instead of trusting a final message.
   const reportsDir = path.join(careerOneRoot(), "reports");
-  const countReports = () => {
+  const listReports = () => {
     try {
-      return fs.readdirSync(reportsDir).filter((f) => f.endsWith(".md")).length;
+      return fs.readdirSync(reportsDir).filter((f) => f.endsWith(".md"));
     } catch {
-      return 0;
+      return [];
     }
   };
   const persists = kind === "evaluate";
-  const reportsBefore = persists ? countReports() : 0;
+  const reportsBefore = new Set(persists ? listReports() : []);
   // Tracker-mutating runs hold a write token so a row delete can't race their merge
   // (tracker.mjs delete doesn't yet share a lock with merge-tracker — see run-registry).
   const writeToken = kind === "evaluate" || kind === "pdf" ? acquireTrackerWrite() : null;
@@ -226,7 +226,8 @@ export async function POST(req: Request) {
       });
       child.on("error", (e) => { send({ type: "error", msg: e.message }); close(); });
       child.on("close", (code) => {
-        const wroteReport = countReports() > reportsBefore;
+        const newReports = persists ? listReports().filter((file) => !reportsBefore.has(file)).slice(0, 5) : [];
+        const wroteReport = newReports.length > 0;
         const cleanExit = code === 0; // non-zero OR null (killed/signal) = NOT clean
         // Honesty gate (#9): a green "done" with a parsed score requires a CLEAN exit,
         // real output, AND (for evaluations) a report actually written. Anything else
@@ -244,7 +245,15 @@ export async function POST(req: Request) {
           // instead of recording a confident score off a half-finished run.
           send({ type: "error", msg: "This run hit an error before finishing, so it isn't recorded as a confident result — re-run it to verify." });
         } else {
-          send({ type: "done", tokens: lastTokens, costUsd: lastCostUsd });
+          const artifacts = newReports.map((file) => {
+            const reportId = String(parseInt(file, 10));
+            return {
+              path: `reports/${file}`,
+              label: "岗位诊断报告",
+              page: /^\d+$/.test(reportId) ? `/pipeline/${reportId}` : "/pipeline",
+            };
+          });
+          send({ type: "done", tokens: lastTokens, costUsd: lastCostUsd, artifacts });
         }
         close();
       });

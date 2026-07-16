@@ -1,9 +1,7 @@
-import { ChevronDown, ExternalLink } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
-// Transparency = our differentiator ("why it's a 4.0 for YOU"). The wording is
-// the CANONICAL public text from career-one.org/methodology + /docs — rendered
-// verbatim, NOT a web reinterpretation of the rubric (whose weights live in the
-// core, modes/_shared.md). Native <details> → no client JS.
+// Keep the report explanation local and aligned with the scoring rubric in
+// modes/_shared.md. Native <details> keeps the disclosure usable without client JS.
 
 const DIMENSIONS: [string, string][] = [
   ["简历匹配度", "你的真实经历与岗位要求之间的对应程度"],
@@ -59,14 +57,6 @@ export function ScoreMethodology() {
             ))}
           </ul>
         </div>
-        <a
-          href="https://career-one.org/methodology"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-brand transition-colors hover:underline"
-        >
-          查看上游完整方法说明 <ExternalLink className="size-3" />
-        </a>
       </div>
     </details>
   );

@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { inter, instrumentSerif, instrumentSerifItalic } from "@/lib/fonts";
 import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 
@@ -30,7 +29,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="zh-CN"
       suppressHydrationWarning
-      className={`${inter.variable} ${instrumentSerif.variable} ${instrumentSerifItalic.variable}`}
     >
       <body className="font-sans antialiased">
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />

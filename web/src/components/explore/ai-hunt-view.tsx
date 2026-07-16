@@ -2,7 +2,6 @@
 
 import { Sparkles } from "lucide-react";
 import { ApplyBackdrop } from "@/components/apply/apply-backdrop";
-import { instrumentSerif } from "@/lib/fonts";
 import { useCountUp } from "./discovering-state";
 import { AiHuntTrace } from "./ai-hunt-trace";
 import { DiscoveryCard } from "./discovery-card";
@@ -41,7 +40,7 @@ export function AiHuntView({ cliName }: { cliName?: string }) {
         </span>
 
         <div>
-          <h2 className={`${instrumentSerif.className} text-3xl leading-tight text-foreground`}>
+          <h2 className={`font-display text-3xl leading-tight text-foreground`}>
             {matchCount > 0 ? `${shown} candidate${shown === 1 ? "" : "s"}` : "Hunting the open web"}
           </h2>
           <p className="mt-1 text-sm text-muted">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Sparkles, X, Settings } from "lucide-react";
 
 type Doctor = { available: boolean; onboardingNeeded: boolean; missing: string[]; warnings: string[] };
+const CONFIG_CHANGED_EVENT = "career-one:config-changed";
 
 function hasCli(): boolean {
   try {
@@ -30,11 +31,21 @@ export function OnboardingBanner() {
   const [cli, setCli] = useState(true); // assume until read (avoid CTA flash)
 
   useEffect(() => {
-    setCli(hasCli());
+    function readConfig() {
+      setCli(hasCli());
+    }
+
+    readConfig();
+    window.addEventListener("storage", readConfig);
+    window.addEventListener(CONFIG_CHANGED_EVENT, readConfig);
     fetch("/api/doctor")
       .then((r) => r.json())
       .then(setD)
       .catch(() => {});
+    return () => {
+      window.removeEventListener("storage", readConfig);
+      window.removeEventListener(CONFIG_CHANGED_EVENT, readConfig);
+    };
   }, []);
 
   if (dismissed || !d || !d.onboardingNeeded) return null;

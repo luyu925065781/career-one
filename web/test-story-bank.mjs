@@ -1,7 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseStoryBank } from "./src/lib/story-bank.mjs";
+import fs from "node:fs";
+import {
+  parseStoryBank,
+  replaceStoryInMarkdown,
+  serializeStoryMarkdown,
+  validateStoryBankMarkdown,
+  validateStoryMarkdown,
+} from "./src/lib/story-bank.mjs";
 import { formatAts, parseStories as parseCliStories, score, tokenize } from "../match-star.mjs";
+
+const readWeb = (relative) => fs.readFileSync(new URL(relative, import.meta.url), "utf8");
 
 const FIXTURE = `# 面试故事库
 
@@ -108,4 +117,89 @@ test("CLI formatter reports Chinese length without an English word-count warning
 
   assert.match(output, /约\d+个中文字符/);
   assert.doesNotMatch(output, /Under 250 words/);
+});
+
+test("validates the editable story-bank contract before any write", () => {
+  assert.deepEqual(validateStoryBankMarkdown(FIXTURE), { ok: true });
+  assert.match(validateStoryBankMarkdown("# 其他文档\n").error, /一级标题/);
+  assert.match(
+    validateStoryBankMarkdown(`${FIXTURE}\n## S02 · 重复编号\n`).error,
+    /编号重复/,
+  );
+  assert.match(validateStoryBankMarkdown("# 面试故事库\n\n## 普通标题\n").error, /故事标题/);
+});
+
+test("serializes and validates exactly one story for scoped maintenance", () => {
+  const [story] = parseStoryBank(FIXTURE).stories.filter((item) => item.id === "S01");
+  const markdown = serializeStoryMarkdown({
+    ...story,
+    title: "只优化这一条故事",
+    reflection: ["保留事实边界。"],
+  });
+
+  assert.match(markdown, /^## S01 · 只优化这一条故事/m);
+  assert.deepEqual(validateStoryMarkdown(markdown, "S01"), { ok: true });
+  assert.match(validateStoryMarkdown(markdown, "S02").error, /编号必须是 S02/);
+  assert.match(validateStoryMarkdown(`${markdown}\n\n${markdown}`, "S01").error, /只能包含一个故事/);
+});
+
+test("replaces only the requested story and preserves every other byte", () => {
+  const targetStart = FIXTURE.indexOf("## S01");
+  const untouchedStart = FIXTURE.indexOf("## S02");
+  const untouched = FIXTURE.slice(untouchedStart);
+  const replacement = serializeStoryMarkdown({
+    ...parseStoryBank(FIXTURE).stories.find((story) => story.id === "S01"),
+    title: "已单独优化",
+    reflection: ["只修改 S01。"],
+  });
+  const result = replaceStoryInMarkdown(FIXTURE, "S01", replacement);
+
+  assert.equal(result.slice(0, targetStart), FIXTURE.slice(0, targetStart));
+  assert.equal(result.slice(result.indexOf("## S02")), untouched);
+  assert.match(result, /## S01 · 已单独优化/);
+  assert.throws(() => replaceStoryInMarkdown(FIXTURE, "S09", replacement), /不存在/);
+  assert.throws(() => replaceStoryInMarkdown(FIXTURE, "S02", replacement), /编号必须是 S02/);
+});
+
+test("interview page exposes maintenance actions on every story card, not in the page header", () => {
+  const page = readWeb("./src/app/interview/page.tsx");
+  const manager = readWeb("./src/components/cv-editor.tsx");
+
+  assert.match(page, /<StoryActions story=\{story\}/);
+  assert.doesNotMatch(page, /<StoryBankManager/);
+  assert.match(manager, /export function StoryActions/);
+  assert.match(manager, /AI 优化/);
+  assert.match(manager, /手动维护/);
+  assert.match(manager, /story\.id/);
+  assert.match(manager, /co-assistant/);
+});
+
+test("story writes are fixed-path, single-story merged, version-checked, and backed up", () => {
+  const route = readWeb("./src/app/api/cv/route.ts");
+
+  assert.match(route, /story-bank/);
+  assert.match(route, /storyId/);
+  assert.match(route, /storyMarkdown/);
+  assert.match(route, /baseHash/);
+  assert.match(route, /status:\s*409/);
+  assert.match(route, /replaceStoryInMarkdown/);
+  assert.match(route, /atomicWriteWithBackup/);
+});
+
+test("AI proposals target one story and remain confirm-gated", () => {
+  const assistant = readWeb("./src/app/api/assistant/route.ts");
+  const registry = readWeb("./src/app/actions/registry.ts");
+  const consoleView = readWeb("./src/components/assistant-console.tsx");
+
+  assert.match(assistant, /setStory/);
+  assert.match(assistant, /storyId/);
+  assert.match(assistant, /storyMarkdown/);
+  assert.match(assistant, /baseHash/);
+  assert.match(assistant, /interview-prep\/story-bank\.md/);
+  assert.match(registry, /setStory/);
+  assert.match(registry, /status:\s*"confirm"/);
+  assert.match(registry, /writeStory/);
+  assert.match(registry, /preview:\s*storyMarkdown/);
+  assert.match(consoleView, /storyId, storyMarkdown, baseHash/);
+  assert.match(consoleView, /查看完整草稿/);
 });

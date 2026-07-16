@@ -17,6 +17,8 @@ const COMMANDS = {
   find: { script: "find.mjs", defaults: [] },
   pdf: { script: "generate-pdf.mjs", defaults: [] },
   status: { script: "market-cn.mjs", defaults: ["status"] },
+  run: { script: "agent-runs.mjs", defaults: ["list"] },
+  web: { script: "start-web.mjs", defaults: ["--open"], alwaysDefaults: true },
 };
 
 const HELP = `择程AI（career-one）便携命令
@@ -31,6 +33,9 @@ const HELP = `择程AI（career-one）便携命令
   career-one.mjs find [参数]                  查找报告或岗位
   career-one.mjs pdf [参数]                   生成 PDF
   career-one.mjs status                       查看中国大陆工作区状态
+  career-one.mjs run [start|progress|complete|fail|list|propose|approve|reject]
+                                              记录 Agent/Web 共享任务与待确认修改
+  career-one.mjs web [--page /页面]             启动或复用工作台并打开指定页面
   career-one.mjs version                      显示运行时版本
 
 岗位评估、简历定制和面试准备属于 Agent 工作流，由 SKILL.md 调度。`;
@@ -72,7 +77,9 @@ function run(command, args) {
   const spec = COMMANDS[command];
   const workspace = resolveWorkspace(args);
   const forwarded = withoutOption(args, "--workspace");
-  const finalArgs = forwarded.length ? forwarded : spec.defaults;
+  const finalArgs = spec.alwaysDefaults
+    ? [...spec.defaults, ...forwarded]
+    : forwarded.length ? forwarded : spec.defaults;
   const script = join(workspace, spec.script);
   if (!existsSync(script)) fail(`工作区缺少 ${spec.script}，请重新安装或更新择程AI。`);
   const result = spawnSync(process.execPath, [script, ...finalArgs], { cwd: workspace, stdio: "inherit" });
@@ -99,6 +106,13 @@ function init(args) {
     const install = spawnSync(NPM, ["install", "--ignore-scripts"], { cwd: target, stdio: "inherit" });
     if (install.error || install.status !== 0) {
       fail(`工作区已创建，但依赖安装失败。请进入 ${target} 后运行 npm install --ignore-scripts。`);
+    }
+    const webDir = join(target, "web");
+    if (existsSync(join(webDir, "package.json"))) {
+      const webInstall = spawnSync(NPM, ["install", "--ignore-scripts"], { cwd: webDir, stdio: "inherit" });
+      if (webInstall.error || webInstall.status !== 0) {
+        fail(`基础工作区已创建，但 Web 依赖安装失败。请进入 ${webDir} 后运行 npm install --ignore-scripts。`);
+      }
     }
   }
 

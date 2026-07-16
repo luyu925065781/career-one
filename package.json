@@ -4,6 +4,7 @@
   "description": "择程AI：面向中国大陆用户的本地优先 AI 求职工作台，可由 Codex、Claude Code、OpenCode、TRAE 等 Agent 驱动",
   "private": true,
   "scripts": {
+    "dev:web": "node start-web.mjs",
     "test:brand": "node career-one-migration-tests.mjs",
     "build:distributions": "node distribution/build-packages.mjs",
     "test:distributions": "node --test distribution/distribution.test.mjs",

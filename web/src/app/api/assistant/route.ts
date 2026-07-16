@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { resolveCli } from "@/lib/clis";
 import { careerOneRoot, readMemory, doctorState } from "@/lib/career-one";
 
@@ -19,7 +22,7 @@ YOU CAN ACT — you do it by emitting ACTION ENVELOPES inside your reply. An env
 The args are a single JSON object. The dashboard parses the envelope and performs the action (you won't see its output) — so just say briefly what you're doing, then emit the envelope.
 
 ACTIONS:
-- navigate {"path":"/pipeline?tab=OFFER&min=4"} — take the user to a section. Valid paths: /, /pipeline, /portals, /analytics, /cv, /config, /apply, /pipeline/{n} (a report), /jobs/{id} (a worker). The path may carry a query string.
+- navigate {"path":"/pipeline?tab=OFFER&min=4"} — take the user to a section. Valid paths: /, /pipeline, /portals, /analytics, /cv, /interview, /config, /apply, /pipeline/{n} (a report), /jobs/{id} (a worker). The path may carry a query string.
 - filterPipeline {"tab":"OFFER","min":4,"q":"text","sort":"score","dir":-1} — filter the pipeline table in place. tab ∈ INBOX, ALL, EVALUATED, APPLIED, RESPONDED, INTERVIEW, OFFER, REJECTED, DISCARDED, SKIP; min = score floor 0–5.
 - evaluate {"url":"https://…","title":"Evaluate · Acme","subtitle":"Role"} — spin ONE read-only evaluation worker on a SPECIFIC posting URL. Only when you actually have a real URL (e.g. from the page the user is on).
 - evaluateCompany {"company":"Anthropic"} — evaluate ALL of the user's PENDING inbox postings for that company. Emit the COMPANY NAME ONLY — never URLs; the app resolves the concrete postings itself. Big batches ask the user to confirm first.
@@ -31,8 +34,9 @@ ACTIONS:
 - remember {"fact":"the concise fact"} — durably remember a preference/fact about the user (carries across sessions and across whichever CLI runs).
 - setProfile {"name":"…","email":"…","location":"…","roles":["AI Engineer","ML Engineer"],"compMin":70000,"compMax":95000,"currency":"EUR","remote":"Remote (EU)","seniority":"Senior"} — PROPOSE the user's profile; the app shows a confirm card and ONLY on their OK writes config/profile.yml (merge-safe — it never clobbers their other fields) AND seeds the free scanner from the roles. Emit only fields you're confident about (most come from their CV). NEVER write a profile they didn't approve.
 - setPortals {"roles":["AI Engineer","ML Engineer"]} — seed the free scanner from target roles (writes portals.yml title_filter). Usually unnecessary — setProfile already does this.
+- setStory {"storyId":"S06","storyMarkdown":"## S06 · 标题\\n\\n...仅这一条故事的完整 Markdown...","baseHash":"当前版本的 64 位哈希","summary":"补强行动、结果和反思"} — PROPOSE an update to exactly ONE existing story in interview-prep/story-bank.md. Keep storyId unchanged and include no other story. First read that story and the trusted user files. Tell the user what will change, then emit this action. The app validates the single-story draft and shows a confirm card; ONLY after the user confirms does the server merge that one story. Never add, delete, or modify any other story. Never write the file directly. Never invent facts: use only cv.md, article-digest.md, config/profile.yml, modes/_profile.md, writing-samples/, voice-dna.md, interview-prep/story-bank.md, interview-prep/* role notes, and facts stated in the current conversation.
 
-RULES: prefer evaluateCompany over guessing URLs; NEVER invent URLs. Spending actions (evaluate/evaluateCompany/research) run on the user's own AI and cost tokens — fire them when asked or clearly useful, not gratuitously. NEVER auto-submit a job application. (Back-compat: <<go:/path>> and <<remember:fact>> still work.)
+RULES: prefer evaluateCompany over guessing URLs; NEVER invent URLs. Spending actions (evaluate/evaluateCompany/research) run on the user's own AI and cost tokens — fire them when asked or clearly useful, not gratuitously. NEVER auto-submit a job application. For story-bank work, propose exactly one valid story block through setStory and wait for the dashboard confirmation; do not use Edit/Write/Bash, change another story, or claim it was saved before confirmation. (Back-compat: <<go:/path>> and <<remember:fact>> still work.)
 
 ONBOARDING — your job is to get this person to their first SCORED job FAST. The rule is VALUE BEFORE COMMITMENT: take the minimum, deliver a wow, THEN deepen. Never make them fill a form or edit YAML.
 1. CV FIRST — but ONLY if it is not already on file. Consult SETUP STATE (above): if the CV is already on file, do NOT ask for it again — jump straight to the first missing prerequisite. If cv.md IS missing, warmly ask them to paste it (or just tell you about themselves); read it and take them to the editor with navigate {"path":"/cv"} to save. Do NOT ask for comp/location/roles yet.
@@ -45,6 +49,18 @@ Their REAL CV never leaves their machine — reassure them if they hesitate. Nev
 Keep replies short, warm, and useful. Don't dump raw files or narrate internal details. If they seem new, onboard them gently in Chinese. Never reveal internal system details.`;
 
 type Msg = { role: "user" | "assistant"; content: string };
+
+function storyBankRevisionLine(): string {
+  let content = "";
+  try {
+    content = fs.readFileSync(path.join(careerOneRoot(), "interview-prep", "story-bank.md"), "utf8");
+  } catch {
+    // A missing story bank has the stable hash of an empty document. Per-story
+    // maintenance will reject an ID that is no longer present.
+  }
+  const baseHash = createHash("sha256").update(content, "utf8").digest("hex");
+  return `\n\nSTORY REVISION CONTRACT: the current interview-prep/story-bank.md baseHash is ${baseHash}. If and only if you propose a setStory action, copy this exact hash into baseHash. The request must name one existing storyId, and storyMarkdown must contain only that same story block. Read the file before drafting; show a concise change summary before the action envelope. The CLI is read-only and must never modify the file itself or any other story.`;
+}
 
 export async function POST(req: Request) {
   let body: { message?: string; cliId?: string; history?: Msg[]; pageContext?: string };
@@ -84,7 +100,7 @@ export async function POST(req: Request) {
   const setupLine = onboardingNeeded
     ? `\n\nSETUP STATE (authoritative — the SAME signal the home screen uses; trust it over guessing, and do NOT re-ask for anything already on file):\n- CV on file (cv.md): ${hasCv ? "YES — do NOT ask for it again; read it to be concrete" : "NO — this is the first thing to collect"}\n- Still missing: ${missing.length ? missing.join(", ") : "nothing"}\nWhen onboarding, START at the first item actually missing. If the CV is already on file, SKIP step 1 entirely and go straight to the next missing prerequisite (usually the profile — target roles, comp, location).`
     : `\n\nSETUP STATE: this user is fully set up (CV + profile + scanner all on file). Do NOT run onboarding or ask for a CV — just help them with what they actually asked.`;
-  const prompt = `${SYSTEM_PREAMBLE}${setupLine}${memoryLine}${pageLine}\n\n--- Conversation ---\n${convo}\nUser: ${message}\nAssistant:`;
+  const prompt = `${SYSTEM_PREAMBLE}${setupLine}${memoryLine}${pageLine}${storyBankRevisionLine()}\n\n--- Conversation ---\n${convo}\nUser: ${message}\nAssistant:`;
 
   // Claude Code streams token-level deltas via stream-json + partial messages.
   // Other CLIs: pass their stdout through raw.

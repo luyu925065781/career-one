@@ -17,13 +17,15 @@ export function WorkerPills() {
   const pathname = usePathname();
   if (jobs.length === 0) return null;
   const running = jobs.filter((j) => j.status === "running").length;
-  const finished = jobs.length - running;
+  const waiting = jobs.filter((j) => j.status === "waiting").length;
+  const finished = jobs.filter((j) => j.status === "done" || j.status === "error").length;
 
   return (
     <div className="mt-4 border-t border-border pt-3">
       <div className="mb-2 flex items-center gap-2 px-1">
         <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">Agent 任务</span>
         {running > 0 && <span className="text-[10px] tabular-nums text-brand">{running} 个运行中</span>}
+        {running === 0 && waiting > 0 && <span className="text-[10px] tabular-nums text-icon-warning">{waiting} 个待确认</span>}
         <Link href="/jobs" className="ml-auto text-faint transition-colors hover:text-foreground" title="历史记录" aria-label="Agent 任务历史">
           <History className="size-3.5" />
         </Link>

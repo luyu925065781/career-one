@@ -45,7 +45,7 @@ export default function Analytics() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
       <h1 className="font-display text-2xl tracking-tight text-landing">数据分析</h1>
-      <p className="mt-1 text-sm text-muted">共跟踪 {total} 次岗位评估。</p>
+      <p className="mt-1 w-full text-sm text-muted">共跟踪 {total} 次岗位评估。</p>
 
       {/* headline stats */}
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">

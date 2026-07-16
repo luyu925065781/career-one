@@ -31,8 +31,47 @@ node <skill-root>/scripts/career-one.mjs init ./career-one
 | `node <skill-root>/scripts/career-one.mjs doctor` | 检查 onboarding 和依赖状态 |
 | `node <skill-root>/scripts/career-one.mjs verify` | 验证本地求职数据完整性 |
 | `node <skill-root>/scripts/career-one.mjs tracker` | 查询求职进度 |
+| `node <skill-root>/scripts/career-one.mjs run [子命令]` | 记录 Agent/Web 共享任务、结果与待确认修改 |
+| `node <skill-root>/scripts/career-one.mjs web [--page /页面]` | 启动或复用 Web 工作台，并打开任务上下文页面 |
 
 岗位评估、简历定制和面试准备仍由 Agent 按下方模式执行；便携 CLI 不自行调用模型。
+
+## Agent 原生任务与 Web 工作台协作
+
+Agent 是完整入口，Web 工作台是可选的可视化伴侣。无论 Web 是否启动，任务都必须可以完成；Web 下次打开后会从 `data/agent-runs.json` 读取同一份进度、结果、产物和待确认修改。
+
+执行会生成报告、PDF、面试材料或用户文件修改的工作流时：
+
+1. 开始前创建任务，保存返回的 `id`：
+   `node <skill-root>/scripts/career-one.mjs run start --intent <意图> --title <中文标题> --source agent [--input <简短输入>] [--page </页面>]`
+2. 长任务在关键阶段记录简短中文进度：
+   `node <skill-root>/scripts/career-one.mjs run progress <id> --label <当前阶段>`
+3. 成功后记录摘要、分数、正式产物和 Web 页面：
+   `node <skill-root>/scripts/career-one.mjs run complete <id> --summary <摘要> [--score <0-5>] [--artifact 'reports/文件.md|岗位诊断报告|/pipeline/编号'] [--page </页面>]`
+4. 失败或被阻塞时记录真实原因：
+   `node <skill-root>/scripts/career-one.mjs run fail <id> --error <原因>`
+
+不得把完整 JD、简历正文或秘密写入任务摘要；任务记录只保存短输入、进度和正式产物的相对路径。
+
+修改 `cv.md`、画像、求职规则或单个面试故事时，不直接覆盖目标文件。先把完整候选内容写入临时草稿，再创建提案：
+
+`node <skill-root>/scripts/career-one.mjs run propose <id> --target <用户层文件> --draft <临时草稿> --summary <修改摘要>`
+
+创建后停止落盘并请用户确认。用户明确同意后才运行 `run approve <proposal-id>`；拒绝时运行 `run reject <proposal-id>`。确认脚本会校验文件版本，目标文件在提案后发生变化时必须重新生成提案，不得覆盖较新的用户修改。
+
+最终回复始终先给结果，再列出：修改或生成了什么、相对文件路径、是否有待确认提案、建议的下一步，以及可在 Web 工作台打开的页面。不得为了显示进度而要求用户启动 Web。
+
+每个 Agent 任务都必须向用户展示可点击的本地入口；不要只报文件路径：
+
+- 工作台总入口：`[打开工作台](http://localhost:3000/jobs)`
+- 当前任务：`[查看当前任务](http://localhost:3000/jobs/<任务ID>)`
+- 岗位诊断完成后：`[查看诊断报告](http://localhost:3000/pipeline/{报告编号})`
+- 简历创建、优化或待确认修改：`[打开简历页面](http://localhost:3000/cv)`
+- 单个面试故事修改：`[打开面试故事库](http://localhost:3000/interview)`
+- 求职画像或规则修改：`[打开设置](http://localhost:3000/config)`
+- 岗位渠道设置：`[打开岗位来源](http://localhost:3000/portals)`
+
+任务仍在执行时立即给出“查看当前任务”链接，用户可在 Web 中实时查看进度。任务完成后，再给最具体的结果页链接。工作台尚未运行时，先运行 `node <skill-root>/scripts/career-one.mjs web --page <任务页面>`；正在运行时该命令会安全复用现有服务，不关闭端口上的其他进程。除非用户明确要求，不要在每个后台步骤重复弹出浏览器。
 
 ### Codex 调用
 
@@ -137,7 +176,7 @@ node doctor.mjs --json
 - 薪资、试用期、五险一金、年终奖、期权、竞业和工作强度风险
 - 建议追问的问题
 - 投递、先沟通、观察或放弃的明确建议
-- 可选的 BOSS直聘开场话术
+- 可选的面试开场话术；报告标题统一写为“面试开场话术”，不添加招聘平台名称
 
 完成岗位评估后必须同步 `interview-prep/story-bank.md`：不存在则创建；按真实经历与核心结果去重；同一岗位的中英文报告不得生成重复故事；所有事实必须能追溯到允许的用户层文件，信息不足时标记为“待完善”。
 

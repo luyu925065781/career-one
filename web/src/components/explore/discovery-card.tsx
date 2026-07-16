@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { ExternalLink, Plus, Check, Loader2, ShieldQuestion, Sparkles, Coins } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { instrumentSerif } from "@/lib/fonts";
 import { ATS_LABEL, type AtsSource, type DiscoveredOffer } from "@/lib/explore";
 import { useJobs } from "@/components/jobs/job-store";
 import { useExplore } from "./explore-provider";
@@ -67,7 +66,7 @@ export function DiscoveryCard({ offer, inPipeline, evaluatedN }: { offer: Discov
       <div className="flex items-start gap-3">
         <Logo company={offer.company} />
         <a href={offer.url} target="_blank" rel="noopener noreferrer" className="block min-w-0 flex-1 max-sm:min-h-[44px]">
-          <h3 className={`${instrumentSerif.className} truncate text-[17px] leading-tight text-foreground transition-colors group-hover:text-brand`}>{offer.title}</h3>
+          <h3 className={`font-display truncate text-[17px] leading-tight text-foreground transition-colors group-hover:text-brand`}>{offer.title}</h3>
           <p className="mt-0.5 truncate text-[13px] text-muted">
             {offer.company}
             {offer.location && <span className="text-faint"> · {offer.location}</span>}
