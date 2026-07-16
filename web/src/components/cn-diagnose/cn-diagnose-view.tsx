@@ -125,6 +125,20 @@ function responseFromTask(task: DiagnosisTask): ApiResponse {
   return { ok: task.status === "completed", result: task.result, files: task.files, warnings: [] };
 }
 
+function formatDiagnosisModules(result: DiagnoseResult): string {
+  const bullets = (items: string[]) => items.map((item) => `- ${item}`).join("\n");
+  return [
+    `# ${result.company} · ${result.role}`,
+    `评分：${result.score.toFixed(1)}/5 · ${result.verdict}`,
+    `## 正向信号\n${bullets(result.positiveSignals)}`,
+    `## 匹配雷达\n${bullets(result.meters.map((meter) => `${meter.label}：${meter.value}%`))}`,
+    `## 剩余风险\n${bullets(result.risks)}`,
+    `## 沟通后的分流规则\n${bullets(result.decisionRules.map((rule) => `${rule.label}：${rule.body}`))}`,
+    `## 必须追问\n${bullets(result.questions)}`,
+    `## 你在这个岗位里的最佳表达\n${bullets(result.positioning)}`,
+  ].join("\n\n");
+}
+
 function formatTaskTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "时间未知";
@@ -341,7 +355,7 @@ function ResultPanel({ response }: { response: ApiResponse | null }) {
           </div>
           <h2 className={`font-display text-4xl text-landing`}>等待诊断输入</h2>
           <p className="mt-4 max-w-xl text-sm leading-7 text-muted">
-            生成后这里会出现评分、正向信号、剩余风险、追问问题、面试开场话术和本地 HTML 报告链接。
+            生成后这里会集中展示正向信号、匹配雷达、剩余风险、沟通分流规则、必须追问和最佳表达，并提供面试开场话术与本地 HTML 报告。
           </p>
         </div>
         <div className="rounded-xl border border-border bg-surface/70 p-4 text-xs leading-6 text-faint">
@@ -376,53 +390,107 @@ function ResultPanel({ response }: { response: ApiResponse | null }) {
         </div>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card className="bg-surface/55">
-          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold"><BrainCircuit className="size-4 text-icon-brand" /> 匹配雷达</h3>
-          <div className="grid gap-4">
-            {result.meters.map((m) => (
-              <div key={m.label}>
-                <div className="mb-2 flex justify-between text-xs font-semibold text-muted">
-                  <span>{m.label}</span>
-                  <span>{m.value}%</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-surface-hover">
-                  <div
-                    className={cn("h-full rounded-full", m.tone === "risk" ? "bg-red-500" : "bg-gradient-to-r from-brand to-emerald-500")}
-                    style={{ width: `${m.value}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+      <section aria-labelledby="diagnosis-modules-title" className="grid gap-4">
+        <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 id="diagnosis-modules-title" className="text-lg font-semibold text-foreground">岗位诊断结论</h2>
+            <p className="mt-1 text-sm leading-6 text-faint">六个模块使用同一份岗位信息与用户证据生成，便于放在一起复核和优化。</p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 whitespace-nowrap"
+            onClick={() => navigator.clipboard?.writeText(formatDiagnosisModules(result))}
+          >
+            <Copy className="size-3.5" />
+            复制六模块
+          </Button>
+        </div>
+
+        <div className="grid gap-4 2xl:grid-cols-2">
+          <Card className="bg-surface/55">
+            <h3 className="mb-4 flex items-center gap-2 text-base font-semibold">
+              <CheckCircle2 className="size-4 text-icon-success" />
+              正向信号
+            </h3>
+            <BulletList items={result.positiveSignals} tone="good" />
+          </Card>
+
+          <Card className="bg-surface/55">
+            <h3 className="mb-4 flex items-center gap-2 text-base font-semibold">
+              <BrainCircuit className="size-4 text-icon-brand" />
+              匹配雷达
+            </h3>
+            <div className="grid gap-4">
+              {result.meters.map((m) => (
+                <div key={m.label}>
+                  <div className="mb-2 flex justify-between text-xs font-semibold text-muted">
+                    <span>{m.label}</span>
+                    <span>{m.value}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-surface-hover">
+                    <div
+                      className={cn("h-full rounded-full", m.tone === "risk" ? "bg-red-500" : "bg-gradient-to-r from-brand to-emerald-500")}
+                      style={{ width: `${m.value}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="bg-surface/55">
+            <h3 className="mb-4 flex items-center gap-2 text-base font-semibold">
+              <AlertTriangle className="size-4 text-icon-danger" />
+              剩余风险
+            </h3>
+            <BulletList items={result.risks} tone="risk" />
+          </Card>
+
+          <Card className="bg-surface/55">
+            <h3 className="mb-4 flex items-center gap-2 text-base font-semibold">
+              <Radar className="size-4 text-icon-brand" />
+              沟通后的分流规则
+            </h3>
+            <div className="grid gap-3">
+              {result.decisionRules.map((rule, index) => (
+                <div
+                  key={`${rule.label}-${index}`}
+                  className={cn(
+                    "border-l-2 bg-background/70 px-4 py-3",
+                    index === 0 ? "border-emerald-500" : index === 1 ? "border-brand" : "border-red-500",
+                  )}
+                >
+                  <div className="text-sm font-semibold text-foreground">{rule.label}</div>
+                  <p className="mt-1 text-sm leading-6 text-muted">{rule.body}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        <Card className="bg-surface/55">
+          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold">
+            <MessageSquareText className="size-4 text-icon-info" />
+            必须追问
+          </h3>
+          <BulletList items={result.questions} tone="question" />
         </Card>
 
         <Card className="bg-surface/55">
-          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold"><Save className="size-4 text-icon-brand" /> 报告文件</h3>
-          <div className="space-y-3 text-sm leading-7 text-muted">
-            <p>HTML 报告已写入本地输出目录。</p>
-            {response.files?.htmlUrl && (
-              <a className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover" href={response.files.htmlUrl} target="_blank" rel="noreferrer">
-                <ExternalLink className="size-4" />
-                打开报告页面
-              </a>
-            )}
-            {response.files?.htmlRel && <p className="break-all font-mono text-xs text-faint">{response.files.htmlRel}</p>}
-            {response.warnings?.length ? (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
-                {response.warnings.map((w) => <div key={w}>{w}</div>)}
-              </div>
-            ) : null}
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="flex items-center gap-2 text-base font-semibold">
+              <Sparkles className="size-4 text-icon-brand" />
+              你在这个岗位里的最佳表达
+            </h3>
+            <Button variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(result.positioning.join("\n"))}>
+              <Copy className="size-3.5" />
+              复制
+            </Button>
           </div>
+          <BulletList items={result.positioning} tone="good" />
         </Card>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card className="bg-surface/55"><h3 className="mb-4 text-base font-semibold">正向信号</h3><BulletList items={result.positiveSignals} tone="good" /></Card>
-        <Card className="bg-surface/55"><h3 className="mb-4 text-base font-semibold">剩余风险</h3><BulletList items={result.risks} tone="risk" /></Card>
-      </div>
-
-      <Card className="bg-surface/55"><h3 className="mb-4 text-base font-semibold">必须追问</h3><BulletList items={result.questions} tone="question" /></Card>
+      </section>
 
       <Card className="bg-surface/55">
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -433,6 +501,25 @@ function ResultPanel({ response }: { response: ApiResponse | null }) {
           </Button>
         </div>
         <pre className="whitespace-pre-wrap rounded-xl border border-border bg-pre-bg p-4 text-sm leading-7 text-foreground">{result.openingMessage}</pre>
+      </Card>
+
+      <Card className="bg-surface/55">
+        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold"><Save className="size-4 text-icon-brand" /> 报告文件</h3>
+        <div className="space-y-3 text-sm leading-7 text-muted">
+          <p>HTML 报告已写入本地输出目录，内容与上方六个诊断模块保持一致。</p>
+          {response.files?.htmlUrl && (
+            <a className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover" href={response.files.htmlUrl} target="_blank" rel="noreferrer">
+              <ExternalLink className="size-4" />
+              打开报告页面
+            </a>
+          )}
+          {response.files?.htmlRel && <p className="break-all font-mono text-xs text-faint">{response.files.htmlRel}</p>}
+          {response.warnings?.length ? (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+              {response.warnings.map((w) => <div key={w}>{w}</div>)}
+            </div>
+          ) : null}
+        </div>
       </Card>
     </div>
   );

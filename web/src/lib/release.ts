@@ -1,3 +1,5 @@
+import releaseConfig from "../../release.config.json";
+
 export type ReleaseChannel = "stable" | "beta" | "development";
 export type FeatureStage = "stable" | "beta" | "development" | "hidden";
 export type FeatureId =
@@ -114,4 +116,3 @@ export function isPathEnabled(
   const feature = featureForPath(pathname);
   return feature ? isFeatureEnabled(feature, channel) : true;
 }
-import releaseConfig from "../../release.config.json";

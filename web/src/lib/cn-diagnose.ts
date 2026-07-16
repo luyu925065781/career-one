@@ -87,8 +87,8 @@ export function renderChinaDiagnosisHtml(result: CnDiagnoseResult, imageRels: st
       <article class="panel card span-6"><div class="kicker">Risks</div><h2>剩余风险</h2>${list(result.risks, "risk-list")}</article>
       <article class="panel card span-6"><div class="kicker">Decision Rule</div><h2>沟通后的分流规则</h2><div class="decision">${result.decisionRules.map((r) => `<div class="decision-item"><b>${escapeHtml(r.label)}</b><p>${escapeHtml(r.body)}</p></div>`).join("")}</div></article>
       <article class="panel card span-5"><div class="kicker">Questions</div><h2>必须追问</h2><ol class="questions">${result.questions.map((q) => `<li>${escapeHtml(q)}</li>`).join("")}</ol></article>
-      <article class="panel card span-7"><div class="kicker">Interview Opener</div><h2>面试开场话术</h2><pre class="script">${escapeHtml(result.openingMessage)}</pre></article>
-      <article class="panel card span-12"><div class="kicker">Positioning</div><h2>你在这个岗位里的最佳表达</h2>${list(result.positioning, "signal-list")}<div class="footer">AI 诊断基于当前岗位输入与工作区内已确认的用户事实生成。若截图缺少完整 JD，请补充更多连续截图后重新分析。沟通后再决定是否写入正式 tracker。</div></article>
+      <article class="panel card span-7"><div class="kicker">Positioning</div><h2>你在这个岗位里的最佳表达</h2>${list(result.positioning, "signal-list")}<div class="footer">以上表达仅使用当前工作区内已确认的用户事实。</div></article>
+      <article class="panel card span-12"><div class="kicker">Interview Opener</div><h2>面试开场话术</h2><pre class="script">${escapeHtml(result.openingMessage)}</pre><div class="footer">AI 诊断基于当前岗位输入与工作区内已确认的用户事实生成。若截图缺少完整 JD，请补充更多连续截图后重新分析。沟通后再决定是否写入正式 tracker。</div></article>
     </section>
   </main>
 </body>

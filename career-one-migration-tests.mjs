@@ -10,8 +10,11 @@ const read = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
 const json = (rel) => JSON.parse(read(rel));
 
 const rootPackage = json("package.json");
+const runtimeReleaseConfig = json("release.config.json");
+const versionFile = read("VERSION").trim().split(/\s+/)[0];
 assert.equal(rootPackage.name, "career-one", "根 package 名必须是 career-one");
-assert.equal(rootPackage.version, "1.0.0", "独立项目必须从 1.0.0 建立版本基线");
+assert.equal(rootPackage.version, runtimeReleaseConfig.version, "根 package 版本必须与发布配置一致");
+assert.equal(versionFile, runtimeReleaseConfig.version, "VERSION 必须与发布配置一致");
 assert.equal(rootPackage.author.name, "NumberX", "根 package 必须声明当前维护者");
 assert.equal(rootPackage.contributors, undefined, "上游作者信息只保留在 LICENSE，不写入 package contributors");
 assert.equal(
@@ -23,6 +26,7 @@ assert.equal(rootPackage.dependencies["js-yaml"], "^5.2.1", "根运行时必须�
 
 const webPackage = json("web/package.json");
 assert.equal(webPackage.name, "@career-one/web", "Web package 名必须使用 career-one");
+assert.equal(webPackage.version, runtimeReleaseConfig.version, "Web package 版本必须与发布配置一致");
 assert.equal(webPackage.dependencies["js-yaml"], "^5.2.1", "Web 与根运行时必须使用同一 js-yaml 主版本");
 
 const yamlConsumers = [
@@ -309,6 +313,13 @@ assert.match(diagnoseView, /loading \? \([\s\S]{0,180}<DiagnosisProgressPanel/, 
 assert.match(diagnoseView, /function DiagnosisHistory/, "岗位诊断页面必须展示持久化历史记录");
 assert.match(diagnoseView, />诊断记录</, "岗位诊断历史区必须使用清晰的中文标题");
 assert.match(diagnoseView, /离开此页面不会停止诊断/, "运行中必须明确告知用户任务不依赖当前页面");
+for (const moduleTitle of ["正向信号", "匹配雷达", "剩余风险", "沟通后的分流规则", "必须追问", "你在这个岗位里的最佳表达"]) {
+  assert.match(diagnoseView, new RegExp(moduleTitle), `即时诊断结果必须展示“${moduleTitle}”模块`);
+}
+assert.match(diagnoseView, /result\.decisionRules\.map/, "即时诊断结果必须渲染 Agent 返回的沟通分流规则");
+assert.match(diagnoseView, /items=\{result\.positioning\}/, "即时诊断结果必须渲染 Agent 返回的最佳表达");
+assert.match(diagnoseView, /function formatDiagnosisModules/, "六个核心模块必须支持统一整理为可复制文本");
+assert.match(diagnoseView, />\s*复制六模块\s*</, "即时诊断结果必须提供六模块统一复制操作");
 
 const diagnoseReport = read("web/src/lib/cn-diagnose.ts");
 assert.doesNotMatch(diagnoseReport, /China Mainland Job Diagnosis|China tracker/, "岗位诊断报告不应重复强调默认市场");
@@ -320,6 +331,12 @@ assert.doesNotMatch(
 );
 assert.doesNotMatch(diagnoseReport, /diagnoseChinaJob|scoreFrom|NEGATIVE_KEYWORDS|candidateContext|QUICK SCORE/, "报告模块不得继续包含规则评分引擎");
 assert.match(diagnoseReport, /AI 匹配评分/, "可视化报告必须明确展示 AI 匹配评分");
+let previousReportModuleIndex = -1;
+for (const moduleTitle of ["正向信号", "匹配雷达", "剩余风险", "沟通后的分流规则", "必须追问", "你在这个岗位里的最佳表达"]) {
+  const moduleIndex = diagnoseReport.indexOf(moduleTitle);
+  assert.ok(moduleIndex > previousReportModuleIndex, `HTML 报告必须按统一顺序展示“${moduleTitle}”模块`);
+  previousReportModuleIndex = moduleIndex;
+}
 
 const diagnoseApi = read("web/src/app/api/cn-diagnose/route.ts");
 assert.doesNotMatch(diagnoseApi, /fetchUrlText|body\.url|liveSearch/, "岗位诊断接口不得在后台抓取招聘页 URL");
@@ -345,6 +362,9 @@ for (const userFactFile of ["cv.md", "config/profile.yml", "modes/_profile.md", 
 for (const resultField of ["positiveSignals", "risks", "questions", "openingMessage", "positioning", "meters", "decisionRules", "nextActions"]) {
   assert.match(diagnoseApi, new RegExp(resultField), `AI 诊断必须生成并校验 ${resultField} 字段`);
 }
+assert.match(diagnoseApi, /六个核心模块必须作为一组完整结论生成/, "Agent 提示词必须把六个核心模块定义为同一组诊断结论");
+assert.match(diagnoseApi, /岗位要求 \+ 用户证据 \+ 为什么匹配/, "正向信号必须连接岗位要求与用户证据");
+assert.match(diagnoseApi, /升分、维持或降分/, "沟通分流规则必须覆盖升分、维持和降分条件");
 assert.match(diagnoseApi, /未检测到已选择的 Agent CLI，无法运行 AI 岗位诊断/, "当前 Agent 不可用时必须明确失败，不得伪装成完整诊断");
 assert.doesNotMatch(diagnoseApi, /已使用本地规则分析|规则预检结果/, "Agent 不可用时不得降级为规则评分");
 assert.match(diagnoseApi, /randomUUID\(\)/, "岗位诊断必须为后台任务生成稳定任务 ID");
@@ -505,7 +525,7 @@ assert.match(profileExample, /modes_dir:\s*modes\/zh/, "默认模式目录必须
 
 const scaffolder = json("scaffolder/package.json");
 assert.equal(scaffolder.name, "career-one", "npm 安装器必须占用 career-one 发布命名空间");
-assert.equal(scaffolder.version, "1.0.0", "npm 安装器必须与项目版本一致");
+assert.equal(scaffolder.version, runtimeReleaseConfig.version, "npm 安装器必须与发布配置一致");
 assert.equal(scaffolder.author.name, "NumberX", "npm 安装器必须声明当前维护者");
 assert.equal(scaffolder.contributors, undefined, "npm 安装器的上游署名只保留在 LICENSE");
 assert.equal(scaffolder.bin["career-one"], "bin/cli.mjs", "脚手架必须暴露 career-one 命令");
@@ -519,7 +539,8 @@ assert.equal(
 
 const updater = read("update-system.mjs");
 assert.match(updater, /github\.com\/luyu925065781\/career-one\.git/, "更新器必须从择程AI仓库获取系统更新");
-assert.match(updater, /raw\.githubusercontent\.com\/luyu925065781\/career-one\/main\/VERSION/, "更新检查必须读取择程AI版本文件");
+assert.match(updater, /RAW_VERSION_URL\('develop'\)/, "开发通道更新检查必须读取 develop 分支版本");
+assert.match(updater, /RELEASES_LATEST_API/, "正式通道更新检查必须读取最新稳定 Release");
 
 const scaffolderCli = read("scaffolder/bin/cli.mjs");
 assert.match(scaffolderCli, /github\.com\/luyu925065781\/career-one\.git/, "安装器必须克隆择程AI仓库");
