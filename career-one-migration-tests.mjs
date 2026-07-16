@@ -243,6 +243,17 @@ assert.match(
 
 const navItems = read("web/src/lib/nav-items.ts");
 assert.doesNotMatch(navItems, /href:\s*"\/cn-diagnose"[^\n]*chip:\s*"中国"/, "中国大陆是默认市场，岗位诊断导航不应重复显示中国标签");
+for (const [href, label] of [
+  ["/explore", "发现岗位"],
+  ["/cn-diagnose", "岗位诊断"],
+  ["/config", "设置"],
+]) {
+  assert.doesNotMatch(
+    navItems,
+    new RegExp(`href:\\s*"${href}"|label:\\s*"${label}"`),
+    `${label}必须从主导航隐藏，但页面路由可以继续保留`,
+  );
+}
 
 const configForm = read("web/src/components/config-form.tsx");
 assert.match(
