@@ -34,6 +34,31 @@ try {
   assert.equal(runs.listRuns(fixture).length, 1);
   pass("Agent and Web share one durable run record");
 
+  const queued = runs.createRun({
+    root: fixture,
+    id: "run-queued-pdf-1",
+    intent: "pdf",
+    title: "生成岗位定制简历",
+    subtitle: "Acme · AI 产品经理",
+    source: "web",
+    input: "042",
+    page: "/pipeline/42",
+    status: "queued",
+    instruction: "已有待办任务 ID：run-queued-pdf-1。请继续这个任务，不要创建新任务。",
+  });
+  assert.equal(queued.status, "queued");
+  assert.equal(queued.instruction, "已有待办任务 ID：run-queued-pdf-1。请继续这个任务，不要创建新任务。");
+  assert.ok(queued.progress.some((step) => step.label === "已加入 Agent 待办"));
+  const claimed = runs.updateRun({
+    root: fixture,
+    id: queued.id,
+    status: "running",
+    progress: "Agent 已接手任务",
+  });
+  assert.equal(claimed.status, "running");
+  assert.equal(claimed.instruction, queued.instruction);
+  pass("Web can queue a durable task that the user's Agent later claims");
+
   runs.updateRun({ root: fixture, id: created.id, status: "running", progress: "正在读取岗位与简历" });
   const completed = runs.updateRun({
     root: fixture,

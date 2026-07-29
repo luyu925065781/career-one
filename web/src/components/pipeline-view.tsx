@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, ChevronsUpDown, X, Compass, ArrowRight } from "lucide-react";
+import { Search, ChevronsUpDown, X, Compass, ArrowRight, ArrowLeft } from "lucide-react";
 import type { Application, InboxJob } from "@/lib/career-one";
 import { Badge } from "@/components/ui/badge";
 import { CompanyLogo } from "@/components/company-logo";
@@ -11,6 +11,9 @@ import { StatusSelect } from "@/components/status-select";
 import { canonStatus, scoreNum, scoreTone } from "@/lib/format";
 import { InboxTriage } from "@/components/inbox/inbox-triage";
 import { cn } from "@/lib/cn";
+import { PRIMARY_NAV_ITEMS } from "@/lib/nav-items";
+
+const PageIcon = PRIMARY_NAV_ITEMS.pipeline.icon;
 
 // ALL leads the navigation and is the default at the bare /pipeline route;
 // INBOX stays explicit so the pending-job triage flow remains directly addressable.
@@ -51,6 +54,30 @@ const SORT_LABELS: Record<SortKey, string> = {
   status: "状态",
   date: "日期",
 };
+
+export function ReportBackButton() {
+  const router = useRouter();
+
+  function handleBack() {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.replace("/pipeline");
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleBack}
+      aria-label="返回上一页"
+      className="inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+    >
+      <ArrowLeft className="size-4" aria-hidden="true" />
+      返回
+    </button>
+  );
+}
 
 export function PipelineView({
   applications,
@@ -146,11 +173,14 @@ export function PipelineView({
   }, [applications, tab, q, sort, minFilter]);
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8 max-sm:pb-24">
+    <div className="page-shell py-8 max-sm:pb-24">
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl tracking-tight text-landing">求职进度</h1>
-          <p className="mt-1 w-full text-sm text-muted">
+          <div className="flex items-center gap-3">
+            <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
+            <h1 className="font-display text-2xl tracking-tight text-landing">求职进度</h1>
+          </div>
+          <p className="mt-1 w-full pl-9 text-sm text-muted">
             待评估 <span className="tabular-nums">{pendingInbox.length}</span> 个 ·{" "}
             已跟踪 <span className="tabular-nums">{applications.length}</span> 个
           </p>

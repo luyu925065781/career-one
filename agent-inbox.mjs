@@ -24,6 +24,7 @@
  *   node agent-inbox.mjs add "evaluate https://acme.com/jobs/42"
  *   node agent-inbox.mjs list [--all]                 # pending only, or every item
  *   node agent-inbox.mjs resolve 1 [--result "scored 4.3 — report 012"]
+ *   node agent-inbox.mjs resolve --task run-id [--result "output/cv.pdf"]
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -110,19 +111,29 @@ function list() {
 }
 
 function resolve() {
-  const n = Number(process.argv[3]);
-  if (!Number.isInteger(n) || n < 1) fail('resolve needs a 1-based item number (see `list`)');
-  // Number against the pending view, so `list` then `resolve N` line up.
   const pending = parseItems().filter((it) => !it.done);
-  const target = pending[n - 1];
-  if (!target) fail(`no pending item #${n} (${pending.length} pending)`);
+  const taskId = oneLine(opt('task'));
+  let target;
+  let targetLabel;
+  if (taskId) {
+    target = pending.find((item) => item.text.includes(`[task:${taskId}]`));
+    targetLabel = `task ${taskId}`;
+    if (!target) fail(`no pending task ${taskId}`);
+  } else {
+    const n = Number(process.argv[3]);
+    if (!Number.isInteger(n) || n < 1) fail('resolve needs a 1-based item number or --task <id> (see `list`)');
+    // Number against the pending view, so `list` then `resolve N` line up.
+    target = pending[n - 1];
+    targetLabel = `#${n}`;
+    if (!target) fail(`no pending item #${n} (${pending.length} pending)`);
+  }
   const result = oneLine(opt('result'));
   const lines = readFileSync(PATH, 'utf8').split('\n');
   let updated = lines[target.line].replace('[ ]', '[x]');
   if (result && !/→ result:/.test(updated)) updated += ` → result: ${result}`;
   lines[target.line] = updated;
   writeFileSync(PATH, lines.join('\n'));
-  process.stdout.write(`Resolved #${n}: ${target.text}\n`);
+  process.stdout.write(`Resolved ${targetLabel}: ${target.text}\n`);
 }
 
 function fail(msg) {
@@ -139,6 +150,7 @@ else {
     'Usage:\n' +
     '  node agent-inbox.mjs add "evaluate https://acme.com/jobs/42"\n' +
     '  node agent-inbox.mjs list [--all]\n' +
-    '  node agent-inbox.mjs resolve <n> [--result "..."]\n',
+    '  node agent-inbox.mjs resolve <n> [--result "..."]\n' +
+    '  node agent-inbox.mjs resolve --task <run-id> [--result "..."]\n',
   );
 }

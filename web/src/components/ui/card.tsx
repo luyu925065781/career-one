@@ -14,17 +14,23 @@ export function Card({
   className,
   corner,
   elevated,
+  interactive,
+  compact,
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   corner?: keyof typeof CORNERS;
   elevated?: boolean;
+  interactive?: boolean;
+  compact?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-border bg-surface/50 p-5",
+        "relative overflow-hidden rounded-card border border-border bg-surface/50",
         corner && `${CORNERS[corner]} from-brand/10 via-transparent to-transparent bg-origin-border`,
-        elevated && "shadow-lg",
+        elevated && "shadow-raised",
+        interactive && "transition-colors duration-150 hover:bg-surface-hover",
+        compact ? "p-4" : "p-5",
         className,
       )}
       {...props}

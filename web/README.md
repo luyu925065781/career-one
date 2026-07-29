@@ -14,12 +14,11 @@ database, no server. If you never run it, nothing about your CLI workflow change
 Requires Node 20+.
 
 ```bash
-cd web
-npm ci
-npm run dev
+npm ci --prefix web
+npm run dev:web
 ```
 
-Open http://localhost:3000. The app reads the career-one checkout it lives in
+Open http://localhost:3301. The app reads the career-one checkout it lives in
 (the parent directory) — your existing CV, pipeline and reports appear as-is.
 
 ## What works today
@@ -45,9 +44,9 @@ Open http://localhost:3000. The app reads the career-one checkout it lives in
 ## Development
 
 ```bash
-npm run dev          # dev server (Turbopack)
-npx tsc --noEmit     # typecheck
-npm run build        # production build
+npm run dev:web                  # scripted dev server on port 3301
+npm run typecheck --prefix web   # typecheck
+npm run build --prefix web       # production build
 ```
 
 Set `CAREER_ONE_ROOT=/path/to/checkout` in `web/.env.local` to point the app at

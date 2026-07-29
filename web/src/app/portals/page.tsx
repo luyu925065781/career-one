@@ -1,13 +1,14 @@
-import { Radar } from "lucide-react";
 import { PortalsView } from "@/components/portals-view";
+import { CONTEXTUAL_NAV_ITEMS } from "@/lib/nav-items";
 
 export const dynamic = "force-dynamic";
+const PageIcon = CONTEXTUAL_NAV_ITEMS.jobSources.icon;
 
 export default function PortalsPage() {
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="page-shell py-8">
       <div className="flex items-center gap-3">
-        <Radar className="size-6 text-icon-brand" />
+        <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
         <h1 className="font-display text-2xl tracking-tight text-landing">岗位来源</h1>
       </div>
       <p className="mt-1.5 w-full text-sm text-muted">

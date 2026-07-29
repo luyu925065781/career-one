@@ -17,19 +17,6 @@ export type FeatureId =
   | "assistant"
   | "designSystem";
 
-const CHANNEL_LABELS: Record<ReleaseChannel, string> = {
-  stable: "正式版",
-  beta: "内测版",
-  development: "开发版",
-};
-
-const STAGE_LABELS: Record<FeatureStage, string> = {
-  stable: "",
-  beta: "内测",
-  development: "开发",
-  hidden: "隐藏",
-};
-
 export const RELEASE_CONFIG = releaseConfig as {
   version: string;
   channel: ReleaseChannel;
@@ -57,23 +44,10 @@ export function isFeatureEnabled(
   return isStageEnabled(featureStage(feature), channel);
 }
 
-export function releaseChannelLabel(channel = RELEASE_CONFIG.channel): string {
-  return CHANNEL_LABELS[channel];
-}
-
-export function featureStageLabel(feature: FeatureId): string {
-  return STAGE_LABELS[featureStage(feature)];
-}
-
-export function releaseDisplayLabel(): string {
-  return `${RELEASE_CONFIG.version} · ${releaseChannelLabel()}`;
-}
-
 const ROUTE_FEATURES: Array<[prefix: string, feature: FeatureId]> = [
   ["/api/agent-runs", "agentTasks"],
   ["/api/runs", "agentTasks"],
   ["/api/explore", "discoverJobs"],
-  ["/api/cn-diagnose", "jobDiagnosis"],
   ["/api/tracker", "pipeline"],
   ["/api/status", "pipeline"],
   ["/api/report", "pipeline"],

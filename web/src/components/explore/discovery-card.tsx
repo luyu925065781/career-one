@@ -5,6 +5,7 @@ import { ExternalLink, Plus, Check, Loader2, ShieldQuestion, Sparkles, Coins } f
 import { cn } from "@/lib/cn";
 import { ATS_LABEL, type AtsSource, type DiscoveredOffer } from "@/lib/explore";
 import { useJobs } from "@/components/jobs/job-store";
+import { Card } from "@/components/ui/card";
 import { useExplore } from "./explore-provider";
 
 function freshness(postedAt: string): string {
@@ -62,11 +63,11 @@ export function DiscoveryCard({ offer, inPipeline, evaluatedN }: { offer: Discov
   };
 
   return (
-    <div className="co-rise group flex min-w-0 flex-col gap-2.5 rounded-xl border border-border bg-surface/40 p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-sm">
+    <Card compact className="co-rise flex min-w-0 flex-col gap-2.5 text-left">
       <div className="flex items-start gap-3">
         <Logo company={offer.company} />
         <a href={offer.url} target="_blank" rel="noopener noreferrer" className="block min-w-0 flex-1 max-sm:min-h-[44px]">
-          <h3 className={`font-display truncate text-[17px] leading-tight text-foreground transition-colors group-hover:text-brand`}>{offer.title}</h3>
+          <h3 className="font-display truncate text-[17px] leading-tight text-foreground">{offer.title}</h3>
           <p className="mt-0.5 truncate text-[13px] text-muted">
             {offer.company}
             {offer.location && <span className="text-faint"> · {offer.location}</span>}
@@ -148,6 +149,6 @@ export function DiscoveryCard({ offer, inPipeline, evaluatedN }: { offer: Discov
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

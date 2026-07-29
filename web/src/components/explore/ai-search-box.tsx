@@ -108,7 +108,7 @@ export function AiSearchBox({
             key={ex}
             type="button"
             onClick={() => onIntent(ex)}
-            className="rounded-full border border-border bg-surface/40 px-3 py-1.5 text-[12px] text-muted transition hover:border-brand/40 hover:text-brand"
+            className="rounded-full border border-border bg-surface/40 px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
           >
             {ex}
           </button>

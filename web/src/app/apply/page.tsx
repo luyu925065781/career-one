@@ -9,7 +9,7 @@ export default function ApplyPage() {
     <div className="relative min-h-screen">
       {/* full-viewport blurred form wallpaper (behind everything) */}
       <ApplyBackdropMount />
-      <div className="relative z-10 mx-auto max-w-3xl px-6 py-8">
+      <div className="page-shell relative z-10 py-8">
         <div className="flex items-center gap-3">
           <Send className="size-6 text-icon-brand" />
           <h1 className="font-display text-2xl tracking-tight text-landing">申请辅助</h1>

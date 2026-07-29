@@ -22,11 +22,11 @@ git worktree add ../career-one-stable main
 git worktree add ../career-one-dev develop
 ```
 
-正式版默认使用 `3000` 端口，开发版可使用 `3101`：
+统一启动脚本默认使用 `3301` 端口；并行运行第二个 worktree 时可显式覆盖端口：
 
 ```bash
 cd ../career-one-stable && npm run dev:web
-cd ../career-one-dev && PORT=3101 npm run dev:web
+cd ../career-one-dev && PORT=3302 npm run dev:web
 ```
 
 ## 功能分级

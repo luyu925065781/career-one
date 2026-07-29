@@ -1,6 +1,8 @@
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { atomicWrite } from "@/lib/core/safe-write";
+import type { DiscoveredOffer } from "@/lib/explore";
 import { parseApplications } from "@/lib/tracker-table.mjs";
 import { parseStoryBank } from "@/lib/story-bank.mjs";
 
@@ -199,6 +201,145 @@ export function pipelineSummary(): PipelineSummary {
     inbox: readInbox().map((j) => ({ ...j, postedAt: scanDates.get(j.url) })),
     applications: readApplications(),
   };
+}
+
+export type FollowUpEntry = {
+  num?: number;
+  applicationNums?: number[];
+  company: string;
+  role?: string;
+  status?: string;
+  urgency?: string;
+  appliedDate?: string;
+  notes?: string;
+};
+
+export type FollowupSnapshot = {
+  available: boolean;
+  metadata: {
+    overdue?: number;
+    urgent?: number;
+    actionable?: number;
+  } | null;
+  entries: FollowUpEntry[];
+};
+
+const EMPTY_FOLLOWUP_SNAPSHOT: FollowupSnapshot = {
+  available: false,
+  metadata: null,
+  entries: [],
+};
+
+/**
+ * Read the demand loop through the core cadence calculator. This shared server
+ * function powers both the initial page render and the API, so hydration can
+ * never replace one queue snapshot with another.
+ */
+export async function readFollowupSnapshot(): Promise<FollowupSnapshot> {
+  const script = rootScript("followup-cadence");
+  if (!fs.existsSync(script)) return EMPTY_FOLLOWUP_SNAPSHOT;
+
+  const stdout = await new Promise<string>((resolve) => {
+    const child = spawn(process.execPath, [script, "--json"], {
+      cwd: careerOneRoot(),
+      env: process.env,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    let output = "";
+    let settled = false;
+    let killer: ReturnType<typeof setTimeout> | undefined;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (killer) clearTimeout(killer);
+      resolve(output);
+    };
+    child.stdout.on("data", (chunk: Buffer) => {
+      output += chunk.toString();
+    });
+    child.on("error", finish);
+    child.on("close", finish);
+    killer = setTimeout(() => {
+      child.kill("SIGTERM");
+      finish();
+    }, 12_000);
+  });
+
+  try {
+    const start = stdout.indexOf("{");
+    if (start < 0) return EMPTY_FOLLOWUP_SNAPSHOT;
+    const parsed = JSON.parse(stdout.slice(start));
+    const entries: FollowUpEntry[] = Array.isArray(parsed.entries) ? parsed.entries : [];
+    const due = entries
+      .filter((entry) => /overdue|urgent/i.test(String(entry.urgency)));
+    return {
+      available: true,
+      metadata: parsed.metadata ?? null,
+      entries: due.slice(0, 6),
+    };
+  } catch {
+    return EMPTY_FOLLOWUP_SNAPSHOT;
+  }
+}
+
+const normalizeCompany = (value: string) =>
+  value.toLocaleLowerCase("en-US").replace(/[^a-z0-9]+/g, " ").trim();
+
+/**
+ * Read the supply loop from scan history without running a scan. This is kept
+ * beside the other server-side career-one readers so the page and API use the
+ * exact same filtering rules.
+ */
+export function readFreshOffers(days = 7): DiscoveredOffer[] {
+  const safeDays = Math.min(30, Math.max(1, Number(days) || 7));
+  const cutoff = Date.now() - safeDays * 86_400_000;
+  const history = read("data/scan-history.tsv");
+  if (!history) return [];
+
+  const rows = history.split("\n");
+  const evaluated = new Set(
+    readApplications().map((application) => normalizeCompany(application.company)).filter(Boolean),
+  );
+  const toOffer = (columns: string[]): DiscoveredOffer | null => {
+    const [url, firstSeen, portal, title, company, status, location] = columns;
+    if (!url || !/^https?:\/\//i.test(url)) return null;
+    if (status && /skipped|expired/i.test(status)) return null;
+    if (company && evaluated.has(normalizeCompany(company))) return null;
+    return {
+      url,
+      company: (company || "").trim(),
+      title: (title || "").trim(),
+      location: (location || "").trim(),
+      postedAt: /^\d{4}-\d{2}-\d{2}$/.test(firstSeen || "") ? firstSeen : "",
+      ats: (portal || "").replace(/-full$/, "").trim() || "other",
+      source: "whats-new",
+    };
+  };
+
+  const seen = new Set<string>();
+  const offers: DiscoveredOffer[] = [];
+  let anyDated = false;
+  for (let index = rows.length - 1; index >= 1 && offers.length < 24; index--) {
+    const columns = rows[index].split("\t");
+    const timestamp = Date.parse(columns[1] || "");
+    if (Number.isFinite(timestamp)) anyDated = true;
+    if (!Number.isFinite(timestamp) || timestamp < cutoff) continue;
+    const offer = toOffer(columns);
+    if (!offer || seen.has(offer.url)) continue;
+    seen.add(offer.url);
+    offers.push(offer);
+  }
+
+  if (offers.length === 0 && !anyDated) {
+    for (let index = rows.length - 1; index >= 1 && offers.length < 12; index--) {
+      const offer = toOffer(rows[index].split("\t"));
+      if (!offer || seen.has(offer.url)) continue;
+      seen.add(offer.url);
+      offers.push(offer);
+    }
+  }
+
+  return offers;
 }
 
 export type ReportData = { content: string; file: string };

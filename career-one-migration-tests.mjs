@@ -108,28 +108,86 @@ const canonicalSkill = read(".agents/skills/career-one/SKILL.md");
 assert.match(canonicalSkill, /^---\nname: career-one\n/m, "必须提供 career-one 开放 Skill");
 assert.match(canonicalSkill, /^# 择程AI（career-one）$/m, "Skill 正文必须展示择程AI品牌");
 assert.match(canonicalSkill, /modes\/zh\//, "career-one Skill 必须默认加载中文模式");
-assert.match(canonicalSkill, /可选的面试开场话术/, "岗位评估 Skill 必须统一使用面试开场话术");
+assert.match(canonicalSkill, /可选的打招呼话术/, "岗位评估 Skill 必须统一使用打招呼话术");
+assert.doesNotMatch(canonicalSkill, /面试开场话术/, "岗位评估 Skill 不得继续使用旧标题");
 assert.doesNotMatch(canonicalSkill, /BOSS直聘开场话术/, "岗位评估 Skill 不得继续使用平台限定的旧标题");
+assert.match(canonicalSkill, /5 个评分因子/, "岗位评估 Skill 必须明确使用五因子评分模型");
+for (const factor of ["简历匹配", "职业方向", "职级与职责", "薪酬", "组织与文化"]) {
+  assert.match(canonicalSkill, new RegExp(factor), `岗位评估 Skill 必须包含评分因子：${factor}`);
+}
+assert.match(canonicalSkill, /G「职位真实性评估」独立评级，不参与 1-5 分计算/, "岗位评估 Skill 必须把真实性评级与匹配分分离");
+assert.match(canonicalSkill, /最终建议.*综合匹配分.*真实性评级/, "岗位评估 Skill 必须说明最终建议同时参考匹配分和真实性评级");
+assert.match(canonicalSkill, /A-G 是内部稳定模块 ID/, "岗位评估 Skill 必须明确 A-G 仅用于内部报告兼容");
+assert.match(canonicalSkill, /用户界面.*连续数字/, "岗位评估 Skill 必须明确用户界面使用连续数字序号");
 assert.match(canonicalSkill, /career-one\.mjs web/, "Skill 必须提供打开 Web 工作台的稳定命令");
-assert.match(canonicalSkill, /http:\/\/localhost:3000\/jobs/, "Skill 必须向用户展示工作台入口");
+assert.match(canonicalSkill, /http:\/\/localhost:3301\/jobs/, "Skill 必须向用户展示 3301 工作台入口");
 assert.match(canonicalSkill, /\/jobs\/<任务ID>/, "Skill 必须向用户展示当前任务入口");
-assert.match(canonicalSkill, /\/pipeline\/\{报告编号\}/, "岗位诊断完成后必须展示诊断报告深链");
-assert.match(canonicalSkill, /http:\/\/localhost:3000\/cv/, "简历任务完成后必须展示简历页面深链");
-assert.match(read("modes/zh/oferta.md"), /^## 面试开场话术$/m, "中文岗位评估模板必须固定面试开场话术标题");
+assert.match(canonicalSkill, /\/pipeline\/\{报告编号\}/, "岗位评估完成后必须展示评估报告深链");
+assert.match(canonicalSkill, /http:\/\/localhost:3301\/cv/, "简历任务完成后必须展示 3301 简历页面深链");
+assert.match(read("modes/zh/oferta.md"), /^## 打招呼话术$/m, "中文岗位评估模板必须固定打招呼话术标题");
+assert.doesNotMatch(read("modes/zh/oferta.md"), /^## 面试开场话术$/m, "中文岗位评估模板不得继续生成旧标题");
+assert.match(read("modes/zh/oferta.md"), /^## 向招聘方追问$/m, "中文岗位评估模板必须使用通用招聘方追问标题");
+assert.doesNotMatch(read("modes/zh/oferta.md"), /^## (?:建议向招聘方追问|建议向猎头追问|必须追问)$/m, "中文岗位评估模板不得继续生成旧追问标题");
+const chineseOfferMode = read("modes/zh/oferta.md");
+const chineseOfferTemplate = chineseOfferMode.slice(chineseOfferMode.indexOf("**报告文件格式模板：**"));
+let previousOfferSectionIndex = -1;
+for (const sectionTitle of [
+  "## B) 简历匹配分析",
+  "### 匹配雷达",
+  "### 正向信号",
+  "### 能力与缺口补强",
+  "## C) 级别判断与求职策略",
+  "## D) 薪酬竞争力与市场需求",
+  "## G) 职位真实性评估",
+  "### 剩余风险",
+  "## 打招呼话术",
+  "## 向招聘方追问",
+  "## 你在这个岗位里的最佳表达",
+  "## 沟通后分流规则",
+  "## E) 针对性定制方案",
+  "## F) 面试备考计划",
+]) {
+  const sectionIndex = chineseOfferTemplate.indexOf(sectionTitle);
+  assert.ok(sectionIndex > previousOfferSectionIndex, `中文岗位评估模板必须按统一顺序展示“${sectionTitle}”`);
+  previousOfferSectionIndex = sectionIndex;
+}
 
 const portableCli = read(".agents/skills/career-one/scripts/career-one.mjs");
 assert.match(portableCli, /web:\s*\{\s*script:\s*"start-web\.mjs"/, "便携 CLI 必须提供 web 命令");
 assert.match(portableCli, /alwaysDefaults:\s*true/, "便携 CLI 的 web 命令必须默认打开浏览器");
 
 const webStarter = read("start-web.mjs");
+assert.match(webStarter, /const DEFAULT_PORT = 3301;/, "Web 启动脚本必须默认使用 3301 端口");
 assert.match(webStarter, /--open/, "Web 启动器必须支持显式打开浏览器");
 assert.match(webStarter, /--page/, "Web 启动器必须支持打开任务上下文页面");
 assert.doesNotMatch(webStarter, /process\.kill|SIGKILL|releasePort/, "Web 启动器不得杀死占用端口的其他进程");
+assert.match(
+  webStarter,
+  /htmlLooksLikeWorkbench\(html\)/,
+  "Web 启动器必须用可测试的页面标识判断服务是否就绪",
+);
+assert.match(
+  webStarter,
+  /Agent 任务.*求职进度|求职进度.*Agent 任务/s,
+  "Web 启动器必须识别新版首页，不能依赖已移除的旧副标题",
+);
 
 const jobDetailPage = read("web/src/app/jobs/[id]/page.tsx");
-assert.match(jobDetailPage, /job\.page/, "任务详情页必须显示任务上下文入口");
-assert.match(jobDetailPage, /查看诊断报告/, "岗位诊断任务必须显示查看诊断报告入口");
-assert.match(jobDetailPage, /打开简历页面/, "简历任务必须显示打开简历页面入口");
+const sharedAgentTaskUi = read("web/src/components/jobs/worker-pills.tsx");
+assert.match(jobDetailPage, /AgentTaskDetailPanel/, "任务详情页必须复用统一任务详情组件");
+assert.match(sharedAgentTaskUi, /job\.page/, "任务详情组件必须显示任务上下文入口");
+assert.match(sharedAgentTaskUi, /查看评估报告/, "岗位评估任务必须显示查看评估报告入口");
+assert.match(sharedAgentTaskUi, /打开简历页面/, "简历任务必须显示打开简历页面入口");
+assert.match(
+  sharedAgentTaskUi,
+  /const hasMatchingPageArtifact = job\.artifacts\?\.some\(\(artifact\) => artifact\.page === job\.page\) \?\? false/,
+  "任务产物已有相同页面入口时必须识别重复目标",
+);
+assert.match(
+  sharedAgentTaskUi,
+  /\{job\.page && !hasMatchingPageArtifact && \(/,
+  "任务详情不得同时显示同目标的顶部快捷入口和生成结果入口",
+);
 
 const updaterSource = read("update-system.mjs");
 for (const requiredPath of ["start-web.mjs", "web/src/", "web/package.json", "web/package-lock.json"]) {
@@ -138,17 +196,14 @@ for (const requiredPath of ["start-web.mjs", "web/src/", "web/package.json", "we
 assert.match(read("DATA_CONTRACT.md"), /web\/src\//, "数据契约必须把 Web 源码声明为系统层");
 
 const diagnosisView = read("web/src/components/cn-diagnose/cn-diagnose-view.tsx");
-const diagnosisReport = read("web/src/lib/cn-diagnose.ts");
-for (const source of [diagnosisView, diagnosisReport]) {
-  assert.match(source, /面试开场话术/, "岗位诊断 Web 与 HTML 报告必须统一使用面试开场话术");
-  assert.doesNotMatch(source, /BOSS 首轮沟通话术|BOSS 打招呼话术/, "岗位诊断不得继续显示 BOSS 专属旧标题");
-}
+assert.doesNotMatch(diagnosisView, /面试开场话术|BOSS 首轮沟通话术|BOSS 打招呼话术/, "岗位评估入口不得继续显示旧诊断话术");
 
 const webLayout = read("web/src/app/layout.tsx");
-assert.match(webLayout, /title: "择程AI｜AI求职工作台"/, "Web 标题必须展示择程AI品牌");
+assert.match(webLayout, /title: "择程AI｜你的AI求职顾问"/, "Web 标题必须展示择程AI品牌");
 
 const globalStyles = read("web/src/app/globals.css");
 assert.match(globalStyles, /--gradient-primary:\s*linear-gradient\(135deg, #facc15 0%, #fde047 100%\)/, "Web 主色必须使用已实现规范页面中的浅黄色渐变");
+assert.doesNotMatch(globalStyles, /scrollbar-gutter:\s*stable/, "根页面不得预留空白滚动条槽，避免右侧出现多余边缘");
 assert.match(globalStyles, /\[class~="bg-brand"\][^{]*\{[^}]*background-image:\s*var\(--gradient-primary\)/s, "主品牌背景必须统一应用黄橙渐变");
 assert.match(globalStyles, /--fg:\s*#111827/, "浅色模式主文字必须使用设计系统 gray-900");
 assert.match(globalStyles, /--muted:\s*#4b5563/, "浅色模式次级文字必须使用设计系统 gray-600");
@@ -190,20 +245,24 @@ assert.match(iconTokenComponents, /text-icon-danger/, "错误状态图标必须�
 
 const designSystem = read("DESIGN_SYSTEM.md");
 assert.match(designSystem, /^# 择程AI设计系统/m, "项目必须包含择程AI设计系统");
+assert.doesNotMatch(designSystem, /上游：数字超体|数字超体基础 Token|两层.*Token/, "择程AI设计系统必须作为独立 Token 来源，不能依赖上游映射");
 assert.match(designSystem, /gray-900.*#111827/, "项目设计系统必须定义主文字色");
 assert.match(designSystem, /输入框、搜索框、文本域和下拉框聚焦时禁止阴影、光晕和发光轮廓/, "设计系统必须禁止表单焦点光晕");
 assert.match(designSystem, /icon-brand/, "设计系统必须定义图标语义 Token");
 assert.match(designSystem, /空心按钮使用半透明中性色背景/, "设计系统必须定义半透明黑白空心按钮");
+assert.match(designSystem, /状态前景|状态浅底|状态描边/, "设计系统必须定义完整的状态语义 Token");
+assert.match(designSystem, /raised|floating|overlay/, "设计系统必须定义语义化阴影层级");
 
 const machineReadableDesign = read("DESIGN.md");
 assert.match(machineReadableDesign, /^---\n/m, "DESIGN.md 必须保留机器可读的 YAML frontmatter");
-for (const tokenGroup of ["colors:", "typography:", "spacing:", "rounded:", "components:"]) {
+assert.match(machineReadableDesign, /^name:\s*择程AI设计系统$/m, "DESIGN.md 必须是择程AI自己的机器可读 Token");
+for (const tokenGroup of ["colors:", "typography:", "spacing:", "rounded:", "elevation:", "components:"]) {
   assert.match(machineReadableDesign, new RegExp(`^${tokenGroup}`, "m"), `DESIGN.md 必须定义 ${tokenGroup} Token`);
 }
-assert.match(machineReadableDesign, /SF Pro/, "公司级英文规范必须采用 SF Pro 风格");
-assert.match(machineReadableDesign, /思源黑体/, "公司级中文规范必须采用思源黑体");
-assert.match(machineReadableDesign, /具体产品.*系统自带字体/, "公司规范必须明确具体产品使用系统自带字体");
-assert.doesNotMatch(machineReadableDesign, /Instrument Serif/, "公司级字体规范不得继续使用 Instrument Serif");
+assert.match(machineReadableDesign, /SF Pro/, "英文规范必须采用 SF Pro 风格");
+assert.match(machineReadableDesign, /思源黑体/, "中文规范必须采用思源黑体风格");
+assert.match(machineReadableDesign, /择程AI.*系统自带字体/, "产品规范必须明确择程AI使用系统自带字体");
+assert.doesNotMatch(machineReadableDesign, /Instrument Serif/, "字体规范不得继续使用 Instrument Serif");
 
 const designSystemPage = read("web/src/app/design-system/page.tsx");
 assert.match(designSystemPage, /readFileSync\(path\.join\(careerOneRoot\(\), "DESIGN\.md"\)/, "UI 规范页必须从根目录 DESIGN.md 读取 Token");
@@ -243,9 +302,13 @@ assert.match(
 
 const navItems = read("web/src/lib/nav-items.ts");
 assert.doesNotMatch(navItems, /href:\s*"\/cn-diagnose"[^\n]*chip:\s*"中国"/, "中国大陆是默认市场，岗位诊断导航不应重复显示中国标签");
+assert.match(
+  navItems,
+  /href:\s*"\/cn-diagnose"[^\n]*label:\s*"岗位评估"[^\n]*feature:\s*"jobDiagnosis"/,
+  "主导航必须展示岗位评估入口并沿用功能门控",
+);
 for (const [href, label] of [
   ["/explore", "发现岗位"],
-  ["/cn-diagnose", "岗位诊断"],
   ["/config", "设置"],
 ]) {
   assert.doesNotMatch(
@@ -257,10 +320,31 @@ for (const [href, label] of [
 
 const appShell = read("web/src/components/app-shell.tsx");
 assert.doesNotMatch(appShell, /AssistantConsole/, "专注插件阶段不得在全局壳层显示问助手入口");
+assert.match(appShell, />择路扬帆，前程似锦</, "桌面菜单底部必须显示品牌口号");
+assert.match(appShell, /tracking-\[0\.14em\][^"]*whitespace-nowrap|whitespace-nowrap[^"]*tracking-\[0\.14em\]/, "桌面品牌口号必须使用舒展且不换行的字距");
+assert.match(appShell, /h-7[^"]*items-center[^"]*justify-between|items-center[^"]*justify-between[^"]*h-7/, "桌面品牌口号行必须在紧凑固定高度内与主题按钮垂直居中");
+assert.match(appShell, /-mx-4[^"]*border-t[^"]*px-4|border-t[^"]*-mx-4[^"]*px-4/, "桌面品牌口号分隔线必须横跨侧栏宽度，同时保持内容内边距");
+assert.match(appShell, /font-normal[^"]*leading-none|leading-none[^"]*font-normal/, "桌面品牌口号必须使用纤细字重并收紧行盒");
+assert.doesNotMatch(appShell, /本地优先\s*·\s*\{releaseDisplayLabel\(\)\}/, "桌面菜单底部不得继续显示旧定位与版本");
+
+const mobileNav = read("web/src/components/mobile-nav.tsx");
+assert.match(mobileNav, /\.co-mdrawer\{[^}]*box-shadow:none/s, "关闭的移动菜单不得把阴影投射到桌面页面内");
+assert.match(mobileNav, /\.co-mdrawer\.open\{[^}]*box-shadow:-16px 0 48px -16px rgba\(0,0,0,\.4\)/s, "移动菜单只在打开时显示分层阴影");
+assert.match(mobileNav, />择路扬帆，前程似锦</, "移动菜单底部必须显示品牌口号");
+assert.match(mobileNav, /tracking-\[0\.14em\][^"]*whitespace-nowrap|whitespace-nowrap[^"]*tracking-\[0\.14em\]/, "移动品牌口号必须使用舒展且不换行的字距");
+assert.match(mobileNav, /h-11[^"]*items-center[^"]*justify-between|items-center[^"]*justify-between[^"]*h-11/, "移动品牌口号行必须与主题按钮在固定高度内垂直居中");
+assert.match(mobileNav, /font-normal[^"]*leading-none|leading-none[^"]*font-normal/, "移动品牌口号必须使用纤细字重并收紧行盒");
+assert.doesNotMatch(mobileNav, /本地优先\s*·\s*\{releaseDisplayLabel\(\)\}/, "移动菜单底部不得继续显示旧定位与版本");
+assert.doesNotMatch(appShell, /UsageMeter|usage-meter/, "桌面侧栏不得加载 Web 用量统计模块");
+assert.doesNotMatch(mobileNav, /UsageMeter|usage-meter/, "移动菜单不得加载 Web 用量统计模块");
+assert.equal(fs.existsSync(path.join(root, "web/src/components/usage-meter.tsx")), false, "Web 不得保留用量统计组件");
+assert.equal(fs.existsSync(path.join(root, "web/src/app/api/usage/route.ts")), false, "Web 不得保留本地用量聚合接口");
 
 const betaBanner = read("web/src/components/beta/beta-banner.tsx");
-assert.match(betaBanner, /fixed bottom-3 right-3/, "版本与反馈模块必须固定在页面右下角");
-assert.doesNotMatch(betaBanner, /fixed bottom-3 left-3/, "版本与反馈模块不得继续占用页面左下角");
+assert.match(betaBanner, /fixed bottom-3 right-3/, "问题反馈入口必须固定在页面右下角");
+assert.doesNotMatch(betaBanner, /fixed bottom-3 left-3/, "问题反馈入口不得继续占用页面左下角");
+assert.match(betaBanner, /onClick=\{openReport\}[\s\S]{0,360}反馈问题/, "问题反馈入口必须继续打开原有反馈流程");
+assert.doesNotMatch(betaBanner, /meta\.version|meta\.sha|releaseChannelLabel/, "问题反馈入口不得继续显示版本、提交或发布通道");
 
 const configForm = read("web/src/components/config-form.tsx");
 assert.match(
@@ -278,9 +362,7 @@ assert.doesNotMatch(configForm, /setCliId\(\(prev\) => prev \|\| list\.find/, "�
 
 for (const configConsumer of [
   "web/src/components/assistant-console.tsx",
-  "web/src/components/cn-diagnose/cn-diagnose-view.tsx",
   "web/src/components/onboarding-banner.tsx",
-  "web/src/components/usage-meter.tsx",
 ]) {
   const source = read(configConsumer);
   assert.match(source, /addEventListener\(CONFIG_CHANGED_EVENT,/, `${configConsumer} 必须响应同页面 Agent 配置变更`);
@@ -288,117 +370,75 @@ for (const configConsumer of [
 }
 
 const diagnoseView = read("web/src/components/cn-diagnose/cn-diagnose-view.tsx");
-assert.match(diagnoseView, />岗位诊断</, "岗位诊断页面必须使用简洁标题");
-assert.doesNotMatch(diagnoseView, /China Job Diagnosis|中国岗位诊断工作流|中国大陆版岗位诊断/, "岗位诊断页面不应重复强调默认市场");
-assert.doesNotMatch(diagnoseView, /BOSS \/ 招聘页 URL|zhipin\.com|const \[url, setUrl\]/, "岗位诊断不得提供不可靠的 BOSS URL 抓取入口");
-assert.match(diagnoseView, /const \[jdText, setJdText\] = useState\(""\)/, "JD 输入必须默认为空，不得混入演示岗位");
-assert.match(diagnoseView, /type InputMode = "jd" \| "screenshots"/, "JD 和岗位截图必须建模为并行输入模式");
-assert.match(diagnoseView, /const MAX_SCREENSHOTS = 3/, "岗位截图上传上限必须为 3 张");
-assert.match(diagnoseView, /useState<InputMode>\("screenshots"\)/, "岗位诊断必须默认显示岗位截图 Tab");
-const inputTablistStart = diagnoseView.indexOf('<div role="tablist"');
-const inputTablistEnd = diagnoseView.indexOf('</div>', inputTablistStart);
-const inputTablist = inputTablistStart >= 0 && inputTablistEnd > inputTablistStart
-  ? diagnoseView.slice(inputTablistStart, inputTablistEnd)
-  : "";
-assert.match(inputTablist, /岗位描述 JD/, "JD Tab 必须位于岗位输入 tablist 中");
-assert.match(inputTablist, /岗位截图/, "岗位截图 Tab 必须位于岗位输入 tablist 中");
-assert.equal((inputTablist.match(/role="tab"/g) || []).length, 2, "岗位输入 tablist 必须包含两个可访问 Tab");
-assert.match(diagnoseView, /role="tab"[\s\S]{0,500}aria-selected=/, "岗位输入 Tab 必须暴露可访问的选中状态");
-assert.match(diagnoseView, /type="file"[\s\S]{0,220}multiple/, "岗位截图必须允许一次选择多张图片");
-assert.match(diagnoseView, /useState<ScreenshotInput\[]>\(\[\]\)/, "前端必须以数组保存最多 3 张岗位截图");
-assert.match(diagnoseView, /window\.addEventListener\("paste", handlePaste\)/, "截图 Tab 必须监听系统粘贴事件");
-assert.match(diagnoseView, /window\.removeEventListener\("paste", handlePaste\)/, "截图 Tab 卸载时必须清理粘贴事件监听");
-assert.match(diagnoseView, /event\.clipboardData\?\.items/, "截图粘贴必须从 ClipboardEvent 的 DataTransferItemList 安全读取文件");
-assert.match(diagnoseView, /item\.kind === "file" && item\.type\.startsWith\("image\/"\)/, "截图粘贴只能接收剪贴板图片");
-assert.match(diagnoseView, /⌘V \/ Ctrl\+V/, "截图上传区必须提示可使用快捷键粘贴");
-assert.match(diagnoseView, /<Button[\s\S]{0,240}AI 岗位诊断[\s\S]{0,60}<\/Button>/, "岗位诊断必须只保留统一的 AI 入口");
-assert.doesNotMatch(diagnoseView, /规则诊断|Codex 深度|type Engine|run\("quick"\)|run\("codex"\)/, "页面不得继续暴露两个同级诊断引擎");
-assert.doesNotMatch(diagnoseView, /variant="secondary"[\s\S]{0,240}AI 岗位诊断/, "AI 岗位诊断必须使用默认主色按钮");
-assert.doesNotMatch(diagnoseView, /engine\s*:/, "前端请求不得继续发送已废弃的诊断引擎参数");
-assert.match(diagnoseView, /localStorage\.getItem\("career-one:config"\)/, "岗位诊断必须读取设置页当前选择的 Agent CLI");
-assert.match(diagnoseView, /body:\s*JSON\.stringify\(\{[\s\S]{0,180}cliId/, "岗位诊断请求必须携带设置中的 cliId");
-assert.doesNotMatch(diagnoseView, /由本机 Codex|仅支持 Codex|Codex CLI/, "通用 AI 岗位诊断不得在界面写死 Codex");
-assert.match(diagnoseView, /disabled=\{!canRun \|\| loading\}/, "提供岗位输入后诊断按钮必须可点击，Agent 配置问题应在点击后明确提示");
-assert.doesNotMatch(diagnoseView, /disabled=\{[^}]*!cliId/, "未保存 Agent 时不得直接把诊断按钮置灰而隐藏原因");
-assert.match(diagnoseView, /const DIAGNOSIS_STAGES/, "岗位诊断必须定义稳定的阶段列表");
-assert.match(diagnoseView, /function DiagnosisProgressPanel/, "岗位诊断运行时必须展示专用进度面板");
-assert.match(diagnoseView, /role="status"/, "岗位诊断进度必须通过可访问状态区域播报");
-assert.match(diagnoseView, /taskId=/, "岗位诊断页面必须通过任务 ID 查询服务端进度");
-assert.match(diagnoseView, /method:\s*"DELETE"/, "岗位诊断必须通过显式停止接口终止 Agent 任务");
-assert.doesNotMatch(diagnoseView, /runControllerRef|reader\.read\(\)|new TextDecoder\(\)/, "页面生命周期不得继续持有或取消 Agent 进程");
-assert.match(diagnoseView, />停止诊断</, "岗位诊断运行时必须提供明确的停止操作");
-assert.match(diagnoseView, /loading \? \([\s\S]{0,180}<DiagnosisProgressPanel/, "诊断运行时结果区必须切换到阶段进度面板");
-assert.match(diagnoseView, /function DiagnosisHistory/, "岗位诊断页面必须展示持久化历史记录");
-assert.match(diagnoseView, />诊断记录</, "岗位诊断历史区必须使用清晰的中文标题");
-assert.match(diagnoseView, /离开此页面不会停止诊断/, "运行中必须明确告知用户任务不依赖当前页面");
-for (const moduleTitle of ["正向信号", "匹配雷达", "剩余风险", "沟通后的分流规则", "必须追问", "你在这个岗位里的最佳表达"]) {
-  assert.match(diagnoseView, new RegExp(moduleTitle), `即时诊断结果必须展示“${moduleTitle}”模块`);
-}
-assert.match(diagnoseView, /result\.decisionRules\.map/, "即时诊断结果必须渲染 Agent 返回的沟通分流规则");
-assert.match(diagnoseView, /items=\{result\.positioning\}/, "即时诊断结果必须渲染 Agent 返回的最佳表达");
-assert.match(diagnoseView, /function formatDiagnosisModules/, "六个核心模块必须支持统一整理为可复制文本");
-assert.match(diagnoseView, />\s*复制六模块\s*</, "即时诊断结果必须提供六模块统一复制操作");
+const taskFormat = read("web/src/lib/format.ts");
+assert.match(diagnoseView, />岗位评估</, "岗位评估页面必须使用统一标题");
+assert.doesNotMatch(diagnoseView, /China Job Diagnosis|中国岗位诊断工作流|中国大陆版岗位诊断/, "岗位评估页面不应重复强调默认市场");
+assert.match(diagnoseView, /useJobs\(\)/, "岗位评估必须复用全局 Agent 任务系统");
+assert.match(diagnoseView, /function isEvaluationJob/, "岗位评估页必须只筛选评估类 Agent 任务");
+assert.match(taskFormat, /EVALUATION_INTENTS[\s\S]{0,100}"evaluate-job"/, "岗位评估页必须兼容 Agent 原生评估任务标识");
+assert.match(diagnoseView, /return isEvaluationIntent\(job\.kind\)/, "岗位评估页必须按任务意图分类，不得按标题猜测任务类型");
+assert.doesNotMatch(diagnoseView, /function isEvaluationJob[\s\S]{0,220}job\.title/, "岗位评估页不得因简历任务标题含有“评估报告”而误收该任务");
+assert.match(diagnoseView, /function CurrentEvaluationTaskDetail/, "岗位评估页必须展示当前评估任务详情");
+assert.match(diagnoseView, />当前岗位评估</, "当前评估任务详情必须使用明确标题");
+assert.match(diagnoseView, /<AgentTaskDetailPanel\s+job=\{job\}/, "当前评估必须复用 Agent 任务详情组件");
+assert.doesNotMatch(diagnoseView, /最近一次岗位评估|单独打开任务|role="progressbar"|evaluationProgress/, "当前评估不得保留旧标题、独立任务按钮或简化进度卡");
+assert.match(diagnoseView, />\s*历史评估报告\s*</, "岗位评估页必须使用历史评估报告标题");
+assert.match(diagnoseView, /<EvaluationReportCard\s+report=\{report\}/, "历史评估报告必须使用独立报告卡片");
+assert.doesNotMatch(diagnoseView, /AgentTaskListCard/, "历史评估报告不得混用 Agent 任务列表卡片");
+const latestEvaluationPosition = diagnoseView.indexOf("<CurrentEvaluationTaskDetail");
+const reportsPosition = diagnoseView.indexOf('id="evaluation-reports-title"');
+assert.ok(latestEvaluationPosition >= 0 && reportsPosition > latestEvaluationPosition, "当前岗位评估必须位于评估报告列表上方");
+assert.doesNotMatch(diagnoseView, /正式 Agent 评估|统一正式评估模式/, "岗位评估页不得保留顶部模式组件");
+assert.doesNotMatch(diagnoseView, /startJob|evaluationInput|type="file"|role="tablist"|岗位描述 JD|上传岗位截图|AI 岗位评估/, "初版岗位评估页不得提供 Web 评估入口");
+assert.doesNotMatch(diagnoseView, /\/api\/cn-diagnose|DiagnosisHistory|ResultPanel|诊断记录|HTML 报告|htmlUrl|htmlRel/, "岗位评估页面不得保留旧诊断 API、即时结果或 HTML 历史");
+assert.equal(fs.existsSync(path.join(root, "web/src/app/api/cn-diagnose/route.ts")), false, "旧 cn-diagnose API 必须移除");
+assert.equal(fs.existsSync(path.join(root, "web/src/lib/cn-diagnose.ts")), false, "旧 HTML 报告渲染器必须移除");
 
-const diagnoseReport = read("web/src/lib/cn-diagnose.ts");
-assert.doesNotMatch(diagnoseReport, /China Mainland Job Diagnosis|China tracker/, "岗位诊断报告不应重复强调默认市场");
-assert.doesNotMatch(diagnoseReport, /url\?: string|input\.url|zhipin\.com/, "岗位诊断报告不得因 BOSS URL 增加评分或置信度");
-assert.doesNotMatch(
-  diagnoseReport,
-  /(?:我是|本人有)\d{1,2}年[^"'`\n]{0,80}(?:背景|经验)|你的优势[^"'`\n]{0,40}(?:全栈|交付)|把 \d{1,2} 年经验[^"'`\n]{0,40}(?:表达|转译)|独立[^"'`\n]{0,12}(?:上线|发布)[^"'`\n]{0,24}(?:网站|APP|小程序)/,
-  "系统层不得硬编码任何候选人的履历、工具栈或能力结论",
-);
-assert.doesNotMatch(diagnoseReport, /diagnoseChinaJob|scoreFrom|NEGATIVE_KEYWORDS|candidateContext|QUICK SCORE/, "报告模块不得继续包含规则评分引擎");
-assert.match(diagnoseReport, /AI 匹配评分/, "可视化报告必须明确展示 AI 匹配评分");
-let previousReportModuleIndex = -1;
-for (const moduleTitle of ["正向信号", "匹配雷达", "剩余风险", "沟通后的分流规则", "必须追问", "你在这个岗位里的最佳表达"]) {
-  const moduleIndex = diagnoseReport.indexOf(moduleTitle);
-  assert.ok(moduleIndex > previousReportModuleIndex, `HTML 报告必须按统一顺序展示“${moduleTitle}”模块`);
-  previousReportModuleIndex = moduleIndex;
-}
+const runApi = read("web/src/app/api/run/route.ts");
+assert.match(runApi, /modes\/zh\/_shared\.md/, "正式评估任务必须加载中文共享评估规则");
+assert.match(runApi, /modes\/zh\/oferta\.md/, "正式评估任务必须加载中文岗位评估模式");
+assert.match(runApi, /node reserve-report-num\.mjs/, "正式评估任务必须保留统一报告编号流程");
+assert.match(runApi, /node merge-tracker\.mjs/, "正式评估任务必须写入统一求职进度");
+assert.match(runApi, /reports\/\{num\}/, "正式评估任务必须写入标准 Markdown 报告");
+assert.doesNotMatch(runApi, /EvaluationInput|screenshotDataUrls|renderChinaDiagnosisHtml|diagnosis-history\.json|markets\/china-mainland\/output/, "统一执行器不得保留已下线的 Web 截图评估或旧 HTML 诊断链路");
+assert.match(runApi, /kind === "pdf"[\s\S]{0,260}status:\s*409/, "Web 执行器必须拒绝直接拉起 Agent 生成 PDF");
 
-const diagnoseApi = read("web/src/app/api/cn-diagnose/route.ts");
-assert.doesNotMatch(diagnoseApi, /fetchUrlText|body\.url|liveSearch/, "岗位诊断接口不得在后台抓取招聘页 URL");
-assert.match(diagnoseApi, /inputMode\?: "jd" \| "screenshots"/, "诊断接口必须显式接收当前输入 Tab");
-assert.match(diagnoseApi, /screenshotDataUrls\?: string\[\]/, "诊断接口必须接收多张岗位截图");
-assert.doesNotMatch(diagnoseApi, /screenshotDataUrl\?: string;/, "多图接口不得保留单图字段");
-assert.match(diagnoseApi, /screenshotDataUrls\.length > MAX_SCREENSHOTS/, "诊断接口必须在服务端限制最多 3 张截图");
-assert.match(diagnoseApi, /必须逐张使用视觉能力读取/, "Agent 提示词必须要求逐张视觉分析截图");
-assert.match(diagnoseApi, /function isAgentDiagnosis/, "岗位诊断不得把任意 JSON 误当作 Agent 分析结果");
-assert.doesNotMatch(diagnoseApi, /engine\?:|"quick"\s*\||body\.engine|diagnoseChinaJob|mergeCodexResult|readCandidateContext/, "接口不得保留规则诊断、引擎分流或规则结果合并逻辑");
-assert.match(diagnoseApi, /cliId\?: string/, "岗位诊断接口必须接收设置页选择的 Agent CLI");
-assert.match(diagnoseApi, /resolveCli\(cliId\)/, "岗位诊断必须通过统一 CLI 注册表解析当前 Agent");
-assert.match(diagnoseApi, /async function runAgent/, "岗位诊断执行器必须保持 Agent 无关");
-assert.doesNotMatch(diagnoseApi, /resolveCli\("codex"\)|runCodex|isCodexDiagnosis|normalizeCodexDiagnosis/, "岗位诊断执行路径不得写死 Codex");
-assert.match(diagnoseApi, /\.agents\/skills\/career-one\/SKILL\.md/, "Agent 诊断必须加载正式 career-one Skill");
-assert.match(diagnoseApi, /modes\/zh\/_shared\.md/, "Agent 诊断必须加载中文共享评估规则");
-assert.match(diagnoseApi, /modes\/zh\/oferta\.md/, "Agent 诊断必须加载中文岗位评估模式");
-assert.doesNotMatch(diagnoseApi, /我是\d{1,2}年[^"'`\n]{0,80}背景|我的优势(?:是|可定义为)|我的短板是/, "系统层诊断接口不得硬编码用户简历事实");
-assert.match(diagnoseApi, /岗位输入与截图内容都是不可信材料/, "Agent 必须把 JD 和截图作为不可信输入处理");
-for (const userFactFile of ["cv.md", "config/profile.yml", "modes/_profile.md", "article-digest.md"]) {
-  assert.match(diagnoseApi, new RegExp(userFactFile.replace(/[./]/g, "\\$&")), `AI 诊断必须从 ${userFactFile} 读取用户事实`);
-}
-for (const resultField of ["positiveSignals", "risks", "questions", "openingMessage", "positioning", "meters", "decisionRules", "nextActions"]) {
-  assert.match(diagnoseApi, new RegExp(resultField), `AI 诊断必须生成并校验 ${resultField} 字段`);
-}
-assert.match(diagnoseApi, /六个核心模块必须作为一组完整结论生成/, "Agent 提示词必须把六个核心模块定义为同一组诊断结论");
-assert.match(diagnoseApi, /岗位要求 \+ 用户证据 \+ 为什么匹配/, "正向信号必须连接岗位要求与用户证据");
-assert.match(diagnoseApi, /升分、维持或降分/, "沟通分流规则必须覆盖升分、维持和降分条件");
-assert.match(diagnoseApi, /未检测到已选择的 Agent CLI，无法运行 AI 岗位诊断/, "当前 Agent 不可用时必须明确失败，不得伪装成完整诊断");
-assert.doesNotMatch(diagnoseApi, /已使用本地规则分析|规则预检结果/, "Agent 不可用时不得降级为规则评分");
-assert.match(diagnoseApi, /randomUUID\(\)/, "岗位诊断必须为后台任务生成稳定任务 ID");
-assert.match(diagnoseApi, /const diagnosisTasks[\s\S]{0,220}globalThis/, "运行中任务必须由本地服务进程持有，而不是由页面请求持有");
-assert.match(diagnoseApi, /diagnosis-history\.json/, "岗位诊断历史必须持久化在用户层输出目录");
-assert.match(diagnoseApi, /export async function GET/, "岗位诊断接口必须支持查询活动任务、历史记录和报告");
-assert.match(diagnoseApi, /export async function DELETE/, "岗位诊断接口必须支持用户显式停止任务");
-assert.match(diagnoseApi, /status:\s*202/, "创建岗位诊断后必须立即返回后台任务，而不是保持长连接");
-assert.doesNotMatch(diagnoseApi, /req\.signal\.addEventListener|new ReadableStream<Uint8Array>|application\/x-ndjson/, "页面请求断开不得终止后台 Agent 任务");
-assert.match(diagnoseApi, /type:\s*"progress"/, "岗位诊断接口必须发送进度事件");
-for (const stage of ["preparing", "starting-agent", "analyzing", "validating", "writing-report"]) {
-  assert.match(diagnoseApi, new RegExp(`stage:\\s*"${stage}"`), `岗位诊断必须发送 ${stage} 阶段`);
-}
-assert.match(diagnoseApi, /setInterval\(/, "Agent 分析期间必须发送存活事件，避免把长任务误判为卡死");
-assert.match(diagnoseApi, /signal\.addEventListener\("abort"/, "岗位诊断接口必须响应浏览器取消信号");
-assert.match(diagnoseApi, /child\.kill\("SIGTERM"\)/, "取消或超时时必须终止本地 Agent CLI");
+const agentRunsApi = read("web/src/app/api/agent-runs/route.ts");
+assert.match(agentRunsApi, /action === "queue"/, "共享任务接口必须提供 Web 到 Agent 的排队入口");
+assert.match(agentRunsApi, /rootScript\("agent-inbox"\)/, "Web 排队任务必须写入本地 Agent 待办");
+assert.match(agentRunsApi, /pushOption\(args,\s*"--instruction",\s*instruction\)/, "共享任务接口必须把原始 Agent 指令持久化到同一个任务");
+
+const jobStore = read("web/src/components/jobs/job-store.tsx");
+assert.match(jobStore, /queueAgentTask/, "全局任务系统必须提供 Agent 原生任务排队能力");
+assert.match(jobStore, /action:\s*"queue"/, "Agent 原生任务必须进入 queued 状态，而不是直接执行");
+assert.match(jobStore, /runStatus:\s*run\.status/, "Web 必须保留 queued、running 等共享任务原始状态");
+assert.match(jobStore, /instruction:\s*run\.instruction/, "Web 必须恢复任务最初的 Agent 交接指令");
+assert.match(jobStore, /buildExistingTaskInstruction/, "任务详情页必须能够从原任务恢复续接指令");
+assert.match(jobStore, /已有待办任务 ID/, "续接指令必须明确声明这是已有任务");
+assert.match(jobStore, /不要创建新任务/, "续接指令必须阻止 Agent 重复创建任务");
+
+assert.match(jobDetailPage, /buildExistingTaskInstruction\(job\)/, "任务详情页必须复用当前任务 ID 构建续接指令");
+assert.match(jobDetailPage, /复制并交给 Agent|复制续接指令/, "任务详情页必须提供可见的 Agent 续接按钮");
+assert.match(jobDetailPage, /如果原 Agent 仍在执行/, "运行中的任务必须提醒用户不要重复启动");
+assert.doesNotMatch(jobDetailPage, /queueAgentTask|action:\s*"queue"/, "任务详情页复制指令不得创建新任务");
+
+const generatePdfButton = read("web/src/components/generate-pdf-button.tsx");
+assert.match(generatePdfButton, /queueAgentTask/, "定制简历按钮必须把任务交给用户自己的 Agent");
+assert.match(generatePdfButton, />\s*在 Agent 中生成\s*</, "定制简历的默认入口必须明确显示在 Agent 中生成");
+assert.match(generatePdfButton, /任务已加入 Agent 待办/, "PDF 交接完成后必须明确告知任务已进入待办");
+assert.match(generatePdfButton, /复制指令/, "PDF 交接弹窗必须提供可靠的指令复制入口");
+assert.doesNotMatch(generatePdfButton, /\bstartJob\b/, "定制简历按钮不得再从 Web 直接启动 Agent CLI");
+
+const actionRegistry = read("web/src/app/actions/registry.ts");
+assert.match(actionRegistry, /generatePdf:[\s\S]{0,600}queueAgentTask/, "Web 助手生成 PDF 动作也必须进入 Agent 待办");
+assert.doesNotMatch(actionRegistry, /generatePdf:[\s\S]{0,600}ctx\.startJob/, "Web 助手不得绕过待办直接生成 PDF");
+
+const assistantApi = read("web/src/app/api/assistant/route.ts");
+assert.match(assistantApi, /generatePdf[\s\S]{0,220}Agent 待办/, "Web 助手必须把 PDF 动作解释为 Agent 待办交接");
+
+const careerOneSkill = read(".agents/skills/career-one/SKILL.md");
+assert.match(careerOneSkill, /Web 工作台不得直接启动 Agent CLI/, "Skill 必须明确 Web 只交接、不直接执行 Agent 任务");
+assert.match(careerOneSkill, /已有待办任务 ID[\s\S]{0,260}run progress/, "Skill 必须指导 Agent 接手已有 queued 任务而不是重复创建");
 
 const careerOneLib = read("web/src/lib/career-one.ts");
 assert.doesNotMatch(careerOneLib, /ReportLocale|reports["'],\s*locale/, "每份报告必须是独立记录，不能把中文报告建模为同编号的语言变体");
@@ -421,14 +461,107 @@ assert.match(statusSelect, /aria-label=\{ariaLabel\}/, "状态下拉框必须提
 assert.match(statusSelect, /compact \?/, "统一状态选择器必须提供列表紧凑反馈模式");
 
 const reportView = read("web/src/components/report-view.tsx");
+assert.match(reportView, /<ReportBackButton\s*\/>/, "评估报告必须使用浏览历史返回组件");
+assert.doesNotMatch(reportView, /href="\/pipeline"[\s\S]{0,160}求职进度/, "评估报告不得把返回入口固定为求职进度");
+assert.match(pipelineView, /export function ReportBackButton/, "求职进度客户端模块必须提供报告返回组件");
+assert.match(pipelineView, /window\.history\.length > 1[\s\S]{0,120}router\.back\(\)/, "评估报告存在上一页时必须返回真实入口");
+assert.match(pipelineView, /router\.replace\("\/pipeline"\)/, "直接打开评估报告时必须提供安全回退");
 assert.doesNotMatch(reportView, /报告语言|>中文<|>原文</, "中文和英文报告是两条记录，不得渲染语言 Tab");
-assert.match(reportView, /机器摘要/, "求职详情必须本地化机器摘要标题");
+assert.match(reportView, /function isWebHiddenSection[\s\S]{0,160}machine summary/i, "求职详情必须识别 Web 端隐藏的机器摘要");
+assert.match(reportView, /rest\.filter\(\(s\) => !isWebHiddenSection\(s\.heading\)\)/, "求职详情必须在 Web 渲染前过滤机器摘要");
+assert.doesNotMatch(reportView, /"machine summary": "机器摘要"/, "求职详情不得继续暴露机器摘要标题");
+assert.match(reportView, /评估规则-面向求职者/, "求职详情必须使用面向求职者的评估规则分隔标题");
+assert.doesNotMatch(reportView, /技术细节 · 面向开发者/, "求职详情不得继续使用面向开发者的技术细节标题");
+assert.match(reportView, /"面试开场话术": "打招呼话术"/, "求职详情必须把历史报告的旧标题映射为打招呼话术");
+assert.match(reportView, /"建议向猎头追问": "向招聘方追问"/, "求职详情必须把历史报告的猎头标题映射为招聘方标题");
+assert.match(reportView, /"建议向招聘方追问": "向招聘方追问"/, "求职详情必须把历史报告的建议追问标题映射为新标题");
+assert.match(reportView, /"必须追问": "向招聘方追问"/, "求职详情必须把即时报告的旧追问标题映射为新标题");
+assert.match(reportView, /"沟通后的分流规则": "沟通后分流规则"/, "求职详情必须把旧分流标题映射为新标题");
+assert.match(reportView, /"岗位概览": "岗位预览"/, "求职详情必须把历史报告的岗位概览显示为岗位预览");
+assert.match(reportView, /function arrangeReportSections/, "求职详情必须统一重排新旧岗位报告模块");
+assert.match(reportView, /insertSubsectionBefore/, "求职详情必须把匹配雷达放到能力与缺口补强上方");
+assert.match(reportView, /const positiveSignals = take\(\/\^正向信号\$\/,\s*bExists\)/, "求职详情必须把历史报告的独立正向信号收进简历匹配分析");
+assert.match(reportView, /insertSubsectionBefore\(content,\s*"正向信号",\s*positiveSignalsContent\)/, "求职详情必须把正向信号放到匹配雷达下方");
+assert.match(reportView, /moveSectionAfter\([\s\S]*section\.letter === "G"[\s\S]*section\.letter === "D"/, "求职详情必须把职位真实性评估移动到薪酬竞争力与市场需求下方");
+assert.match(reportView, /for \(const letter of \["E", "F"\]\)/, "求职详情必须成组提取针对性定制方案和面试备考计划");
+assert.match(reportView, /arranged\.splice\(deferredInsertIndex,\s*0,\s*\.\.\.deferredSections\)/, "求职详情必须把针对性定制方案和面试备考计划放到沟通后分流规则下方");
+assert.match(reportView, /const expanded = !anyAB && i === 0;/, "岗位预览和简历匹配分析必须与其他章节一致使用默认收起的抽屉");
+assert.match(
+  reportView,
+  /<span className="shrink-0 whitespace-nowrap text-sm font-medium">\s*<span className="tabular-nums">\{i \+ 1\}、<\/span>\s*\{cleanHeading\(s\.heading\)\}\s*<\/span>/,
+  "求职详情的用户可见模块必须按实际顺序展示紧凑中文编号",
+);
+assert.doesNotMatch(
+  reportView,
+  /className="[^"]*bg-brand-soft[^"]*"[\s\S]{0,100}\{i \+ 1\}/,
+  "求职详情的连续编号不得使用额外色块背景",
+);
+assert.match(reportView, /heading\.match\(\/\^\(\?:Block/, "求职详情必须继续解析内部 A-G 模块 ID 以兼容历史报告");
+assert.match(reportView, /shrink-0[^"]*whitespace-nowrap|whitespace-nowrap[^"]*shrink-0/, "求职详情抽屉标题必须保持单行且不得参与压缩");
+assert.match(reportView, /min-w-0[^"]*flex-1[^"]*truncate|flex-1[^"]*min-w-0[^"]*truncate/, "求职详情抽屉副标题必须优先压缩并截断");
+assert.ok(
+  taskFormat.includes("const ORDERED_LIST_ITEM = /^\\s*\\d+\\s*[.)、）]"),
+  "求职详情预览必须识别常见中文与西文有序列表标记",
+);
+assert.match(reportView, /const teaser = reportSectionPreview\(s\.content\)/, "求职详情抽屉必须通过共享格式化方法计算可选副标题");
+assert.match(reportView, /\{teaser && \(/, "有序列表等无有效预览内容时不得渲染空洞副标题");
 assert.match(reportView, /verdict\|结论\|最终建议/, "求职详情只能按明确标题识别结论章节");
+assert.match(reportView, /verdict && \([\s\S]{0,220}border border-border bg-surface\/30/, "结论卡片必须使用与下方抽屉一致的中性背景和边框");
+assert.match(reportView, /<p className="mb-2 text-lg font-bold text-foreground">结论<\/p>/, "结论标题必须使用加大、加粗的前景色文字");
+assert.doesNotMatch(reportView, /<p className="[^"]*text-brand[^"]*">结论<\/p>/, "结论标题不得继续使用品牌黄色");
 assert.doesNotMatch(reportView, /find\(\(s\) => s\.letter === "F"\)/, "F 章节可能是面试计划，不能固定当作结论");
 
 const scoreMethodology = read("web/src/components/score-methodology.tsx");
 assert.doesNotMatch(scoreMethodology, /career-one\.org\/methodology/, "评分说明不得链接到失效的外部方法页");
 assert.doesNotMatch(scoreMethodology, /查看上游完整方法说明/, "评分说明不得继续显示误导性的上游链接");
+assert.match(scoreMethodology, /const SCORING_FACTORS/, "评分说明必须把评分因子与综合判断分开建模");
+assert.match(scoreMethodology, /5 个评分因子/, "评分说明必须展示五因子评分模型");
+for (const factor of ["简历匹配度", "职业方向", "职级与职责", "薪酬竞争力", "组织与文化"]) {
+  assert.match(scoreMethodology, new RegExp(factor), `评分说明必须展示评分因子：${factor}`);
+}
+assert.doesNotMatch(scoreMethodology, /\["风险信号",/, "风险信号不得继续作为数值评分因子");
+assert.match(scoreMethodology, /综合判断/, "评分说明必须解释综合判断");
+assert.match(scoreMethodology, /真实性评级不修改数值分/, "评分说明必须明确真实性评级不修改匹配分");
+assert.match(scoreMethodology, /const REPORT_MODULES/, "评分说明必须按用户可见顺序单独建模报告模块");
+assert.doesNotMatch(scoreMethodology, /const BLOCKS|\["[A-G]",/, "评分说明不得向用户暴露内部 A-G 模块 ID");
+assert.doesNotMatch(scoreMethodology, /G 的职位真实性评级/, "评分说明的用户可见文案不得继续引用内部字母 ID");
+assert.match(scoreMethodology, /REPORT_MODULES\.map\(\(description, index\)/, "评分说明必须按模块数组顺序生成连续数字");
+assert.match(scoreMethodology, /aria-hidden="true"[\s\S]{0,240}\{index \+ 1\}/, "评分说明必须显示连续数字序号");
+for (const moduleTitle of [
+  "岗位预览",
+  "简历匹配分析",
+  "级别判断与求职策略",
+  "薪酬竞争力与市场需求",
+  "职位真实性评估",
+  "打招呼话术",
+  "向招聘方追问",
+  "你在这个岗位里的最佳表达",
+  "沟通后分流规则",
+  "针对性定制方案",
+  "面试备考计划",
+]) {
+  assert.match(scoreMethodology, new RegExp(moduleTitle), `评分说明必须按当前报告顺序展示模块：${moduleTitle}`);
+}
+
+const chineseScoringRules = read("modes/zh/_shared.md");
+assert.match(chineseScoringRules, /5 个评分因子/, "中文共享规则必须使用五因子评分模型");
+assert.match(chineseScoringRules, /\| 职级与职责匹配度 .* \|/, "中文共享规则必须增加职级与职责评分");
+assert.doesNotMatch(chineseScoringRules, /^\| 红线警告 .* \|$/m, "中文共享规则不得把风险作为数值评分因子");
+assert.match(chineseScoringRules, /最终建议.*综合匹配分.*职位真实性评级/s, "中文共享规则必须组合匹配分与真实性评级形成最终建议");
+
+const englishScoringRules = read("modes/_shared.md");
+assert.match(englishScoringRules, /5 scoring factors/, "英文共享规则必须使用五因子评分模型");
+assert.match(englishScoringRules, /\| Level and responsibility fit \|/, "英文共享规则必须增加职级与职责评分");
+assert.doesNotMatch(englishScoringRules, /^\| Red flags \|/m, "英文共享规则不得把风险作为数值评分因子");
+assert.match(englishScoringRules, /final recommendation.*global match score.*posting legitimacy/is, "英文共享规则必须组合匹配分与真实性评级形成最终建议");
+
+const batchPrompt = read("batch/batch-prompt.md");
+assert.match(batchPrompt, /\| Level and responsibilities \| X\/5 \|/, "批处理提示必须输出职级与职责评分");
+assert.doesNotMatch(batchPrompt, /^\| Red flags \|/m, "批处理提示不得继续用风险扣减匹配分");
+
+const patternAnalyzer = read("analyze-patterns.mjs");
+assert.match(patternAnalyzer, /levelResponsibilityRegex/, "历史分析器必须能解析新的职级与职责评分");
+assert.match(patternAnalyzer, /legacyRedFlagsRegex/, "历史分析器必须保留旧报告风险分的兼容解析");
 
 const explorerView = read("web/src/components/explore/explorer-view.tsx");
 assert.match(explorerView, /function DiscoverBar[\s\S]{0,800}bg-brand[^"]*hover:bg-brand-200/, "发现岗位主按钮 hover 必须复用加深的品牌色");

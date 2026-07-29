@@ -34,31 +34,32 @@ The files below are the **ONLY** sources for user-facing content (CV, cover lett
 
 ## Scoring System
 
-The evaluation uses 6 blocks (A-F) with a global score of 1-5:
+The evaluation uses **5 scoring factors** to calculate a 1-5 global match score. A-G are report modules, not scoring factors; adding radar, risk, communication, or preparation content must not create duplicate scoring.
 
-| Dimension | What it measures |
+| Scoring factor | What it measures |
 |-----------|-----------------|
 | Match con CV | Skills, experience, proof points alignment |
 | North Star alignment | How well the role fits the user's target archetypes (from _profile.md) |
+| Level and responsibility fit | Match between the JD's real seniority, scope, decision authority, management/collaboration boundaries, and the candidate's natural level |
 | Comp | Salary vs market (5=top quartile, 1=well below) |
-| Cultural signals | Company culture, growth, stability, remote policy |
-| Red flags | Blockers, warnings (negative adjustments) |
-| **Global** | Weighted average of above |
+| Organization and culture fit | Team structure, values, working style, growth, stability, remote policy, and working-hours expectations |
+
+**Global** is the weighted average of these 5 factors. Risks, missing information, and legitimacy signals must remain visible in the report, but must not be applied again as a sixth scoring factor.
 
 **Score interpretation:**
-- 4.5+ → Strong match, recommend applying immediately
+- 4.5+ → Strong match; recommend applying immediately only when Block G is High Confidence, otherwise follow the legitimacy action
 - 4.0-4.4 → Good match, worth applying
 - 3.5-3.9 → Decent but not ideal, apply only if specific reason
 - Below 3.5 → Recommend against applying (see Ethical Use in AGENTS.md)
 
-**How to score the "Cultural signals" dimension:**
-1. Read `culture_screen.require` from `config/profile.yml`. If `culture_screen` is missing or empty, skip the structural capping and score the dimension qualitatively based on company size, remote policy, and stability.
+**How to score the "Organization and culture fit" factor:**
+1. Read `culture_screen.require` from `config/profile.yml`. If `culture_screen` is missing or empty, skip the structural capping and score the factor qualitatively based on company size, remote policy, and stability.
 2. Actively look for evidence in the JD + Block G company research corresponding to those requirements (e.g., team size mentions, org-chart depth/manager layers, meeting-culture language, company stage).
 3. **If most `require` criteria have positive evidence** → score 4-5.
 4. **If some criteria have positive evidence, and none are contradicted** → score 3.
-5. **If evidence contradicts the `require` criteria** → **cap this dimension at 2/5**, and add an explicit line to Block A's Culture Screen field (see `oferta.md`) naming what's missing or contradicted. Do not let a strong CV-match score silently compensate for this — surface it, don't bury it.
-6. **If no evidence exists for any `require` criterion** → score 3 by default, unless `culture_screen.deprioritize_if_absent: true` is set, in which case **cap this dimension at 2/5**.
-7. A role scoring 4.5+ overall but 2 or below on Cultural signals must carry an explicit warning in the report: "High technical fit, unconfirmed/poor culture fit — verify before applying."
+5. **If evidence contradicts the `require` criteria** → **cap this factor at 2/5**, and add an explicit line to Block A's Culture Screen field (see `oferta.md`) naming what's missing or contradicted. Do not let a strong CV-match score silently compensate for this — surface it, don't bury it.
+6. **If no evidence exists for any `require` criterion** → score 3 by default, unless `culture_screen.deprioritize_if_absent: true` is set, in which case **cap this factor at 2/5**.
+7. A role scoring 4.5+ overall but 2 or below on Organization and culture fit must carry an explicit warning in the report: "High technical fit, unconfirmed/poor culture fit — verify before applying."
 
 ## Posting Legitimacy (Block G)
 
@@ -68,6 +69,14 @@ Block G assesses whether a posting is likely a real, active opening. It does NOT
 - **High Confidence** -- Real, active opening (most signals positive)
 - **Proceed with Caution** -- Mixed signals, worth noting (some concerns)
 - **Suspicious** -- Multiple ghost indicators, user should investigate first
+
+## Final Recommendation
+
+The final recommendation must combine the **global match score** with **posting legitimacy**:
+
+- The global match score answers whether the role fits the candidate.
+- Posting legitimacy answers whether the opportunity deserves time now or needs verification first.
+- Legitimacy does not alter the numeric score, but it can change the action. For example, a high score plus Proceed with Caution becomes "verify first, then apply"; a high score plus Suspicious becomes "research first or skip", never an automatic immediate-apply recommendation.
 
 **Key signals (weighted by reliability):**
 

@@ -126,6 +126,49 @@ export function parseAppliedDate(notes) {
   return m ? m[1] : null;
 }
 
+function normalizeApplicationIdentityPart(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .trim()
+    .toLocaleLowerCase('en-US')
+    .replace(/[\p{P}\p{S}\s]+/gu, ' ')
+    .trim();
+}
+
+/**
+ * Reports are tracker records, not necessarily distinct real-world
+ * applications. A translated or regenerated report can therefore share the
+ * same company, role, channel and applied date with an existing row. Collapse
+ * those rows into one follow-up identity while retaining every tracker number
+ * so their follow-up history is still observed.
+ */
+export function groupApplicationsForFollowup(applications) {
+  const grouped = new Map();
+
+  for (const app of applications) {
+    const appliedDate = parseAppliedDate(app.notes) || app.date;
+    const via = app.via && app.via !== '—' ? app.via : '';
+    const identity = JSON.stringify([
+      normalizeApplicationIdentityPart(app.company),
+      normalizeApplicationIdentityPart(app.role),
+      normalizeApplicationIdentityPart(via),
+      appliedDate,
+    ]);
+    const existing = grouped.get(identity);
+    if (existing) {
+      existing.applicationNums.push(app.num);
+      continue;
+    }
+    grouped.set(identity, {
+      ...app,
+      appliedDate,
+      applicationNums: [app.num],
+    });
+  }
+
+  return [...grouped.values()];
+}
+
 export function daysBetween(d1, d2) {
   return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
 }
@@ -299,18 +342,20 @@ function analyze() {
 
   const now = today();
   const entries = [];
+  const actionableApplications = groupApplicationsForFollowup(
+    apps.filter((app) => ACTIONABLE_STATUSES.includes(normalizeStatus(app.status))),
+  );
 
-  for (const app of apps) {
+  for (const app of actionableApplications) {
     const normalized = normalizeStatus(app.status);
-    if (!ACTIONABLE_STATUSES.includes(normalized)) continue;
 
     // Prefer the "Applied YYYY-MM-DD" date from notes; fall back to the column.
-    const appliedDate = parseAppliedDate(app.notes) || app.date;
+    const appliedDate = app.appliedDate;
     const appDate = parseDate(appliedDate);
     if (!appDate) continue;
 
     const daysSinceApp = daysBetween(appDate, now);
-    const appFollowups = followupsByApp.get(app.num) || [];
+    const appFollowups = app.applicationNums.flatMap((num) => followupsByApp.get(num) || []);
     const followupCount = appFollowups.length;
 
     // Find most recent follow-up
@@ -329,7 +374,16 @@ function analyze() {
     // A pinned next-date takes precedence over the computed cadence (explicit
     // user intent — it even revives a cold application) until a follow-up
     // logged after the pin resumes the normal schedule.
-    const nextOverride = resolveNextOverride(overrides.get(app.num), lastFollowupDate);
+    const activeOverride = app.applicationNums
+      .map((num) => overrides.get(num))
+      .filter(Boolean)
+      .map((override) => ({ override, date: resolveNextOverride(override, lastFollowupDate) }))
+      .filter(({ date }) => date)
+      .sort((a, b) =>
+        b.override.setDate.localeCompare(a.override.setDate)
+        || b.override.appNum - a.override.appNum,
+      )[0];
+    const nextOverride = activeOverride?.date || null;
     if (nextOverride) {
       nextFollowupDate = nextOverride;
       urgency = daysBetween(parseDate(nextOverride), now) >= 0 ? 'overdue' : 'waiting';
@@ -343,6 +397,7 @@ function analyze() {
 
     entries.push({
       num: app.num,
+      applicationNums: app.applicationNums,
       date: app.date,
       appliedDate,
       company: app.company,

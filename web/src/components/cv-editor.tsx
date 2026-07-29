@@ -1,15 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, Loader2, PencilLine, Sparkles, X } from "lucide-react";
+import { Bot, Check, Loader2, PencilLine, RotateCcw, X } from "lucide-react";
+import { AgentTaskHandoffDialog } from "@/components/generate-pdf-button";
+import {
+  buildQueuedTaskInstruction,
+  type AgentTaskHandoff,
+  useJobs,
+} from "@/components/jobs/job-store";
 import type { InterviewStory } from "@/lib/career-one";
 import { cn } from "@/lib/cn";
+import { PRIMARY_NAV_ITEMS } from "@/lib/nav-items";
 import { parseStoryBank, serializeStoryMarkdown } from "@/lib/story-bank.mjs";
 
-const STORY_ACTION_CLASS = "liquid-glass-control group inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold tracking-[0.01em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/45 max-sm:h-11 max-sm:px-3";
+const STORY_ACTION_CLASS = "group inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-outline-border bg-outline-bg px-3 py-1 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-border-hover focus-visible:ring-offset-2 focus-visible:ring-offset-surface max-sm:min-h-11";
+const PageIcon = PRIMARY_NAV_ITEMS.cv.icon;
 
 export function CvEditor() {
   const [content, setContent] = useState("");
@@ -49,11 +58,14 @@ export function CvEditor() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="page-shell py-8">
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl tracking-tight text-landing">简历编辑器</h1>
-          <p className="mt-1 w-full text-sm text-muted">
+          <div className="flex items-center gap-3">
+            <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
+            <h1 className="font-display text-2xl tracking-tight text-landing">简历编辑器</h1>
+          </div>
+          <p className="mt-1 w-full pl-9 text-sm text-muted">
             编辑 <code className="text-foreground">cv.md</code> 并实时预览。
             {!exists && loaded && <span className="ml-1 text-faint">当前还没有 cv.md，输入内容即可创建。</span>}
           </p>
@@ -91,16 +103,28 @@ export function CvEditor() {
   );
 }
 
-function storyPrompt(story: InterviewStory) {
-  return `请只优化面试故事 ${story.id}《${story.title}》。先读取 interview-prep/story-bank.md 中这一条故事，以及允许作为事实来源的 cv.md、article-digest.md、config/profile.yml、modes/_profile.md 和 interview-prep/ 中的面试资料。增强这条故事的 STAR+Reflection 表达，但不得新增、删除或修改其他故事，也不得改变故事编号。只能使用已核验事实；信息不足时先问我，不要猜测。准备好后先列出本条故事的修改摘要，再通过 setStory 提交仅包含 ${story.id} 的 Markdown 草稿，必须等我在确认卡中确认后才能保存。不要直接修改任何文件。`;
-}
-
 /**
  * Per-story maintenance entry points. Every write carries an immutable story
  * ID; the server merges that one block into the user-owned story bank.
  */
 export function StoryActions({ story }: { story: InterviewStory }) {
   const router = useRouter();
+  const { jobs, queueAgentTask } = useJobs();
+  const job = useMemo(
+    () => jobs
+      .filter((item) => item.kind === "story" && item.input === story.id)
+      .sort((a, b) => b.startedAt - a.startedAt)[0],
+    [jobs, story.id],
+  );
+  const taskOpts = useMemo(() => ({
+    title: `优化面试故事 · ${story.id} ${story.title}`,
+    subtitle: "等待用户自己的 Agent 处理",
+    kind: "story",
+    input: story.id,
+    page: "/interview",
+  }), [story.id, story.title]);
+  const [handoff, setHandoff] = useState<AgentTaskHandoff | null>(null);
+  const [handoffOpen, setHandoffOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -109,6 +133,8 @@ export function StoryActions({ story }: { story: InterviewStory }) {
   const [original, setOriginal] = useState("");
   const [baseHash, setBaseHash] = useState("");
   const [error, setError] = useState("");
+  const agentTriggerRef = useRef<HTMLButtonElement>(null);
+  const queuingRef = useRef(false);
   const dirty = content !== original;
 
   useEffect(() => {
@@ -171,21 +197,70 @@ export function StoryActions({ story }: { story: InterviewStory }) {
     }
   }
 
-  function openAgent() {
-    window.dispatchEvent(new CustomEvent("co-assistant", { detail: { message: storyPrompt(story) } }));
+  function showExistingHandoff() {
+    if (!job) return;
+    setHandoff({
+      id: job.id,
+      instruction: buildQueuedTaskInstruction(taskOpts, job.id),
+    });
+    setHandoffOpen(true);
+  }
+
+  function beginAgentHandoff() {
+    if (queuingRef.current) return;
+    if (
+      job?.runStatus === "queued"
+      || job?.runStatus === "waiting_approval"
+      || job?.status === "running"
+      || job?.status === "error"
+    ) {
+      showExistingHandoff();
+      return;
+    }
+    queuingRef.current = true;
+    const next = queueAgentTask(taskOpts);
+    setHandoff(next);
+    setHandoffOpen(true);
+    window.setTimeout(() => {
+      queuingRef.current = false;
+    }, 500);
   }
 
   return (
     <>
       <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-        <button
-          type="button"
-          onClick={openAgent}
-          className={STORY_ACTION_CLASS}
-        >
-          <Sparkles className="size-3.5 text-icon-brand transition-colors" />
-          AI 优化
-        </button>
+        {job?.runStatus === "waiting_approval" ? (
+          <Link href={`/jobs/${job.id}`} className={STORY_ACTION_CLASS}>
+            <Bot className="size-3.5 text-icon-brand" aria-hidden="true" />
+            等待确认
+          </Link>
+        ) : job?.status === "running" ? (
+          <Link href={`/jobs/${job.id}`} className={STORY_ACTION_CLASS}>
+            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            Agent 正在优化…
+          </Link>
+        ) : (
+          <button
+            ref={agentTriggerRef}
+            type="button"
+            onClick={job?.runStatus === "queued" || job?.status === "error" ? showExistingHandoff : beginAgentHandoff}
+            aria-haspopup="dialog"
+            aria-expanded={handoffOpen}
+            className={STORY_ACTION_CLASS}
+            title="由你的 Codex、WorkBuddy 或其他 Agent 优化这条面试故事"
+          >
+            {job?.status === "error" ? (
+              <RotateCcw className="size-3.5 text-icon-muted transition-colors group-hover:text-icon-brand" aria-hidden="true" />
+            ) : (
+              <Bot className="size-3.5 text-icon-muted transition-colors group-hover:text-icon-brand" aria-hidden="true" />
+            )}
+            {job?.runStatus === "queued"
+              ? "等待 Agent 处理"
+              : job?.status === "error"
+                ? "回到 Agent 重试"
+                : "在 Agent 中优化"}
+          </button>
+        )}
         <button
           type="button"
           onClick={openManualEditor}
@@ -195,6 +270,13 @@ export function StoryActions({ story }: { story: InterviewStory }) {
           手动维护
         </button>
       </div>
+
+      <AgentTaskHandoffDialog
+        handoff={handoff}
+        open={handoffOpen}
+        onClose={() => setHandoffOpen(false)}
+        returnFocusRef={agentTriggerRef}
+      />
 
       {manualOpen && (
         <div

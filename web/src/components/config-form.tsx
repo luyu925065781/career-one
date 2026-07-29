@@ -93,7 +93,7 @@ export function ConfigForm() {
   const installed = clis?.filter((c) => c.installed) ?? [];
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-10">
+    <div className="page-shell py-10">
       <h1 className="font-display text-2xl tracking-tight text-landing">设置</h1>
       <p className="mt-1 w-full text-sm text-muted">
         择程AI使用你自己的 Agent，在当前电脑上处理简历和求职数据。

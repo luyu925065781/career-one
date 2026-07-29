@@ -125,6 +125,36 @@ function parseMachineSummary(content) {
   }
 }
 
+function parseScoreTable(content) {
+  const plain = content.replace(/\*\*/g, '');
+  const scores = {};
+  const scoreRegex = /\|\s*(?:CV Match|Match con CV|简历匹配度)\s*\|\s*([\d.]+)\/5\s*\|/i;
+  const northStarRegex = /\|\s*(?:North Star(?: alignment)?|Alineación North Star|职业方向(?:契合度)?)\s*\|\s*([\d.]+)\/5\s*\|/i;
+  const levelResponsibilityRegex = /\|\s*(?:Level and responsibilit(?:y fit|ies)|Nivel y responsabilidades|职级与职责(?:匹配度)?)\s*\|\s*([\d.]+)\/5\s*\|/i;
+  const compScoreRegex = /\|\s*(?:Comp|薪酬竞争力)\s*\|\s*([\d.]+)\/5\s*\|/i;
+  const culturalRegex = /\|\s*(?:Organization and culture(?: fit)?|Cultural signals|Cultural|Señales culturales|组织与文化(?:契合度)?)\s*\|\s*([\d.]+)\/5\s*\|/i;
+  // Historical reports used a sixth "Red flags" adjustment. Keep parsing it
+  // for backwards-compatible analytics, but new reports must not generate it.
+  const legacyRedFlagsRegex = /\|\s*(?:Red flags|红线警告)\s*\|\s*([-+]?[\d.]+)\s*\|/i;
+  const globalRegex = /\|\s*(?:Global|综合评分)\s*\|\s*([\d.]+)\/5\s*\|/i;
+
+  const mappings = [
+    ['cvMatch', scoreRegex],
+    ['northStar', northStarRegex],
+    ['levelResponsibility', levelResponsibilityRegex],
+    ['comp', compScoreRegex],
+    ['cultural', culturalRegex],
+    ['redFlags', legacyRedFlagsRegex],
+    ['global', globalRegex],
+  ];
+
+  for (const [key, regex] of mappings) {
+    const match = plain.match(regex);
+    if (match) scores[key] = parseFloat(match[1]);
+  }
+  return scores;
+}
+
 // --- Via channel analysis (#1596 follow-up) ---
 // Pure: group submitted applications by their Via channel (agency/recruiter
 // firm) and compute per-agency advance rates, plus the agency-vs-direct
@@ -209,6 +239,22 @@ next_action: "Follow up on ticket #42 with tailored CV"
   if (summary?.soft_gaps?.[0] !== 'No direct healthcare domain experience') failures.push('list item was not parsed');
   if (summary?.next_action !== 'Follow up on ticket #42 with tailored CV') failures.push('hash-containing scalar field was not parsed');
 
+  const fiveFactorScores = parseScoreTable(`
+| Dimension | Score |
+|---|---|
+| Match con CV | 4.3/5 |
+| North Star alignment | 4.5/5 |
+| Level and responsibilities | 4.1/5 |
+| Comp | 3.8/5 |
+| Organization and culture | 4.0/5 |
+| Global | 4.1/5 |
+`);
+  if (fiveFactorScores.levelResponsibility !== 4.1) failures.push('level/responsibility score was not parsed');
+  if (fiveFactorScores.global !== 4.1) failures.push('global score from five-factor table was not parsed');
+
+  const legacyScores = parseScoreTable('| Red flags | -0.5 |');
+  if (legacyScores.redFlags !== -0.5) failures.push('legacy red-flags adjustment was not parsed');
+
   // Vendor detection (community ATS only; white-labeled → null)
   const vendorCases = [
     ['https://boards.greenhouse.io/acme/jobs/12345', 'greenhouse'],
@@ -266,7 +312,7 @@ next_action: "Follow up on ticket #42 with tailored CV"
     process.exit(1);
   }
 
-  console.log('analyze-patterns self-test OK (Machine Summary parser + vendor detection + via channel analysis)');
+  console.log('analyze-patterns self-test OK (Machine Summary + five-factor score parser + vendor detection + via channel analysis)');
   process.exit(0);
 }
 
@@ -376,31 +422,11 @@ function parseReport(reportPath) {
   const domainMatch = plain.match(domainRegex);
   if (domainMatch && !report.domain) report.domain = domainMatch[1].trim();
 
-  // Extract scoring table — look for table with "Global" row (using plain, bold already stripped)
-  const scoreRegex = /\|\s*(?:CV Match|Match con CV)\s*\|\s*([\d.]+)\/5\s*\|/i;
-  const northStarRegex = /\|\s*(?:North Star)\s*\|\s*([\d.]+)\/5\s*\|/i;
-  const compScoreRegex = /\|\s*(?:Comp)\s*\|\s*([\d.]+)\/5\s*\|/i;
-  const culturalRegex = /\|\s*(?:Cultural signals|Cultural)\s*\|\s*([\d.]+)\/5\s*\|/i;
-  const redFlagsRegex = /\|\s*(?:Red flags)\s*\|\s*([-+]?[\d.]+)\s*\|/i;
-  const globalRegex = /\|\s*(?:Global)\s*\|\s*([\d.]+)\/5\s*\|/i;
-
-  const cvScoreMatch = plain.match(scoreRegex);
-  if (cvScoreMatch && report.scores.cvMatch === undefined) report.scores.cvMatch = parseFloat(cvScoreMatch[1]);
-
-  const nsMatch = plain.match(northStarRegex);
-  if (nsMatch && report.scores.northStar === undefined) report.scores.northStar = parseFloat(nsMatch[1]);
-
-  const csMatch = plain.match(compScoreRegex);
-  if (csMatch && report.scores.comp === undefined) report.scores.comp = parseFloat(csMatch[1]);
-
-  const culMatch = plain.match(culturalRegex);
-  if (culMatch && report.scores.cultural === undefined) report.scores.cultural = parseFloat(culMatch[1]);
-
-  const rfMatch = plain.match(redFlagsRegex);
-  if (rfMatch && report.scores.redFlags === undefined) report.scores.redFlags = parseFloat(rfMatch[1]);
-
-  const glMatch = plain.match(globalRegex);
-  if (glMatch && report.scores.global === undefined) report.scores.global = parseFloat(glMatch[1]);
+  // Parse the current five-factor table while retaining legacy Red flags
+  // support for reports generated before the scoring-contract migration.
+  for (const [key, value] of Object.entries(parseScoreTable(plain))) {
+    if (report.scores[key] === undefined) report.scores[key] = value;
+  }
 
   // Extract gaps table
   const gapTableRegex = /\|\s*Gap\s*\|\s*Severity\s*\|.*?\n\|[-|\s]+\n([\s\S]*?)(?:\n\n|\n##|\n\*\*|$)/i;

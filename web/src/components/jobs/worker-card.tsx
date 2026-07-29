@@ -56,10 +56,10 @@ function useElapsed(running: boolean, startedAt: number): number {
 // visually identical. TONE + pillTone live here (the canonical source).
 
 export const TONE = {
-  good: { bar: "bg-emerald-500/70", chip: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400", icon: "text-icon-success" },
-  warn: { bar: "bg-amber-500/70", chip: "bg-amber-500/15 text-amber-700 dark:text-amber-400", icon: "text-icon-warning" },
-  bad: { bar: "bg-red-400/70", chip: "bg-red-500/15 text-red-700 dark:text-red-400", icon: "text-icon-danger" },
-  muted: { bar: "bg-zinc-400/50", chip: "bg-surface-hover text-muted", icon: "text-icon-muted" },
+  good: { bar: "bg-success-solid/75", chip: "bg-success-surface text-success", icon: "text-icon-success" },
+  warn: { bar: "bg-warning-solid/75", chip: "bg-warning-surface text-warning", icon: "text-icon-warning" },
+  bad: { bar: "bg-danger-solid/75", chip: "bg-danger-surface text-danger", icon: "text-icon-danger" },
+  muted: { bar: "bg-faint/45", chip: "bg-surface-hover text-muted", icon: "text-icon-muted" },
 } as const;
 
 export function pillTone(j: Job): keyof typeof TONE {
@@ -126,11 +126,15 @@ export function WorkerCard({
       </div>
       {(bottom || running || job.status === "waiting") && (
         <div className={cn("mt-1 truncate text-faint", inline ? "text-xs" : "text-[10px]")}>
-          {running ? `${last ?? "执行中"} · ${fmtElapsed(elapsed)}` : job.status === "waiting" ? "等待你确认修改" : bottom}
+          {running
+            ? `${last ?? "执行中"} · ${fmtElapsed(elapsed)}`
+            : job.status === "waiting"
+              ? job.runStatus === "queued" ? "等待 Agent 处理" : "等待你确认修改"
+              : bottom}
         </div>
       )}
       {authError && (
-        <div className={cn("mt-1 text-amber-700 dark:text-amber-400", inline ? "text-xs" : "text-[10px]")}>
+        <div className={cn("mt-1 text-warning", inline ? "text-xs" : "text-[10px]")}>
           请先在设置中登录 Agent CLI，然后重新运行。
         </div>
       )}

@@ -45,6 +45,7 @@ export type DesignDocument = {
   colors: Record<string, string>;
   typography: Record<string, TypographyToken>;
   rounded: Record<string, string>;
+  elevation: Record<string, string>;
   spacing: Record<string, string>;
   components: Record<string, ComponentToken>;
 };
@@ -64,7 +65,7 @@ const TABS: Array<{
 }> = [
   { id: "colors", label: "颜色", description: "品牌、中性与语义色", icon: Palette },
   { id: "typography", label: "字体", description: "双字体信息层级", icon: Type },
-  { id: "scale", label: "尺度", description: "间距与圆角", icon: Ruler },
+  { id: "scale", label: "尺度", description: "间距、圆角与层级", icon: Ruler },
   { id: "components", label: "组件", description: "真实交互状态", icon: Component },
   { id: "principles", label: "原则", description: "约束与可访问性", icon: BookOpenCheck },
 ];
@@ -78,6 +79,14 @@ const COLOR_LABELS: Record<string, string> = {
   "on-surface-variant": "次级正文",
   muted: "弱化正文",
   faint: "元数据",
+  "accent-yellow": "强调黄",
+  "accent-orange": "强调橙",
+  "accent-red": "强调红",
+  "accent-green": "强调绿",
+  "accent-blue": "强调蓝",
+  "accent-purple": "强调紫",
+  "metric-brand": "品牌指标金",
+  "metric-purple": "紫色指标",
   outline: "默认边框",
   "outline-strong": "强调边框",
   success: "成功",
@@ -90,8 +99,8 @@ const COLOR_LABELS: Record<string, string> = {
 };
 
 const TYPE_SAMPLES: Record<string, string> = {
-  "display-lg": "Digital Supermind",
-  "display-md": "数字超体",
+  "display-lg": "求职决策，清晰推进",
+  "display-md": "择程AI",
   "headline-lg": "AI Native, by design",
   "headline-md": "高频工作流，安静地完成",
   "headline-sm": "任务进度与关键证据",
@@ -198,6 +207,11 @@ function ColorSection({ document, onCopy, copiedKey }: {
       ),
     },
     {
+      title: "多色相强调色",
+      description: "黄色保持唯一品牌主色；其他色相用于图表、进度条、数据标记和小面积视觉强调。",
+      entries: entries.filter(([name]) => name.startsWith("accent-") || name.startsWith("metric-")),
+    },
+    {
       title: "中性色阶",
       description: "从阅读背景到高对比正文，建立稳定的信息密度与边界。",
       entries: entries.filter(([name]) => name.startsWith("gray-") || name.startsWith("surface-container") || name === "surface-hover"),
@@ -205,7 +219,7 @@ function ColorSection({ document, onCopy, copiedKey }: {
     {
       title: "语义状态",
       description: "成功、警告、错误和信息保持独立语义，状态不能只依赖颜色表达。",
-      entries: entries.filter(([name]) => /^(success|warning|error|info)/.test(name)),
+      entries: entries.filter(([name]) => /^(success|warning|error|danger|info)/.test(name)),
     },
     {
       title: "深色模式",
@@ -252,7 +266,7 @@ function TypographySection({ document, onCopy, copiedKey }: {
 }) {
   return (
     <div>
-      <SectionHeading eyebrow="Typography tokens" title="统一的现代无衬线语言" description="公司规范以英文 SF Pro 风格和中文思源黑体为基准；具体产品使用系统 UI 字体，不额外内嵌品牌字体。" />
+      <SectionHeading eyebrow="Typography tokens" title="统一的现代无衬线语言" description="择程AI以英文 SF Pro 风格和中文思源黑体风格为基准；产品使用系统 UI 字体，不额外内嵌品牌字体。" />
       <div className="divide-y divide-border border-y border-border">
         {Object.entries(document.typography).map(([name, token]) => {
           const serialized = `${token.fontFamily} / ${token.fontSize} / ${token.fontWeight} / ${token.lineHeight}`;
@@ -286,11 +300,11 @@ function TypographySection({ document, onCopy, copiedKey }: {
       <section className="mt-10 grid gap-4 md:grid-cols-3" aria-label="字体职责">
         <Card className="min-h-44 bg-surface p-5">
           <p className="text-2xl font-semibold text-landing">SF Pro style</p>
-          <p className="mt-4 text-sm leading-6 text-muted">公司级英文基准。Display 用于标题，Text 用于正文与控件。</p>
+          <p className="mt-4 text-sm leading-6 text-muted">英文视觉基准。Display 用于标题，Text 用于正文与控件。</p>
         </Card>
         <Card className="min-h-44 bg-surface p-5">
           <p className="text-2xl font-semibold text-foreground">思源黑体</p>
-          <p className="mt-4 text-sm leading-6 text-muted">公司级中文基准。覆盖标题、正文、导航、表单与数据。</p>
+          <p className="mt-4 text-sm leading-6 text-muted">中文视觉基准。覆盖标题、正文、导航、表单与数据。</p>
         </Card>
         <Card className="min-h-44 bg-surface p-5">
           <p className="text-2xl font-semibold text-foreground">系统 UI 字体</p>
@@ -363,6 +377,28 @@ function ScaleSection({ document, onCopy, copiedKey }: {
           ))}
         </div>
       </section>
+
+      <section className="mt-10 border-t border-border pt-7" aria-labelledby="elevation-heading">
+        <h3 id="elevation-heading" className="text-lg font-semibold text-foreground">阴影层级</h3>
+        <p className="mt-1 text-sm text-muted">只有脱离页面画布的元素才使用阴影；普通列表与页面结构保持无阴影。</p>
+        <div className="mt-5 grid gap-5 sm:grid-cols-3">
+          {Object.entries(document.elevation)
+            .filter(([name]) => !name.startsWith("dark-"))
+            .map(([name, value]) => (
+              <article
+                key={name}
+                className="relative min-h-32 rounded-card border border-border bg-surface p-4"
+                style={{ boxShadow: value }}
+              >
+                <code className="font-mono text-xs font-semibold text-foreground">{name}</code>
+                <code className="mt-2 block break-words font-mono text-[11px] leading-5 text-faint">{value}</code>
+                <div className="absolute bottom-3 right-3">
+                  <TokenCopyButton name={name} value={value} onCopy={onCopy} copied={copiedKey === `${name}:${value}`} />
+                </div>
+              </article>
+            ))}
+        </div>
+      </section>
     </div>
   );
 }
@@ -415,14 +451,15 @@ function ComponentsSection({ document }: { document: DesignDocument }) {
           <section aria-labelledby="buttons-heading">
             <div className="mb-4 border-b border-border pb-3">
               <h3 id="buttons-heading" className="text-lg font-semibold text-foreground">按钮与命令</h3>
-              <p className="mt-1 text-sm text-muted">一个任务区域只保留一个 Primary；熟悉操作优先使用图标。</p>
+              <p className="mt-1 text-sm text-muted">Primary 使用品牌色，Secondary 使用中性实底，Tertiary 使用白底描边。</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button><Sparkles className="size-4" aria-hidden="true" />AI 岗位诊断</Button>
-              <Button variant="outline">查看报告<ArrowRight className="size-4" aria-hidden="true" /></Button>
+              <Button variant="secondary">查看报告<ArrowRight className="size-4" aria-hidden="true" /></Button>
+              <Button variant="tertiary">稍后处理</Button>
               <Button variant="ghost"><Settings2 className="size-4" aria-hidden="true" />设置</Button>
               <Button disabled><LoaderCircle className="size-4 animate-spin" aria-hidden="true" />正在分析</Button>
-              <Button variant="secondary" size="icon" title="搜索" aria-label="搜索"><Search className="size-4" aria-hidden="true" /></Button>
+              <Button variant="tertiary" size="icon" title="搜索" aria-label="搜索"><Search className="size-4" aria-hidden="true" /></Button>
             </div>
           </section>
 
@@ -511,8 +548,8 @@ function ComponentsSection({ document }: { document: DesignDocument }) {
 
         <aside className="xl:border-l xl:border-border xl:pl-8" aria-labelledby="component-map-heading">
           <div className="sticky top-24">
-            <h3 id="component-map-heading" className="text-lg font-semibold text-foreground">组件 Token 映射</h3>
-            <p className="mt-1 text-sm leading-6 text-muted">展开查看 DESIGN.md 中的引用如何解析到基础 Token。</p>
+            <h3 id="component-map-heading" className="text-lg font-semibold text-foreground">组件 Token 解析</h3>
+            <p className="mt-1 text-sm leading-6 text-muted">展开查看 DESIGN.md 中的组件规则如何解析到语义 Token。</p>
             <div className="mt-5">
               <ComponentTokenList document={document} />
             </div>
@@ -574,7 +611,7 @@ export function DesignSystemShowcase({ document, principles }: {
   const counts = useMemo(() => [
     { label: "颜色", value: Object.keys(document.colors).length },
     { label: "字体", value: Object.keys(document.typography).length },
-    { label: "尺度", value: Object.keys(document.spacing).length + Object.keys(document.rounded).length },
+    { label: "尺度", value: Object.keys(document.spacing).length + Object.keys(document.rounded).length + Object.keys(document.elevation).length },
     { label: "组件", value: Object.keys(document.components).length },
   ], [document]);
 

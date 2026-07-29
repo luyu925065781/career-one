@@ -7,6 +7,7 @@ export type JobStep = { kind: "tool" | "status"; label: string; ts: number };
 export type JobResult = { score: number | null; summary: string; tone: "good" | "warn" | "bad" | "muted" };
 export type JobArtifact = { path: string; label: string; page?: string };
 export type JobProposal = { id: string; title: string; summary: string; target: string; status: "pending" | "applied" | "rejected" | "stale"; createdAt: string; updatedAt: string };
+export type SharedRunStatus = "queued" | "running" | "waiting_approval" | "completed" | "failed" | "cancelled";
 
 export type Job = {
   id: string;
@@ -17,6 +18,8 @@ export type Job = {
   kind?: string;
   batchId?: string; // groups jobs fired together (e.g. "evaluate all Anthropic")
   source?: "agent" | "web";
+  runStatus?: SharedRunStatus;
+  instruction?: string;
   status: "running" | "waiting" | "done" | "error";
   steps: JobStep[];
   text: string;
@@ -28,11 +31,24 @@ export type Job = {
   endedAt?: number;
 };
 
-type StartOpts = { title: string; subtitle?: string; kind: string; input: string; page?: string; batchId?: string };
+type StartOpts = {
+  title: string;
+  subtitle?: string;
+  kind: string;
+  input: string;
+  page?: string;
+  batchId?: string;
+};
+
+export type AgentTaskHandoff = {
+  id: string;
+  instruction: string;
+};
 
 type Ctx = {
   jobs: Job[];
   startJob: (opts: StartOpts) => string | null;
+  queueAgentTask: (opts: StartOpts) => AgentTaskHandoff;
   removeJob: (id: string) => void;
   clearFinished: () => void;
   refreshJobs: () => void;
@@ -56,7 +72,8 @@ type SharedRun = {
   source: "agent" | "web";
   input?: string;
   page?: string;
-  status: "queued" | "running" | "waiting_approval" | "completed" | "failed" | "cancelled";
+  instruction?: string;
+  status: SharedRunStatus;
   progress?: { kind?: string; label: string; at: string }[];
   summary?: string;
   score?: number;
@@ -69,7 +86,13 @@ type SharedRun = {
 };
 
 function sharedRunToJob(run: SharedRun): Job {
-  const status: Job["status"] = run.status === "completed" ? "done" : run.status === "failed" || run.status === "cancelled" ? "error" : run.status === "waiting_approval" ? "waiting" : "running";
+  const status: Job["status"] = run.status === "completed"
+    ? "done"
+    : run.status === "failed" || run.status === "cancelled"
+      ? "error"
+      : run.status === "queued" || run.status === "waiting_approval"
+        ? "waiting"
+        : "running";
   const score = typeof run.score === "number" ? run.score : null;
   return {
     id: run.id,
@@ -79,6 +102,8 @@ function sharedRunToJob(run: SharedRun): Job {
     input: run.input,
     kind: run.intent,
     source: run.source,
+    runStatus: run.status,
+    instruction: run.instruction,
     status,
     steps: (run.progress ?? []).map((step) => ({ kind: step.kind === "tool" ? "tool" : "status", label: step.label, ts: Date.parse(step.at) || Date.now() })),
     text: run.error || "",
@@ -88,6 +113,35 @@ function sharedRunToJob(run: SharedRun): Job {
     startedAt: Date.parse(run.createdAt) || Date.now(),
     endedAt: run.completedAt ? Date.parse(run.completedAt) : undefined,
   };
+}
+
+export function buildQueuedTaskInstruction(opts: StartOpts, id: string): string {
+  const continuation = `已有待办任务 ID：${id}。`;
+  if (opts.kind === "pdf") {
+    const reportNumber = /^\d+$/.test(opts.input) ? opts.input.padStart(3, "0") : opts.input;
+    return `${continuation} 请使用择程AI继续为岗位评估报告 #${reportNumber} 生成定制简历 PDF，完成后给我查看链接。请继续这个任务，不要创建新任务。`;
+  }
+  if (opts.kind === "story") {
+    const storyId = opts.input.trim().toUpperCase();
+    return `${continuation} 请使用择程AI继续优化面试故事 ${storyId}。只处理 interview-prep/story-bank.md 中这一条故事，基于允许的本地事实来源增强 STAR+Reflection 表达，不得虚构；先给我查看修改摘要和完整草稿，等我确认后再保存。请继续这个任务，不要创建新任务。`;
+  }
+  return `${continuation} 请使用择程AI继续处理“${opts.title}”，完成后给我查看结果。请继续这个任务，不要创建新任务。`;
+}
+
+export function buildExistingTaskInstruction(
+  job: Pick<Job, "id" | "instruction" | "title" | "subtitle" | "kind" | "input" | "page" | "batchId">,
+): string | null {
+  const persisted = job.instruction?.trim();
+  if (persisted) return persisted;
+  if (!job.kind?.trim() || !job.input?.trim()) return null;
+  return buildQueuedTaskInstruction({
+    title: job.title,
+    subtitle: job.subtitle,
+    kind: job.kind,
+    input: job.input,
+    page: job.page,
+    batchId: job.batchId,
+  }, job.id);
 }
 
 function parseVerdict(text: string): JobResult {
@@ -195,6 +249,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
         kind: opts.kind,
         batchId: opts.batchId,
         source: "web",
+        runStatus: "running",
         status: "running",
         steps: [{ kind: "status", label: "正在启动…", ts: Date.now() }],
         text: "",
@@ -240,6 +295,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
           patch(id, (j) => ({
             ...j,
             status,
+            runStatus: status === "done" ? "completed" : "failed",
             result,
             cost,
             artifacts: doneArtifacts,
@@ -262,7 +318,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
             }).catch(() => {});
             // Tell server-snapshot surfaces (Today, pipeline) to refetch — the
             // worker just wrote a real tracker row / report they don't yet see.
-            if (typeof window !== "undefined" && (opts.kind === "evaluate" || opts.kind === "pdf")) {
+            if (typeof window !== "undefined" && opts.kind === "evaluate") {
               window.dispatchEvent(new CustomEvent("co-job-done", { detail: { kind: opts.kind, input: opts.input } }));
             }
           }
@@ -333,6 +389,68 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
     [patch, refreshJobs],
   );
 
+  const queueAgentTask = useCallback(
+    (opts: StartOpts): AgentTaskHandoff => {
+      const id = `run-web-${opts.kind}-${Date.now()}-${seq.current++}`;
+      const instruction = buildQueuedTaskInstruction(opts, id);
+      const job: Job = {
+        id,
+        title: opts.title,
+        subtitle: opts.subtitle,
+        page: opts.page,
+        input: opts.input,
+        kind: opts.kind,
+        batchId: opts.batchId,
+        source: "web",
+        runStatus: "queued",
+        instruction,
+        status: "waiting",
+        steps: [{ kind: "status", label: "已加入 Agent 待办", ts: Date.now() }],
+        text: "",
+        startedAt: Date.now(),
+      };
+      setJobs((current) => [job, ...current]);
+
+      fetch("/api/agent-runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "queue",
+          id,
+          intent: opts.kind,
+          title: opts.title,
+          subtitle: opts.subtitle,
+          source: "web",
+          input: opts.input,
+          page: opts.page,
+          instruction,
+        }),
+      })
+        .then(async (response) => {
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.error || "加入 Agent 待办失败");
+          if (typeof payload.id === "string" && payload.id !== id) {
+            setJobs((current) => current.filter((item) => item.id !== id));
+          }
+          refreshJobs();
+        })
+        .catch((error) => {
+          const message = error instanceof Error ? error.message : "加入 Agent 待办失败";
+          patch(id, (current) => ({
+            ...current,
+            runStatus: "failed",
+            status: "error",
+            text: message,
+            endedAt: Date.now(),
+            steps: [...current.steps, { kind: "status", label: message, ts: Date.now() }],
+          }));
+        });
+
+      return { id, instruction };
+    },
+    [patch, refreshJobs],
+  );
+
   const removeJob = useCallback((id: string) => {
     setJobs((js) => js.filter((j) => j.id !== id));
     fetch("/api/agent-runs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "archive", id }) }).catch(() => {});
@@ -345,5 +463,5 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [jobs]);
 
-  return <JobsContext.Provider value={{ jobs, startJob, removeJob, clearFinished, refreshJobs }}>{children}</JobsContext.Provider>;
+  return <JobsContext.Provider value={{ jobs, startJob, queueAgentTask, removeJob, clearFinished, refreshJobs }}>{children}</JobsContext.Provider>;
 }

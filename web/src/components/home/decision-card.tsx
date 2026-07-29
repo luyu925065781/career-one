@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Check, X, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { CompanyLogo } from "@/components/company-logo";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { scoreNum, scoreTone } from "@/lib/format";
 import type { Application } from "@/lib/career-one";
 
@@ -33,7 +36,7 @@ export function DecisionCard({ app }: { app: Application }) {
   if (done) return null;
 
   return (
-    <div className="flex min-w-0 flex-col gap-2.5 rounded-xl border border-border bg-surface/40 p-3.5 transition hover:border-brand/30">
+    <Card compact className="flex min-w-0 flex-col gap-2.5">
       <div className="flex items-start gap-2.5">
         <CompanyLogo name={app.company} size={24} />
         <div className="min-w-0 flex-1">
@@ -41,41 +44,41 @@ export function DecisionCard({ app }: { app: Application }) {
           <p className="truncate text-[13px] text-muted">{app.role}</p>
         </div>
         {Number.isFinite(score) && score > 0 && (
-          <span
-            className={cn(
-              "shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums",
-              tone === "good" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : tone === "warn" ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-surface-hover text-muted",
-            )}
-          >
+          <Badge tone={tone} className="shrink-0 px-2">
             {app.score}
-          </span>
+          </Badge>
         )}
       </div>
       <div className="flex items-center gap-2">
-        {/* brand-soft AT REST (not a solid fill, not hover-only): a calm-but-
-            affirmative primary — a queue of these reads as gentle brand, not 6
-            solid shouts (P5), while staying visibly the positive action next to
-            the neutral Skip even on touch (no hover). */}
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           disabled={!!busy}
           onClick={() => setStatus("Applied")}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md bg-brand-soft px-2.5 py-1.5 text-xs font-medium text-brand-text transition hover:bg-brand/15 disabled:opacity-60 max-sm:min-h-[44px]"
+          className="flex-1"
         >
           {busy === "Applied" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} 标记已投递
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="tertiary"
+          size="sm"
           disabled={!!busy}
           onClick={() => setStatus("Discarded")}
-          className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted transition hover:text-foreground disabled:opacity-60 max-sm:min-h-[44px] max-sm:px-4"
+          className="max-sm:px-4"
         >
           {busy === "Discarded" ? <Loader2 className="size-3.5 animate-spin" /> : <X className="size-3.5" />} 放弃
-        </button>
-        <a href={`/pipeline/${app.n}`} title="打开报告" aria-label="打开报告" className="inline-flex shrink-0 items-center justify-center rounded p-1.5 text-faint transition hover:text-brand max-sm:min-h-[44px] max-sm:min-w-[44px]">
+        </Button>
+        <a
+          href={`/pipeline/${app.n}`}
+          title="打开报告"
+          aria-label="打开报告"
+          className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "shrink-0 text-faint")}
+        >
           <FileText className="size-4" />
         </a>
       </div>
-    </div>
+    </Card>
   );
 }

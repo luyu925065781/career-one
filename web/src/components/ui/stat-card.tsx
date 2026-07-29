@@ -31,10 +31,10 @@ export function StatCard({
     <Link
       href={href}
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-border bg-surface/50 bg-origin-border p-5 shadow-lg transition-colors",
+        "group relative overflow-hidden rounded-card border border-border bg-surface/50 bg-origin-border p-5 shadow-raised transition-colors",
         CORNERS[corner],
         "from-brand/10 via-transparent to-transparent",
-        "hover:border-brand/40 hover:bg-surface-hover group-hover:from-brand/20",
+        "hover:bg-surface-hover",
       )}
     >
       <Icon className="size-5 text-icon-brand" />

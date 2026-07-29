@@ -11,11 +11,33 @@ const BUILD_MODULE = join(ROOT, "distribution", "build-packages.mjs");
 const MANIFEST_MODULE = join(ROOT, "distribution", "runtime-paths.mjs");
 const CANONICAL_SKILL = join(ROOT, ".agents", "skills", "career-one", "SKILL.md");
 const PORTABLE_CLI = join(ROOT, ".agents", "skills", "career-one", "scripts", "career-one.mjs");
+const ROOT_PACKAGE = join(ROOT, "package.json");
+const WEB_PACKAGE = join(ROOT, "web", "package.json");
+const SCAFFOLDER_PACKAGE = join(ROOT, "scaffolder", "package.json");
+const DOCTOR = join(ROOT, "doctor.mjs");
 
 test("portable distribution sources exist", () => {
   assert.ok(existsSync(BUILD_MODULE), "distribution builder is required");
   assert.ok(existsSync(MANIFEST_MODULE), "runtime path manifest is required");
   assert.ok(existsSync(PORTABLE_CLI), "the canonical Skill must own the portable CLI");
+});
+
+test("Node.js runtime requirement matches Next.js 16 across every public entrypoint", () => {
+  const expected = ">=20.9.0";
+  const rootPackage = JSON.parse(readFileSync(ROOT_PACKAGE, "utf8"));
+  const webPackage = JSON.parse(readFileSync(WEB_PACKAGE, "utf8"));
+  const scaffolderPackage = JSON.parse(readFileSync(SCAFFOLDER_PACKAGE, "utf8"));
+  const skill = readFileSync(CANONICAL_SKILL, "utf8");
+  const doctor = readFileSync(DOCTOR, "utf8");
+  const portableCli = readFileSync(PORTABLE_CLI, "utf8");
+
+  assert.equal(rootPackage.engines?.node, expected);
+  assert.equal(webPackage.engines?.node, expected);
+  assert.equal(scaffolderPackage.engines?.node, expected);
+  assert.match(skill, /Node\.js 20\.9\+/);
+  assert.match(skill, /推荐使用 Node\.js 22 LTS/);
+  assert.match(doctor, /MIN_NODE_VERSION\s*=\s*'20\.9\.0'/);
+  assert.match(portableCli, /MIN_NODE_VERSION\s*=\s*"20\.9\.0"/);
 });
 
 test("runtime manifest includes system essentials and excludes user data", async () => {

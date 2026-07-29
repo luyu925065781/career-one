@@ -11,7 +11,7 @@ import { careerOneRoot } from "@/lib/career-one";
 
 export const metadata: Metadata = {
   title: "UI 规范｜择程AI",
-  description: "由 DESIGN.md 实时生成的数字超体设计系统组件规范页。",
+  description: "由 DESIGN.md 实时生成的择程AI设计系统组件规范页。",
 };
 
 export const dynamic = "force-dynamic";
@@ -40,8 +40,8 @@ function readDesignDocument(): { document: DesignDocument; principles: DesignPri
   }
 
   const document = yaml.load(frontmatter[1]) as DesignDocument;
-  if (!document?.colors || !document?.typography || !document?.spacing || !document?.rounded) {
-    throw new Error("DESIGN.md 缺少颜色、字体、间距或圆角 Token");
+  if (!document?.colors || !document?.typography || !document?.spacing || !document?.rounded || !document?.elevation) {
+    throw new Error("DESIGN.md 缺少颜色、字体、间距、圆角或阴影 Token");
   }
 
   return {

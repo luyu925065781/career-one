@@ -12,6 +12,8 @@
  *   5. An empty `add` fails loudly (exit 1) rather than queuing a blank line.
  *   6. On the default path, a first `add` self-heals .gitignore (idempotent) so
  *      the personal queue isn't accidentally tracked.
+ *   7. `resolve --task <id>` resolves the matching shared Agent/Web task
+ *      without depending on its current position in the pending list.
  *
  * Provisions a throwaway queue via CAREER_ONE_INBOX and a temp CWD; never
  * touches real user data.
@@ -121,6 +123,19 @@ console.log('6. first add on the default path self-heals .gitignore (idempotent)
   const gi = readFileSync(join(repo, '.gitignore'), 'utf8');
   const ruleCount = gi.split('\n').filter((l) => l.trim() === 'data/agent-inbox.md').length;
   check('.gitignore gains exactly one data/agent-inbox.md rule', ruleCount === 1, `count=${ruleCount}`);
+}
+
+// ---------------------------------------------------------------------------
+console.log('7. resolve --task settles the matching shared task');
+{
+  const inbox = join(tmp('inbox-'), 'agent-inbox.md');
+  run(inbox, ['add', '[task:run-pdf-042] 为报告 #042 生成定制简历 PDF']);
+  run(inbox, ['add', '[task:run-other] 处理另一个任务']);
+  run(inbox, ['resolve', '--task', 'run-pdf-042', '--result', '已生成 output/cv-acme.pdf']);
+  const md = readFileSync(inbox, 'utf8');
+  check('matching task marked done', /^- \[x\].*\[task:run-pdf-042\]/m.test(md), md);
+  check('other task remains pending', /^- \[ \].*\[task:run-other\]/m.test(md), md);
+  check('task result appended', /run-pdf-042.*→ result: 已生成 output\/cv-acme\.pdf/.test(md), md);
 }
 
 console.log(`\nResults: ${passed} passed, ${failed} failed`);

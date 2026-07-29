@@ -2,8 +2,10 @@ import { BookOpenCheck, CircleAlert, CircleCheck, Database, Target } from "lucid
 import { StoryActions } from "@/components/cv-editor";
 import { readStoryBank, type InterviewStory } from "@/lib/career-one";
 import { cn } from "@/lib/cn";
+import { PRIMARY_NAV_ITEMS } from "@/lib/nav-items";
 
 export const dynamic = "force-dynamic";
+const PageIcon = PRIMARY_NAV_ITEMS.interviewStories.icon;
 
 export default function InterviewStoryBankPage() {
   const { stories } = readStoryBank();
@@ -12,19 +14,19 @@ export default function InterviewStoryBankPage() {
   const tags = [...new Set(stories.flatMap((story) => story.tags))];
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8 max-sm:pb-24">
+    <div className="page-shell py-8 max-sm:pb-24">
       <header>
-        <div className="flex min-w-0 items-start gap-3">
-          <BookOpenCheck className="mt-0.5 size-6 shrink-0 text-icon-brand" />
-          <div className="min-w-0 flex-1">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
             <h1 className="font-display text-2xl tracking-normal text-landing">面试故事库</h1>
-            <p className="mt-1.5 w-full text-sm leading-6 text-muted">
-              从已核验经历中沉淀的 STAR+Reflection 主故事，按不同岗位和面试问题灵活调用。
-            </p>
-            <p className="mt-1 text-xs text-faint">
-              本地数据：<code className="font-mono text-muted">interview-prep/story-bank.md</code>
-            </p>
           </div>
+          <p className="mt-1.5 w-full pl-9 text-sm leading-6 text-muted">
+            从已核验经历中沉淀的 STAR+Reflection 主故事，AI会按不同岗位和面试问题灵活调用。
+          </p>
+          <p className="mt-1 pl-9 text-xs text-faint">
+            本地数据：<code className="font-mono text-muted">interview-prep/story-bank.md</code>
+          </p>
         </div>
       </header>
 

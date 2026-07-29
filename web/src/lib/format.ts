@@ -63,6 +63,37 @@ export const CANONICAL_STATE_LABELS: Record<(typeof CANONICAL_STATES)[number], s
   SKIP: "跳过",
 };
 
+const EVALUATION_INTENTS = new Set(["evaluate", "evaluate-job"]);
+
+/** Agent run intent is the authoritative task taxonomy; titles are user-facing
+ * text and may mention an evaluation report for unrelated work such as a CV. */
+export function isEvaluationIntent(intent: string | null | undefined): boolean {
+  return EVALUATION_INTENTS.has((intent ?? "").trim().toLowerCase());
+}
+
+const REPORT_SECTION_PREVIEW_LENGTH = 96;
+const ORDERED_LIST_ITEM = /^\s*\d+\s*[.)、）]\s*(.*)$/;
+
+/** Collapsed report-card summary. Plain content keeps the existing leading-text
+ * behavior; ordered lists use only their first item before the shared limit. */
+export function reportSectionPreview(md: string): string {
+  const meaningfulLines = md
+    .replace(/```[\s\S]*?```/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !/^#+\s/.test(line));
+  const firstNumberedItem = meaningfulLines[0]?.match(ORDERED_LIST_ITEM);
+  const source = firstNumberedItem ? firstNumberedItem[1] : meaningfulLines.join(" ");
+  const text = source
+    .replace(/[*_`>#|]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const sentence = text.split(/(?<=[.!?])\s/)[0] ?? text;
+  return sentence.length > REPORT_SECTION_PREVIEW_LENGTH
+    ? sentence.slice(0, REPORT_SECTION_PREVIEW_LENGTH).trimEnd() + "…"
+    : sentence;
+}
+
 export function canonStatus(s: string): string {
   const k = s.trim().toLowerCase();
   if (k === "" || k === "—" || k === "-") return "DISCARDED";
@@ -73,11 +104,11 @@ export function canonStatus(s: string): string {
  *  responded, red skip/rejected, gray discarded, neutral evaluated. */
 export function statusDot(status: string): string {
   const c = canonStatus(status);
-  if (c.includes("INTERVIEW") || c.includes("OFFER")) return "bg-emerald-400";
-  if (c.includes("APPLIED") || c.includes("RESPONDED")) return "bg-sky-400";
-  if (c.includes("REJECTED") || c.includes("SKIP")) return "bg-red-400";
-  if (c.includes("DISCARDED")) return "bg-zinc-600";
-  return "bg-zinc-500"; // Evaluated / unknown
+  if (c.includes("INTERVIEW") || c.includes("OFFER")) return "bg-success-solid";
+  if (c.includes("APPLIED") || c.includes("RESPONDED")) return "bg-info-solid";
+  if (c.includes("REJECTED") || c.includes("SKIP")) return "bg-danger-solid";
+  if (c.includes("DISCARDED")) return "bg-muted";
+  return "bg-faint"; // Evaluated / unknown
 }
 
 /** First number in a score string ("4.1/5", "B+", "3.0") → numeric, or NaN. */

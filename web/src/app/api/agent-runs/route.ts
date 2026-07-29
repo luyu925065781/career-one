@@ -22,6 +22,7 @@ type Body = {
   error?: unknown;
   artifacts?: unknown;
   proposalId?: unknown;
+  instruction?: unknown;
 };
 
 function text(value: unknown): string | undefined {
@@ -44,6 +45,18 @@ function runContract(args: string[]): unknown {
     stdio: ["ignore", "pipe", "pipe"],
   });
   return JSON.parse(output);
+}
+
+function runInbox(args: string[]): string {
+  const script = rootScript("agent-inbox");
+  if (!fs.existsSync(script)) throw new Error("当前工作区缺少 Agent 待办协议，请更新择程AI");
+  return execFileSync(process.execPath, [script, ...args], {
+    cwd: careerOneRoot(),
+    encoding: "utf8",
+    timeout: 15_000,
+    maxBuffer: 512 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
 }
 
 function errorResponse(error: unknown) {
@@ -74,6 +87,34 @@ export async function POST(req: Request) {
   const action = text(body.action);
   const id = text(body.id);
   try {
+    if (action === "queue") {
+      const instruction = text(body.instruction)?.slice(0, 1_000);
+      if (!instruction) {
+        return NextResponse.json({ error: "缺少交给 Agent 的任务指令" }, { status: 400 });
+      }
+      const args = ["queue"];
+      pushOption(args, "--id", id);
+      pushOption(args, "--intent", body.intent);
+      pushOption(args, "--title", body.title);
+      pushOption(args, "--subtitle", body.subtitle);
+      pushOption(args, "--source", body.source || "web");
+      pushOption(args, "--input", body.input);
+      pushOption(args, "--page", body.page);
+      pushOption(args, "--instruction", instruction);
+      const run = runContract(args) as { id?: string };
+      if (!run.id) throw new Error("Agent 待办任务创建失败");
+      try {
+        runInbox(["add", `[task:${run.id}] ${instruction}`]);
+      } catch (error) {
+        try {
+          runContract(["fail", run.id, "--error", "写入 Agent 待办失败"]);
+        } catch {
+          // Preserve the original inbox error.
+        }
+        throw error;
+      }
+      return NextResponse.json({ ...run, instruction });
+    }
     if (action === "start") {
       const args = ["start"];
       pushOption(args, "--id", id);

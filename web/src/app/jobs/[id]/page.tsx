@@ -4,20 +4,17 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowLeft, Loader2, Wrench, CircleDot, Check, X, Clock3, FileText, ArrowRight, ShieldCheck } from "lucide-react";
-import { useJobs, type JobProposal } from "@/components/jobs/job-store";
-import { HeroGlow } from "@/components/hero-glow";
+import { ArrowLeft, Bot, Check, Copy, Loader2, ShieldCheck } from "lucide-react";
+import { copyAgentInstruction } from "@/components/generate-pdf-button";
+import {
+  buildExistingTaskInstruction,
+  useJobs,
+  type Job,
+  type JobProposal,
+} from "@/components/jobs/job-store";
+import { AgentTaskDetailPanel } from "@/components/jobs/worker-pills";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-function contextualAction(page: string) {
-  if (/^\/pipeline\/\d+/.test(page)) return "查看诊断报告";
-  if (page === "/cv") return "打开简历页面";
-  if (page === "/interview") return "打开面试故事库";
-  if (page === "/config") return "打开设置";
-  if (page === "/portals") return "打开岗位来源";
-  return "打开相关页面";
-}
 
 export default function JobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -26,7 +23,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
   if (!job) {
     return (
-      <div className="mx-auto max-w-3xl px-6 py-10">
+      <div className="page-shell py-10">
         <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-brand">
           <ArrowLeft className="size-4" /> Agent 任务
         </Link>
@@ -37,109 +34,39 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
     );
   }
 
+  const continuationInstruction = buildExistingTaskInstruction(job);
+  const isAgentHandoff = Boolean(job.instruction)
+    || job.runStatus === "queued"
+    || job.id.startsWith("run-web-");
+  const canContinue = isAgentHandoff
+    && continuationInstruction
+    && (job.runStatus === "queued" || job.runStatus === "running" || job.runStatus === "failed");
+
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
+    <div className="page-shell py-8">
       <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-brand">
         <ArrowLeft className="size-4" /> Agent 任务
       </Link>
 
-      <section className="dot-bg relative mt-5 overflow-hidden rounded-2xl border border-border bg-surface/40 px-6 py-7">
-        {(job.status === "running" || job.status === "waiting") && <HeroGlow />}
-        <div className="relative z-10">
-          <p className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-faint">
-            {job.status === "running" ? (
-              <><Loader2 className="size-3 animate-spin text-icon-brand" /> 执行中</>
-            ) : job.status === "waiting" ? (
-              <><Clock3 className="size-3 text-icon-warning" /> 等待确认</>
-            ) : job.status === "done" ? (
-              <><Check className="size-3 text-icon-success" /> 已完成</>
-            ) : (
-              <><X className="size-3 text-icon-danger" /> 出错</>
-            )}
-          </p>
-          <h1 className="mt-2 font-display text-2xl tracking-tight text-landing">{job.title}</h1>
-          {job.subtitle && <p className="mt-1 text-sm text-muted">{job.subtitle}</p>}
-          <p className="mt-3 text-xs text-faint">{job.source === "agent" ? "由 Agent 原生入口发起" : "由 Web 工作台发起"}</p>
-          {job.result?.score != null && (
-            <div className="mt-3 flex flex-wrap items-center gap-2.5">
-              <Badge tone={job.result.tone}>{job.result.score}/5</Badge>
-              {job.result.summary && <span className="text-sm text-muted">{job.result.summary}</span>}
-            </div>
+      <div className="mt-5">
+        <AgentTaskDetailPanel job={job} titleLevel="h1">
+          {!!job.proposals?.length && (
+            <section className="mt-6 space-y-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="size-4 text-icon-brand" />
+                <h2 className="text-sm font-semibold text-foreground">待确认修改</h2>
+                <span className="text-xs text-faint">Agent 只提出修改，确认后才会落盘</span>
+              </div>
+              {job.proposals.map((proposal) => (
+                <ProposalReview key={proposal.id} proposal={proposal} onSettled={refreshJobs} />
+              ))}
+            </section>
           )}
-        </div>
-      </section>
-
-      {job.page && (
-        <Link
-          href={job.page}
-          className="group mt-4 flex items-center gap-3 rounded-xl border border-border bg-surface/45 px-4 py-3 transition-colors hover:bg-surface-hover"
-        >
-          <FileText className="size-4 text-icon-brand" />
-          <span className="flex-1 text-sm font-medium text-foreground">{contextualAction(job.page)}</span>
-          <ArrowRight className="size-4 text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
-        </Link>
-      )}
-
-      {!!job.proposals?.length && (
-        <section className="mt-6 space-y-3">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="size-4 text-icon-brand" />
-            <h2 className="text-sm font-semibold text-foreground">待确认修改</h2>
-            <span className="text-xs text-faint">Agent 只提出修改，确认后才会落盘</span>
-          </div>
-          {job.proposals.map((proposal) => (
-            <ProposalReview key={proposal.id} proposal={proposal} onSettled={refreshJobs} />
-          ))}
-        </section>
-      )}
-
-      <ol className="mt-6 space-y-2">
-        {job.steps.map((s, i) => (
-          <li key={i} className="flex items-start gap-2.5 text-sm">
-            {s.kind === "tool" ? (
-              <Wrench className="mt-0.5 size-3.5 shrink-0 text-icon-brand" />
-            ) : (
-              <CircleDot className="mt-0.5 size-3.5 shrink-0 text-icon-muted" />
-            )}
-            <span className={s.kind === "tool" ? "font-medium" : "text-muted"}>
-              {s.kind === "tool" ? `调用 ${s.label}` : s.label}
-            </span>
-          </li>
-        ))}
-        {job.status === "running" && (
-          <li className="flex items-center gap-2.5 text-sm text-muted">
-            <Loader2 className="size-3.5 animate-spin text-icon-brand" /> 思考中…
-          </li>
+        </AgentTaskDetailPanel>
+        {canContinue && (
+          <AgentTaskContinuation job={job} instruction={continuationInstruction} />
         )}
-      </ol>
-
-      {!!job.artifacts?.length && (
-        <section className="mt-8">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">生成结果</h2>
-          <div className="mt-3 grid gap-2">
-            {job.artifacts.map((artifact) => (
-              artifact.page ? (
-                <Link key={artifact.path} href={artifact.page} className="group flex items-center gap-3 rounded-xl border border-border bg-surface/45 px-4 py-3 transition-colors hover:bg-surface-hover">
-                  <FileText className="size-4 text-icon-brand" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground">{artifact.label}</p>
-                    <p className="truncate text-xs text-faint">{artifact.path}</p>
-                  </div>
-                  <ArrowRight className="size-4 text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
-                </Link>
-              ) : (
-                <div key={artifact.path} className="flex items-center gap-3 rounded-xl border border-border bg-surface/45 px-4 py-3">
-                  <FileText className="size-4 text-icon-brand" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">{artifact.label}</p>
-                    <p className="truncate text-xs text-faint">{artifact.path}</p>
-                  </div>
-                </div>
-              )
-            ))}
-          </div>
-        </section>
-      )}
+      </div>
 
       {job.text && (
         <div className="mt-8">
@@ -150,6 +77,90 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         </div>
       )}
     </div>
+  );
+}
+
+function AgentTaskContinuation({ job, instruction }: { job: Job; instruction: string }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const running = job.runStatus === "running";
+  const failed = job.runStatus === "failed";
+  const title = failed
+    ? "从原任务继续重试"
+    : running
+      ? "Agent 已接手这个任务"
+      : "交给你的 Agent 继续";
+  const actionLabel = running || failed ? "复制续接指令" : "复制并交给 Agent";
+
+  async function copyInstruction() {
+    try {
+      await copyAgentInstruction(instruction);
+      setCopyState("copied");
+      window.setTimeout(() => setCopyState("idle"), 2_000);
+    } catch {
+      setCopyState("error");
+    }
+  }
+
+  return (
+    <section
+      data-agent-task-handoff
+      className="mt-6 overflow-hidden rounded-2xl border border-warning-border bg-warning-surface/35"
+      aria-labelledby="agent-task-handoff-title"
+    >
+      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-icon-brand">
+            <Bot className="size-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h2 id="agent-task-handoff-title" className="text-sm font-semibold text-foreground">
+              {title}
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              {running
+                ? "如果原 Agent 仍在执行，请直接等待；只有原会话中断时，才需要复制下面的续接指令。"
+                : failed
+                  ? "复制下面的指令重新交给 Agent，它会从当前任务继续，而不是重新排队。"
+                  : "复制下面的指令交给当前 Agent，它会接手已经创建的这项待办。"}
+            </p>
+            <p className="mt-2 text-xs text-faint">
+              当前任务 ID：
+              <code className="break-all font-mono text-muted">{job.id}</code>
+              <span className="mx-1.5" aria-hidden="true">·</span>
+              继续时会复用当前任务 ID，不会创建新任务。
+            </p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          className="shrink-0"
+          onClick={copyInstruction}
+          aria-describedby="agent-task-copy-status"
+        >
+          {copyState === "copied" ? (
+            <Check className="size-4" aria-hidden="true" />
+          ) : (
+            <Copy className="size-4" aria-hidden="true" />
+          )}
+          {copyState === "copied" ? "已复制" : actionLabel}
+        </Button>
+      </div>
+      <div className="border-t border-warning-border bg-surface/55 px-5 py-4">
+        <p className="break-words text-sm leading-6 text-foreground">{instruction}</p>
+        <p
+          id="agent-task-copy-status"
+          className={copyState === "error" ? "mt-2 text-xs text-danger" : "sr-only"}
+          role={copyState === "error" ? "alert" : "status"}
+          aria-live="polite"
+        >
+          {copyState === "copied"
+            ? "续接指令已复制"
+            : copyState === "error"
+              ? "复制失败，请手动选择上方指令。"
+              : ""}
+        </p>
+      </div>
+    </section>
   );
 }
 
@@ -221,7 +232,7 @@ function ProposalReview({ proposal, onSettled }: { proposal: JobProposal; onSett
       {error && <p className="border-t border-border px-5 py-3 text-sm text-red-600 dark:text-red-300">{error}</p>}
       {status === "pending" && (
         <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
-          <Button variant="outline" onClick={() => decide("reject")} disabled={busy !== null}>
+          <Button variant="tertiary" onClick={() => decide("reject")} disabled={busy !== null}>
             {busy === "reject" && <Loader2 className="size-4 animate-spin" />} 暂不修改
           </Button>
           <Button onClick={() => decide("approve")} disabled={busy !== null || !detail}>

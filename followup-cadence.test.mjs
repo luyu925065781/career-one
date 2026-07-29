@@ -10,6 +10,7 @@
 import {
   computeNextFollowupDate,
   addDays,
+  groupApplicationsForFollowup,
   parseDate,
   DEFAULT_CADENCE,
 } from './followup-cadence.mjs';
@@ -65,6 +66,53 @@ eq(
   'applied, no follow-ups uses applied_first',
   computeNextFollowupDate('applied', APP, null, 0),
   addDays(parseDate(APP), DEFAULT_CADENCE.applied_first),
+);
+
+const groupedApplications = groupApplicationsForFollowup([
+  {
+    num: 1,
+    date: '2026-07-10',
+    company: 'Wispr Flow',
+    role: 'Ex-Founder',
+    via: '—',
+    notes: '[Applied 2026-07-10] English report',
+  },
+  {
+    num: 2,
+    date: '2026-07-10',
+    company: ' WISPR   FLOW ',
+    role: 'Ex–Founder',
+    via: '',
+    notes: '[Applied 2026-07-10] Chinese report',
+  },
+  {
+    num: 3,
+    date: '2026-07-11',
+    company: 'Wispr Flow',
+    role: 'Ex-Founder',
+    via: '—',
+    notes: '[Applied 2026-07-11] Re-application',
+  },
+  {
+    num: 4,
+    date: '2026-07-10',
+    company: 'Wispr Flow',
+    role: 'Ex-Founder',
+    via: 'Hays',
+    notes: '[Applied 2026-07-10] Agency application',
+  },
+]);
+
+eq(
+  'same real application groups translated reports under one follow-up identity',
+  groupedApplications.map((group) => group.applicationNums),
+  [[1, 2], [3], [4]],
+);
+
+eq(
+  'follow-up grouping keeps the first tracker row as the canonical report',
+  groupedApplications[0].num,
+  1,
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);

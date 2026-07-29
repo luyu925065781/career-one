@@ -78,6 +78,9 @@
     "url": "https://github.com/luyu925065781/career-one"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "dotenv": "^17.0.0",

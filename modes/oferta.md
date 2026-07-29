@@ -1,6 +1,6 @@
 # Mode: job — Full A-G Evaluation
 
-When the candidate pastes a job (text or URL), ALWAYS deliver the 7 blocks (A-F evaluation + G legitimacy):
+When the candidate pastes a job (text or URL), ALWAYS deliver the 7 report blocks (A-F analysis + G legitimacy). Scoring must follow the 5 factors in `_shared.md`; report blocks are not scoring factors and new content must not be double-counted:
 
 ## Liveness gate (URL inputs)
 
@@ -333,6 +333,10 @@ Apply all language rules from `_shared.md` Professional Writing section to the d
 ## Post-evaluation
 
 **ALWAYS** after generating blocks A-G:
+
+A-G are stable internal module IDs used by the report Markdown schema, parser, and historical-report compatibility. They do not participate in the 1-5 score and MUST NOT be renumbered when the presentation order changes.
+
+The user-facing interface uses consecutive numbers in the actual presentation order: 1 Role Preview → 2 CV Match Analysis → 3 Level and Job-Search Strategy → 4 Compensation Competitiveness and Market Demand → 5 Posting Legitimacy → 6 Greeting Message → 7 Questions for the Recruiter → 8 Best Positioning for This Role → 9 Post-conversation Decision Rules → 10 Targeted Customization Plan → 11 Interview Preparation Plan.
 
 ### 1. Save report .md
 

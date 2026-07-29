@@ -161,17 +161,25 @@ test("replaces only the requested story and preserves every other byte", () => {
   assert.throws(() => replaceStoryInMarkdown(FIXTURE, "S02", replacement), /编号必须是 S02/);
 });
 
-test("interview page exposes maintenance actions on every story card, not in the page header", () => {
+test("interview page hands story optimization to the user's Agent and keeps manual maintenance", () => {
   const page = readWeb("./src/app/interview/page.tsx");
   const manager = readWeb("./src/components/cv-editor.tsx");
 
   assert.match(page, /<StoryActions story=\{story\}/);
   assert.doesNotMatch(page, /<StoryBankManager/);
   assert.match(manager, /export function StoryActions/);
-  assert.match(manager, /AI 优化/);
+  assert.match(manager, /在 Agent 中优化/);
   assert.match(manager, /手动维护/);
   assert.match(manager, /story\.id/);
-  assert.match(manager, /co-assistant/);
+  assert.match(manager, /queueAgentTask/);
+  assert.match(manager, /kind:\s*"story"/);
+  assert.match(manager, /page:\s*"\/interview"/);
+  assert.match(manager, /waiting_approval/);
+  assert.match(manager, /等待确认/);
+  assert.match(manager, /AgentTaskHandoffDialog/);
+  assert.doesNotMatch(manager, /co-assistant/);
+  assert.doesNotMatch(manager, /liquid-glass-control/);
+  assert.match(manager, /border-outline-border bg-outline-bg/);
 });
 
 test("story writes are fixed-path, single-story merged, version-checked, and backed up", () => {
@@ -186,20 +194,27 @@ test("story writes are fixed-path, single-story merged, version-checked, and bac
   assert.match(route, /atomicWriteWithBackup/);
 });
 
-test("AI proposals target one story and remain confirm-gated", () => {
+test("story optimization stays in the Agent product, including requests from the Web assistant", () => {
   const assistant = readWeb("./src/app/api/assistant/route.ts");
   const registry = readWeb("./src/app/actions/registry.ts");
   const consoleView = readWeb("./src/components/assistant-console.tsx");
+  const jobStore = readWeb("./src/components/jobs/job-store.tsx");
+  const handoffDialog = readWeb("./src/components/generate-pdf-button.tsx");
 
-  assert.match(assistant, /setStory/);
-  assert.match(assistant, /storyId/);
-  assert.match(assistant, /storyMarkdown/);
-  assert.match(assistant, /baseHash/);
-  assert.match(assistant, /interview-prep\/story-bank\.md/);
-  assert.match(registry, /setStory/);
-  assert.match(registry, /status:\s*"confirm"/);
-  assert.match(registry, /writeStory/);
-  assert.match(registry, /preview:\s*storyMarkdown/);
-  assert.match(consoleView, /storyId, storyMarkdown, baseHash/);
-  assert.match(consoleView, /查看完整草稿/);
+  assert.match(jobStore, /opts\.kind === "story"/);
+  assert.match(jobStore, /interview-prep\/story-bank\.md/);
+  assert.match(jobStore, /待办任务 ID/);
+  assert.match(handoffDialog, /export function AgentTaskHandoffDialog/);
+  assert.match(handoffDialog, /任务已加入 Agent 待办/);
+  assert.match(handoffDialog, /请回到 Codex、WorkBuddy 或其他 Agent/);
+  assert.match(handoffDialog, /复制指令/);
+
+  assert.match(assistant, /optimizeStory/);
+  assert.match(assistant, /Web does not optimize or write the story/);
+  assert.doesNotMatch(assistant, /setStory|STORY REVISION CONTRACT|storyBankRevisionLine/);
+  assert.match(registry, /optimizeStory/);
+  assert.match(registry, /queueAgentTask/);
+  assert.match(registry, /kind:\s*"story"/);
+  assert.doesNotMatch(registry, /setStory|writeStory|validateStoryMarkdown/);
+  assert.doesNotMatch(consoleView, /writeStory/);
 });

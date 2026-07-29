@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - An AI coding CLI — [Claude Code](https://claude.ai/code), Gemini CLI, Codex, Qwen Code, OpenCode, GitHub Copilot CLI, Antigravity CLI, or Grok Build CLI (see [Supported CLIs](SUPPORTED_CLIS.md))
-- [Node.js](https://nodejs.org) 18+ and `git` (`npx` ships with Node — the installer refuses to run without them) — note: the Gemini CLI integration requires Node.js 20+
+- [Node.js](https://nodejs.org) 20.9+ and `git` (`npx` ships with Node — the installer refuses to run without them); Node.js 22 LTS or a newer LTS release is recommended
 - (Optional) Go 1.21+ (for the dashboard TUI)
 
 ## Quick Start

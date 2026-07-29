@@ -34,7 +34,7 @@ export function ApplyView() {
   if (a.status === "idle" || a.status === "error") {
     return (
       <div>
-        <div className="flex max-w-2xl items-center gap-2 rounded-full border border-border bg-surface/70 py-1.5 pl-4 pr-1.5 shadow-sm transition focus-within:border-brand/50">
+        <div className="flex w-full items-center gap-2 rounded-full border border-border bg-surface/70 py-1.5 pl-4 pr-1.5 shadow-sm transition focus-within:border-brand/50">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -50,7 +50,7 @@ export function ApplyView() {
           </button>
         </div>
         {a.error && (
-          <div className="mt-4 max-w-2xl rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3.5">
+          <div className="mt-4 w-full rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3.5">
             <div className="flex items-start gap-2.5">
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-icon-warning" />
               <div className="min-w-0">
@@ -77,7 +77,7 @@ export function ApplyView() {
   const phase = busy ? 0 : prefilling ? 1 : 2;
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="w-full">
       <style>{STYLE}</style>
 
       {/* journey: Read → Draft → Review */}

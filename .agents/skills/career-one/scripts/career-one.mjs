@@ -8,6 +8,25 @@ import { fileURLToPath } from "node:url";
 const SKILL_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BUNDLED_RUNTIME = join(SKILL_ROOT, "assets", "runtime");
 const NPM = process.platform === "win32" ? "npm.cmd" : "npm";
+const MIN_NODE_VERSION = "20.9.0";
+
+function nodeVersionAtLeast(version, minimum) {
+  const current = version.split(".").map((part) => Number.parseInt(part, 10) || 0);
+  const required = minimum.split(".").map((part) => Number.parseInt(part, 10) || 0);
+  for (let index = 0; index < Math.max(current.length, required.length); index++) {
+    if ((current[index] || 0) > (required[index] || 0)) return true;
+    if ((current[index] || 0) < (required[index] || 0)) return false;
+  }
+  return true;
+}
+
+if (!nodeVersionAtLeast(process.versions.node, MIN_NODE_VERSION)) {
+  console.error(
+    `择程AI需要 Node.js ${MIN_NODE_VERSION} 或更高版本（当前为 v${process.versions.node}）。` +
+      "推荐安装 Node.js 22 LTS 或更新的 LTS 版本。",
+  );
+  process.exit(2);
+}
 
 const COMMANDS = {
   doctor: { script: "doctor.mjs", defaults: ["--json"] },

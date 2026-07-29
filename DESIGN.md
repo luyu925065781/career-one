@@ -1,7 +1,7 @@
 ---
 version: alpha
-name: 数字超体设计系统
-description: 数字超体公司旗下 AI Native 产品共用的视觉身份与设计 Token；择程AI是当前参考实现。
+name: 择程AI设计系统
+description: 择程AI本地优先 AI 求职工作台的机器可读视觉身份与设计 Token。
 colors:
   primary: "#FACC15"
   on-primary: "#111827"
@@ -21,6 +21,12 @@ colors:
   primary-900: "#78350F"
   secondary: "#FDE047"
   on-secondary: "#111827"
+  accent-yellow: "#FACC15"
+  accent-orange: "#F59E0B"
+  accent-red: "#EF4444"
+  accent-green: "#22C55E"
+  accent-blue: "#3B82F6"
+  accent-purple: "#4D44D6"
   background: "#F7F6F3"
   on-background: "#111827"
   surface: "#FFFFFF"
@@ -33,6 +39,20 @@ colors:
   on-surface-variant: "#4B5563"
   muted: "#4B5563"
   faint: "#6B7280"
+  metric-brand: "#B48300"
+  metric-warning: "#EA580C"
+  metric-info: "#2563EB"
+  metric-success: "#059669"
+  metric-danger: "#E11D48"
+  metric-purple: "#4D44D6"
+  action-secondary: "#F3F4F6"
+  action-secondary-hover: "#E5E7EB"
+  action-secondary-active: "#D1D5DB"
+  action-secondary-foreground: "#111827"
+  outline-bg: "rgb(17 24 39 / 0.025)"
+  outline-bg-hover: "rgb(17 24 39 / 0.05)"
+  outline-border: "rgb(17 24 39 / 0.16)"
+  outline-border-hover: "rgb(17 24 39 / 0.22)"
   outline: "#E5E7EB"
   outline-strong: "#D1D5DB"
   gray-50: "#F9FAFB"
@@ -48,25 +68,58 @@ colors:
   gray-950: "#030712"
   success: "#22C55E"
   success-text: "#15803D"
+  success-surface: "rgb(34 197 94 / 0.12)"
+  success-border: "rgb(34 197 94 / 0.30)"
   warning: "#F59E0B"
   warning-text: "#B45309"
+  warning-surface: "rgb(245 158 11 / 0.12)"
+  warning-border: "rgb(245 158 11 / 0.30)"
   error: "#EF4444"
   error-text: "#B91C1C"
+  danger: "#EF4444"
+  danger-text: "#B91C1C"
+  danger-surface: "rgb(239 68 68 / 0.10)"
+  danger-border: "rgb(239 68 68 / 0.28)"
   info: "#3B82F6"
   info-text: "#1D4ED8"
+  info-surface: "rgb(59 130 246 / 0.10)"
+  info-border: "rgb(59 130 246 / 0.28)"
   dark-background: "#0A0A0A"
   dark-on-background: "#FFFFFF"
   dark-surface: "#161616"
   dark-surface-hover: "#232323"
+  dark-action-secondary: "rgb(255 255 255 / 0.12)"
+  dark-action-secondary-hover: "rgb(255 255 255 / 0.18)"
+  dark-action-secondary-active: "rgb(255 255 255 / 0.24)"
+  dark-action-secondary-foreground: "#FFFFFF"
+  dark-outline-bg: "rgb(255 255 255 / 0.05)"
+  dark-outline-bg-hover: "rgb(255 255 255 / 0.1)"
+  dark-outline-border: "rgb(255 255 255 / 0.18)"
+  dark-outline-border-hover: "rgb(255 255 255 / 0.26)"
   dark-outline: "#262626"
   dark-on-surface: "#FFFFFF"
   dark-on-surface-variant: "#9CA3AF"
   dark-primary: "#FACC15"
   dark-on-primary: "#111827"
+  dark-metric-brand: "#FACC15"
+  dark-metric-warning: "#FB923C"
+  dark-metric-info: "#60A5FA"
+  dark-metric-success: "#10B981"
+  dark-metric-danger: "#FB7185"
+  dark-metric-purple: "#A5B4FC"
   dark-success: "#4ADE80"
+  dark-success-surface: "rgb(74 222 128 / 0.12)"
+  dark-success-border: "rgb(74 222 128 / 0.28)"
   dark-warning: "#FBBF24"
+  dark-warning-surface: "rgb(251 191 36 / 0.12)"
+  dark-warning-border: "rgb(251 191 36 / 0.28)"
   dark-error: "#F87171"
+  dark-danger: "#F87171"
+  dark-danger-surface: "rgb(248 113 113 / 0.12)"
+  dark-danger-border: "rgb(248 113 113 / 0.28)"
   dark-info: "#60A5FA"
+  dark-info-surface: "rgb(96 165 250 / 0.12)"
+  dark-info-border: "rgb(96 165 250 / 0.28)"
 typography:
   display-lg:
     fontFamily: SF Pro Display / Source Han Sans SC
@@ -148,6 +201,13 @@ rounded:
   card: 16px
   panel: 24px
   full: 9999px
+elevation:
+  raised: "0 1px 2px rgb(17 24 39 / 0.05), 0 4px 12px rgb(17 24 39 / 0.05)"
+  floating: "0 8px 24px rgb(17 24 39 / 0.10)"
+  overlay: "0 20px 48px rgb(17 24 39 / 0.16)"
+  dark-raised: "0 1px 2px rgb(0 0 0 / 0.24), 0 4px 12px rgb(0 0 0 / 0.18)"
+  dark-floating: "0 8px 24px rgb(0 0 0 / 0.32)"
+  dark-overlay: "0 20px 48px rgb(0 0 0 / 0.46)"
 spacing:
   base: 4px
   xs: 4px
@@ -191,13 +251,35 @@ components:
     textColor: "{colors.dark-on-primary}"
     typography: "{typography.label-md}"
     rounded: "{rounded.md}"
-  button-outline:
-    backgroundColor: "{colors.surface-container-low}"
+  button-secondary:
+    backgroundColor: "{colors.action-secondary}"
+    textColor: "{colors.action-secondary-foreground}"
+    typography: "{typography.label-md}"
+    rounded: "{rounded.md}"
+    padding: 8px 12px
+    height: 40px
+  button-secondary-hover:
+    backgroundColor: "{colors.action-secondary-hover}"
+    textColor: "{colors.action-secondary-foreground}"
+  button-secondary-active:
+    backgroundColor: "{colors.action-secondary-active}"
+    textColor: "{colors.action-secondary-foreground}"
+  button-tertiary:
+    backgroundColor: "{colors.surface}"
+    borderColor: "{colors.outline-border}"
     textColor: "{colors.on-surface}"
     typography: "{typography.label-md}"
     rounded: "{rounded.md}"
     padding: 8px 12px
     height: 40px
+  button-tertiary-hover:
+    backgroundColor: "{colors.outline-bg}"
+    borderColor: "{colors.outline-border-hover}"
+    textColor: "{colors.on-surface}"
+  button-tertiary-active:
+    backgroundColor: "{colors.outline-bg-hover}"
+    borderColor: "{colors.outline-border-hover}"
+    textColor: "{colors.on-surface}"
   input-field:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.on-surface}"
@@ -241,34 +323,38 @@ components:
     backgroundColor: "{colors.outline-strong}"
     height: 1px
   status-success:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "{colors.success-surface}"
+    borderColor: "{colors.success-border}"
     textColor: "{colors.success-text}"
     typography: "{typography.label-sm}"
     rounded: "{rounded.md}"
   status-warning:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "{colors.warning-surface}"
+    borderColor: "{colors.warning-border}"
     textColor: "{colors.warning-text}"
     typography: "{typography.label-sm}"
     rounded: "{rounded.md}"
   status-error:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.error-text}"
+    backgroundColor: "{colors.danger-surface}"
+    borderColor: "{colors.danger-border}"
+    textColor: "{colors.danger-text}"
     typography: "{typography.label-sm}"
     rounded: "{rounded.md}"
   status-info:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "{colors.info-surface}"
+    borderColor: "{colors.info-border}"
     textColor: "{colors.info-text}"
     typography: "{typography.label-sm}"
     rounded: "{rounded.md}"
 ---
 
-# 数字超体设计系统
+# 择程AI设计系统
 
 ## Overview
 
-数字超体公司的视觉语言服务于 AI Native 产品、智能体工作台和高频生产力工具。它应当让用户感到**清晰、可靠、敏捷且具有人格温度**：像一位安静但反应迅速的专业合作者，而不是一张炫技的科技海报。
+择程AI的视觉语言服务于本地优先的 AI 求职工作流。它应当让用户感到**清晰、可靠、敏捷且具有人格温度**：像一位安静但反应迅速的专业求职合作者，而不是一张炫技的科技海报。
 
-品牌通过三组视觉信号建立识别：代表认知与行动的明亮黄色、提供长期阅读舒适度的暖白画布，以及承载信息密度的炭黑文字。界面以内容和工作流为中心，装饰必须服从任务。择程AI是这套公司级设计系统的当前参考实现。
+产品通过三组视觉信号建立识别：代表认知与行动的明亮黄色、提供长期阅读舒适度的暖白画布，以及承载信息密度的炭黑文字。界面以求职内容和工作流为中心，装饰必须服从任务。
 
 ## Colors
 
@@ -295,9 +381,9 @@ components:
 
 字体采用统一的现代无衬线语言，不使用衬线展示字体。
 
-- **英文 / SF Pro 风格：** 公司级英文视觉以 SF Pro Display 和 SF Pro Text 的比例、字重与字面气质为基准。标题使用 Display 风格，正文与控件使用 Text 风格；非 Apple 平台使用接近的系统无衬线字体回退，不分发 Apple 专有字体文件。
-- **中文 / 思源黑体：** 公司级中文视觉以思源黑体（Source Han Sans SC）的结构和字重为基准，用于标题、正文、按钮、表单、导航、标签、表格和数字。
-- **具体产品 / 系统自带字体：** 择程AI等具体产品不额外下载或内嵌品牌字体，使用当前操作系统的 UI 字体。Apple 平台优先 SF Pro 与苹方，Windows 优先 Segoe UI 与微软雅黑，其他平台使用 `system-ui` 及本地无衬线回退。
+- **英文 / SF Pro 风格：** 英文视觉以 SF Pro Display 和 SF Pro Text 的比例、字重与字面气质为基准。标题使用 Display 风格，正文与控件使用 Text 风格；非 Apple 平台使用接近的系统无衬线字体回退，不分发 Apple 专有字体文件。
+- **中文 / 思源黑体风格：** 中文视觉以思源黑体（Source Han Sans SC）的结构和字重为基准，用于标题、正文、按钮、表单、导航、标签、表格和数字。
+- **择程AI / 系统自带字体：** 产品不额外下载或内嵌品牌字体，使用当前操作系统的 UI 字体。Apple 平台优先 SF Pro 与苹方，Windows 优先 Segoe UI 与微软雅黑，其他平台使用 `system-ui` 及本地无衬线回退。
 - **ui-monospace：** 用于命令、文件路径、代码、任务 ID 和机器状态。
 
 不随视口宽度缩放字号。所有字距保持 `0`，长文本依靠换行、容器约束和层级调整解决，不使用负字距挤压内容。
@@ -319,6 +405,7 @@ components:
 
 - 页面画布使用 `background`，主要工作表面使用 `surface`，悬停和次级层使用 `surface-hover` 或容器色阶。
 - 普通卡片使用 1px `outline` 边框；高优先级工具可以使用低透明度、宽扩散的中性阴影。
+- 轻抬升卡片、悬浮控件和模态框分别使用 `raised`、`floating`、`overlay`，业务组件不得直接选择裸阴影等级。
 - Hover 可以轻微抬升 1px，但不能改变组件尺寸或推动相邻内容。
 - 品牌光效只允许出现在短暂的关键反馈中。禁止大面积发光、渐变光球、bokeh 和纯装饰性背景效果。
 - Liquid glass 仅限小型悬浮控制，不用于主要内容容器或大面积页面结构。
@@ -358,7 +445,7 @@ components:
 
 ### Icons and status
 
-- 图标必须按角色使用 `icon-default`、`icon-muted`、`icon-brand`、`icon-success`、`icon-warning`、`icon-danger`、`icon-info` 的实现映射。
+- 图标必须按角色使用 `icon-default`、`icon-muted`、`icon-brand`、`icon-success`、`icon-warning`、`icon-danger`、`icon-info` 语义 Token。
 - 第三方 Logo 和内容图片保留原始品牌色，不强制染成黄色。
 - 状态不能只依赖颜色表达；必须同时提供文字、图标或结构信号。
 

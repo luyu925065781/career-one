@@ -8,13 +8,11 @@ import { cn } from "@/lib/cn";
 import { CoMark } from "@/components/co-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { WorkerPills } from "@/components/jobs/worker-pills";
-import { UsageMeter } from "@/components/usage-meter";
 import { NAV_ITEMS, isActivePath } from "@/lib/nav-items";
 import { useJobs } from "@/components/jobs/job-store";
-import { releaseDisplayLabel } from "@/lib/release";
 
 // Mobile navigation (< md): a glass top bar + a right-side slide-over drawer that
-// mirrors the desktop sidebar (nav + workers + usage + theme). Premium details:
+// mirrors the desktop sidebar (nav + workers + theme). Premium details:
 // spring slide, scrim blur, swipe-to-close, body scroll-lock, Escape, focus move,
 // safe-area insets (notch / home bar), worker pulse, reduced-motion aware.
 // Motion/inset CSS is co-located (env() insets + the Tailwind v4 stale-CSS HMR gotcha).
@@ -26,8 +24,8 @@ const STYLE = `
 .co-mnav{position:sticky;top:0;z-index:30;background:var(--bg);padding-top:calc(env(safe-area-inset-top) + .8rem)}
 .co-mscrim{position:fixed;inset:0;z-index:60;background:rgba(8,8,12,.45);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .3s ease}
 .co-mscrim.open{opacity:1;pointer-events:auto}
-.co-mdrawer{position:fixed;top:0;right:0;bottom:0;z-index:61;width:min(20rem,86vw);display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;transform:translateX(102%);transition:transform .34s cubic-bezier(.32,.72,0,1);will-change:transform;box-shadow:-16px 0 48px -16px rgba(0,0,0,.4);padding-top:calc(env(safe-area-inset-top) + .25rem)}
-.co-mdrawer.open{transform:translateX(0)}
+.co-mdrawer{position:fixed;top:0;right:0;bottom:0;z-index:61;width:min(20rem,86vw);display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:contain;transform:translateX(102%);transition:transform .34s cubic-bezier(.32,.72,0,1);will-change:transform;box-shadow:none;padding-top:calc(env(safe-area-inset-top) + .25rem)}
+.co-mdrawer.open{transform:translateX(0);box-shadow:-16px 0 48px -16px rgba(0,0,0,.4)}
 .co-msafe{padding-bottom:calc(1rem + env(safe-area-inset-bottom))}
 .co-pulse{animation:co-pulse 1.6s ease-in-out infinite}
 @keyframes co-pulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -150,7 +148,7 @@ export function MobileNav() {
         </div>
 
         <nav className="flex flex-col gap-1 px-3">
-          {NAV_ITEMS.map(({ href, label, icon: Icon, chip }) => {
+          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = isActivePath(href, pathname);
             return (
               <Link
@@ -165,24 +163,18 @@ export function MobileNav() {
               >
                 <Icon className="size-5" />
                 {label}
-                {chip && (
-                  <span className="ml-auto rounded-full border border-brand/30 bg-brand-soft px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-brand-text">
-                    {chip}
-                  </span>
-                )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="px-3">
+        <div className="flex min-h-0 flex-1 flex-col px-3">
           <WorkerPills />
         </div>
 
-        <div className="co-msafe mt-auto space-y-3 border-t border-border px-4 pt-4">
-          <UsageMeter />
-          <div className="flex items-center justify-between">
-            <span className="font-display text-sm text-faint">本地优先 · {releaseDisplayLabel()}</span>
+        <div className="co-msafe mt-auto border-t border-border px-4 pt-2">
+          <div className="flex h-11 items-center justify-between">
+            <span className="whitespace-nowrap font-sans text-sm font-normal leading-none tracking-[0.14em] text-faint">择路扬帆，前程似锦</span>
             <ThemeToggle />
           </div>
         </div>

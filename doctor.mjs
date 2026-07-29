@@ -29,15 +29,26 @@ const red = (s) => isTTY ? `\x1b[31m${s}\x1b[0m` : s;
 const yellow = (s) => isTTY ? `\x1b[33m${s}\x1b[0m` : s;
 const dim = (s) => isTTY ? `\x1b[2m${s}\x1b[0m` : s;
 
+const MIN_NODE_VERSION = '20.9.0';
+
+function nodeVersionAtLeast(version, minimum) {
+  const current = version.split('.').map((part) => Number.parseInt(part, 10) || 0);
+  const required = minimum.split('.').map((part) => Number.parseInt(part, 10) || 0);
+  for (let index = 0; index < Math.max(current.length, required.length); index++) {
+    if ((current[index] || 0) > (required[index] || 0)) return true;
+    if ((current[index] || 0) < (required[index] || 0)) return false;
+  }
+  return true;
+}
+
 function checkNodeVersion() {
-  const major = parseInt(process.versions.node.split('.')[0]);
-  if (major >= 18) {
-    return { pass: true, label: `Node.js >= 18 (v${process.versions.node})` };
+  if (nodeVersionAtLeast(process.versions.node, MIN_NODE_VERSION)) {
+    return { pass: true, label: `Node.js >= ${MIN_NODE_VERSION} (v${process.versions.node})` };
   }
   return {
     pass: false,
-    label: `Node.js >= 18 (found v${process.versions.node})`,
-    fix: 'Install Node.js 18 or later from https://nodejs.org',
+    label: `Node.js >= ${MIN_NODE_VERSION} (found v${process.versions.node})`,
+    fix: 'Install Node.js 22 LTS or a newer LTS release from https://nodejs.org',
   };
 }
 

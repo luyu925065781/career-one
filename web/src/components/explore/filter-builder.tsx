@@ -216,7 +216,7 @@ export function FilterBuilder({
                 href={platform.href}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-brand/40 bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand transition-colors hover:border-brand/60 hover:bg-brand/15 max-sm:min-h-[44px]"
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-brand/40 bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand transition-colors hover:bg-brand/15 max-sm:min-h-[44px]"
                 aria-label={`前往${platform.name}官网`}
                 title={`打开${platform.name}官网`}
               >

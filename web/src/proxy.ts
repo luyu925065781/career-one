@@ -43,7 +43,6 @@ export const config = {
     "/api/agent-runs/:path*",
     "/api/runs/:path*",
     "/api/explore/:path*",
-    "/api/cn-diagnose/:path*",
     "/api/tracker/:path*",
     "/api/status/:path*",
     "/api/report/:path*",

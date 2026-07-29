@@ -27,12 +27,14 @@ All scripts live in the project root as `.mjs` modules and are exposed via `npm 
 | `npm run tracker` | `tracker.mjs` | SQLite derived index over applications.md — sync/query/history/export |
 | `npm run find` | `find.mjs` | Resolve a report#/tracker#/company query to its full pipeline identity |
 | `npm run invite-match` | `invite-match.mjs` | Fuzzy-match a pasted interview-invite email against `data/applications.md` |
+| `node agent-inbox.mjs` | `agent-inbox.mjs` | Queue and resolve durable Agent requests |
+| `node agent-runs.mjs` | `agent-runs.mjs` | Share task status and artifacts between Agent and Web |
 
 ---
 
 ## doctor
 
-Validates that all prerequisites are in place: Node.js >= 18, dependencies installed, Playwright chromium, required files (`cv.md`, `config/profile.yml`, `portals.yml`), fonts directory, and auto-creates `data/`, `output/`, `reports/` if missing.
+Validates that all prerequisites are in place: Node.js >= 20.9, dependencies installed, Playwright chromium, required files (`cv.md`, `config/profile.yml`, `portals.yml`), fonts directory, and auto-creates `data/`, `output/`, `reports/` if missing.
 
 ```bash
 npm run doctor
@@ -127,6 +129,28 @@ npm run pdf -- input.html output.pdf --format=a4        # A4 (default)
 ```
 
 **Exit codes:** `0` PDF generated, `1` missing arguments or generation failure.
+
+---
+
+## Agent inbox and shared runs
+
+Web does not launch an Agent CLI for reasoning or PDF generation. It queues a
+short request in `data/agent-inbox.md` and creates the same task in
+`data/agent-runs.json`; the user's Codex, WorkBuddy, or other Agent resumes that
+task ID. Web then reads the shared registry to display queued, running,
+completed, failed, approval, and artifact states.
+
+```bash
+node agent-inbox.mjs list
+node agent-runs.mjs progress <task-id> --label "Agent 已接手任务"
+node agent-runs.mjs complete <task-id> --summary "已生成定制简历" \
+  --artifact "output/example.pdf|定制简历|application/pdf"
+node agent-inbox.mjs resolve --task <task-id> --result "已生成定制简历"
+```
+
+Items with `[task:<id>]` must resume the existing shared task instead of
+creating a duplicate. Agent owns understanding, decisions, generation, and
+modification; Web owns viewing, confirmation, management, and replay.
 
 ---
 

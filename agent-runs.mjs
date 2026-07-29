@@ -208,13 +208,25 @@ function attachProposalSummaries(root, run) {
   };
 }
 
-export function createRun({ root: rawRoot = process.cwd(), id, intent, title, subtitle, source = "agent", input, page }) {
+export function createRun({
+  root: rawRoot = process.cwd(),
+  id,
+  intent,
+  title,
+  subtitle,
+  source = "agent",
+  input,
+  page,
+  instruction,
+  status = "running",
+}) {
   const root = resolve(rawRoot);
   const runId = cleanId(id, "run");
   const normalizedIntent = cleanText(intent, 80);
   const normalizedTitle = cleanText(title, 140);
   if (!normalizedIntent || !normalizedTitle) throw new Error("Run intent and title are required");
   if (!SOURCES.has(source)) throw new Error("Run source must be agent or web");
+  if (!["queued", "running"].includes(status)) throw new Error("New runs must start as queued or running");
   const timestamp = now();
   const run = {
     version: CONTRACT_VERSION,
@@ -225,8 +237,13 @@ export function createRun({ root: rawRoot = process.cwd(), id, intent, title, su
     source,
     input: cleanText(input, 500) || undefined,
     page: normalizePage(page),
-    status: "running",
-    progress: [{ kind: "status", label: "任务已创建", at: timestamp }],
+    instruction: cleanText(instruction, 1_000) || undefined,
+    status,
+    progress: [{
+      kind: "status",
+      label: status === "queued" ? "已加入 Agent 待办" : "任务已创建",
+      at: timestamp,
+    }],
     artifacts: [],
     proposalIds: [],
     createdAt: timestamp,
@@ -445,6 +462,7 @@ function print(value) {
 function cliHelp() {
   return `择程AI共享任务协议\n\n` +
     `  node agent-runs.mjs start --intent <意图> --title <标题> [--source agent|web]\n` +
+    `  node agent-runs.mjs queue --intent <意图> --title <标题> [--source web] [--instruction <续接指令>]\n` +
     `  node agent-runs.mjs progress <run-id> --label <进度>\n` +
     `  node agent-runs.mjs complete <run-id> [--summary <摘要>] [--artifact path|label|/page]\n` +
     `  node agent-runs.mjs fail <run-id> --error <原因>\n` +
@@ -461,7 +479,7 @@ export function runCli(argv = process.argv.slice(2)) {
     process.stdout.write(cliHelp());
     return 0;
   }
-  if (command === "start") {
+  if (command === "start" || command === "queue") {
     print(createRun({
       root,
       id: option(args, "--id"),
@@ -471,6 +489,8 @@ export function runCli(argv = process.argv.slice(2)) {
       source: option(args, "--source") || "agent",
       input: option(args, "--input"),
       page: option(args, "--page"),
+      instruction: option(args, "--instruction"),
+      status: command === "queue" ? "queued" : "running",
     }));
     return 0;
   }

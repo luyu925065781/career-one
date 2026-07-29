@@ -137,7 +137,7 @@ export function AssistantConsole() {
   const pathname = usePathname();
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { jobs, startJob } = useJobs();
+  const { jobs, startJob, queueAgentTask } = useJobs();
   const pipeline = usePipeline();
   const apply = useApply();
 
@@ -246,6 +246,7 @@ export function AssistantConsole() {
       push: (p) => router.push(p),
       replace: (p) => router.replace(p),
       startJob,
+      queueAgentTask,
       inbox: pipelineRef.current.inbox,
       applications: pipelineRef.current.applications,
       jobForUrl: (url) => {
@@ -284,23 +285,6 @@ export function AssistantConsole() {
       },
       writePortals: (roles, location) => {
         fetch("/api/portals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roles, location }) }).catch(() => {});
-      },
-      writeStory: (storyId, storyMarkdown, baseHash) => {
-        fetch("/api/cv", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ target: "story-bank", storyId, storyMarkdown, baseHash }),
-        })
-          .then(async (response) => {
-            const result = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(result.error || "保存失败");
-            appendParts([{ type: "note", text: `${storyId} 已保存，其他故事保持原样，并已为旧版本创建本地备份。` }]);
-            router.refresh();
-          })
-          .catch((error: unknown) => {
-            const message = error instanceof Error ? error.message : "保存失败";
-            appendParts([{ type: "note", text: `⚠️ ${message}` }]);
-          });
       },
     };
   }

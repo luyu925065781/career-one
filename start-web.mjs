@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = join(ROOT, "web");
-const DEFAULT_PORT = 3000;
+const DEFAULT_PORT = 3301;
 
 function optionValue(args, name) {
   const index = args.lastIndexOf(name);
@@ -50,6 +50,16 @@ function portIsListening(port) {
   });
 }
 
+export function htmlLooksLikeWorkbench(html) {
+  const content = String(html || "");
+  return content.includes("择程AI")
+    && (
+      content.includes("AI求职工作台")
+      || content.includes("Agent 任务")
+      || content.includes("求职进度")
+    );
+}
+
 async function isCareerOneWorkbench(port) {
   try {
     const response = await fetch(`http://localhost:${port}`, {
@@ -58,7 +68,7 @@ async function isCareerOneWorkbench(port) {
     });
     if (!response.ok) return false;
     const html = await response.text();
-    return html.includes("择程AI") && html.includes("AI求职工作台");
+    return htmlLooksLikeWorkbench(html);
   } catch {
     return false;
   }

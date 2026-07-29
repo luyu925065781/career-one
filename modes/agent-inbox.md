@@ -24,12 +24,14 @@ node agent-inbox.mjs add "run a scan and triage anything new"
 node agent-inbox.mjs list            # pending items
 node agent-inbox.mjs list --all      # include resolved items
 node agent-inbox.mjs resolve 1 --result "scored 4.3 — report 012"
+node agent-inbox.mjs resolve --task run-pdf-012 --result "PDF generated"
 ```
 
 `data/agent-inbox.md` is user-layer (gitignored). Items look like:
 
 ```markdown
 - [ ] 2026-06-21 09:30 — evaluate https://acme.com/jobs/42
+- [ ] 2026-06-21 09:35 — [task:run-pdf-012] generate tailored CV PDF for report #012
 - [x] 2026-06-20 18:05 — run a scan → result: 3 new, 1 worth evaluating
 ```
 
@@ -39,12 +41,17 @@ node agent-inbox.mjs resolve 1 --result "scored 4.3 — report 012"
    say so and stop.
 2. Run each **unchecked** item top-to-bottom by routing it to the right mode
    (a URL → `auto-pipeline`; "follow-up" → `followup`; "scan" → `scan`; etc.).
-3. After each, mark it `[x]` and append `→ result: <one line>` — either by hand
-   or with `node agent-inbox.mjs resolve <n> --result "..."`.
-4. Items that need **live user input** (a mock interview, a pasted transcript, a
+3. If an item contains `[task:<id>]`, it already has a shared Web/Agent run.
+   Resume that exact ID with `agent-runs.mjs progress`; do not create a second
+   run. Complete or fail the same ID so Web can show the live state and result.
+4. After each, mark it `[x]` and append `→ result: <one line>` — either by hand,
+   with `node agent-inbox.mjs resolve <n> --result "..."`, or for a shared run
+   with `node agent-inbox.mjs resolve --task <id> --result "..."`.
+5. Items that need **live user input** (a mock interview, a pasted transcript, a
    decision, anything that would submit an application) → do **not** run them;
    ask the user to start them instead. The inbox never bypasses human review.
 
 This mode pairs naturally with a dashboard: a "queue this" button writes to the
-same file, so a click while browsing the tracker becomes work the next session
-picks up.
+same file and shared run registry. Web is responsible for viewing, confirming,
+managing, and replaying the work; the user's Agent is responsible for
+understanding, deciding, generating, and modifying.

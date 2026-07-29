@@ -7,7 +7,7 @@ import { acquireTrackerWrite, releaseTrackerWrite } from "@/lib/core/run-registr
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 800; // a real oferta evaluation / pdf-mode CV tailoring + render is heavy and multi-step
+export const maxDuration = 800; // a real oferta evaluation is heavy and multi-step
 
 // The web ORCHESTRATES the real career-one engine — it does NOT reimplement it.
 // kind "evaluate" runs the REAL Chinese modes and persists the canonical
@@ -15,7 +15,12 @@ export const maxDuration = 800; // a real oferta evaluation / pdf-mode CV tailor
 // (reserve-report-num.mjs → reports/ → batch/tracker-additions/ → merge-tracker.mjs),
 // so a web evaluation is byte-identical to a CLI one (single source of truth, no
 // drift). kind "research" stays read-only. Streams progress as NDJSON events.
-function buildPrompt(kind: string, input: string, memory: string, today: string): string {
+function buildPrompt(
+  kind: string,
+  input: string,
+  memory: string,
+  today: string,
+): string {
   const mem = memory.trim() ? `\n\nDurable notes about the user (from their profile):\n${memory.trim()}\n` : "";
   if (kind === "research") {
     return `你正在用户自己的电脑上调研其作品或项目，以提炼与求职相关的真实优势。使用 WebFetch 读取 URL，或读取用户明确引用的本地文件。用简体中文说明：它是什么、价值在哪里、能支持哪些岗位或简历表达。保持具体、诚实，不得虚构。${mem}
@@ -23,17 +28,6 @@ function buildPrompt(kind: string, input: string, memory: string, today: string)
 End with EXACTLY one final line: VERDICT: {0-5 signal strength}/5 — {why it helps their search, ≤12 words}
 
 Target: ${input}`;
-  }
-  if (kind === "pdf") {
-    return `你正在用户自己的电脑上，为申请 #${input} 生成 ATS 友好的定制简历 PDF。运行真实的 career-one pdf 模式，不要自创格式。
-1. 先读取 modes/zh/_shared.md，再读取 modes/pdf.md、cv.md、config/profile.yml 和 reports/${input}-*.md 中的评估报告。所有用户可见内容使用简体中文，除非该岗位明确需要英文简历。
-2. Tailor the CV per modes/pdf.md: inject the JD's keywords into the summary + first bullets, reorder experience by relevance, build the competency grid, pick the top 3–4 projects. NEVER invent skills — only reword REAL experience using the JD's vocabulary.
-3. Fill templates/cv-template.html's {{...}} placeholders with the tailored content; write the HTML to /tmp/cv-{candidate}-{company}.html (candidate = the profile name in kebab-case).
-4. Render the PDF: \`node generate-pdf.mjs /tmp/cv-{candidate}-{company}.html output/cv-{candidate}-{company}-${today}.pdf --format={letter for US/Canada companies, else a4}\`.
-5. Update the tracker: in data/applications.md, change the PDF column for row #${input} from ❌ to ✅.
-Do not submit anything anywhere.
-
-End with EXACTLY one final line: VERDICT: {5 if the PDF was written, else 1}/5 — {the output/ path, ≤12 words}`;
   }
   if (kind === "fix-portal") {
     return `A company's job-portal ATS slug is BROKEN — career-one can no longer scan it, so it silently disappears from every future scan. Repair it (headless, on the user's machine):
@@ -47,7 +41,7 @@ End with EXACTLY one final line: VERDICT: {5 if now live, else 1}/5 — {what yo
   // evaluate (default) — run the REAL oferta mode + persist canonically
   return `你正在用户自己的电脑上运行 career-one 正式岗位评估。今天是 ${today}。必须使用真实模式和评分规则，不得自创评分。
 
-1. 读取 modes/zh/_shared.md 和 modes/zh/oferta.md，并严格遵循其中 A-F、岗位真实性 G 和 Machine Summary 规则。读取 cv.md、config/profile.yml 和 modes/_profile.md，只依据该用户的真实事实判断匹配度。使用 WebFetch 读取岗位，并在报告头标记 \`Verification: unconfirmed (batch mode)\`。所有分析与报告正文使用简体中文。
+1. 读取 modes/zh/_shared.md 和 modes/zh/oferta.md，并严格遵循其中 A-F、岗位真实性 G 和 Machine Summary 规则。读取 cv.md、article-digest.md、config/profile.yml 和 modes/_profile.md，只依据该用户的真实事实判断匹配度。使用 WebFetch 读取岗位，并在报告头标记 \`Verification: unconfirmed (batch mode)\`。所有分析与报告正文使用简体中文。
 
 2. Persist the result CANONICALLY so the web and the CLI share ONE source of truth:
    a. Reserve a report number: run \`node reserve-report-num.mjs\` — its stdout is a 3-digit number (e.g. 035).
@@ -72,6 +66,12 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: "bad json" }), { status: 400 });
   }
   const { kind = "evaluate", input, cliId } = body;
+  if (kind === "pdf") {
+    return Response.json(
+      { error: "定制简历必须由用户自己的 Agent 生成；Web 只负责创建待办和展示结果" },
+      { status: 409 },
+    );
+  }
   if (!input || !cliId) {
     return new Response(JSON.stringify({ error: "input and cliId required" }), { status: 400 });
   }
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
 
   // These run the REAL core (modes/scripts), not just data — fail clearly if the
   // root is incomplete instead of faking it.
-  const needsScript: Record<string, string> = { evaluate: "modes/oferta.md", "fix-portal": "verify-portals.mjs", pdf: "generate-pdf.mjs" };
+  const needsScript: Record<string, string> = { evaluate: "modes/oferta.md", "fix-portal": "verify-portals.mjs" };
   const required = needsScript[kind];
   if (required && !fs.existsSync(path.join(careerOneRoot(), required))) {
     return new Response(
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
 
   // An A–F score is meaningless without a CV to score against — the CLI would
   // hallucinate a fit narrative and still emit a VERDICT. Require cv.md first.
-  if ((kind === "evaluate" || kind === "pdf") && !fs.existsSync(path.join(careerOneRoot(), "cv.md"))) {
+  if (kind === "evaluate" && !fs.existsSync(path.join(careerOneRoot(), "cv.md"))) {
     return new Response(
       JSON.stringify({ error: "Add your CV first so I can score this against you — drop it on the home page." }),
       { status: 400, headers: { "Content-Type": "application/json" } },
@@ -110,7 +110,7 @@ export async function POST(req: Request) {
   const prompt = buildPrompt(kind, input, readMemory(), today);
 
   const isClaude = cliId === "claude";
-  const needsWorkspaceWrite = kind === "evaluate" || kind === "fix-portal" || kind === "pdf";
+  const needsWorkspaceWrite = kind === "evaluate" || kind === "fix-portal";
   const needsLiveSearch = kind === "evaluate" || kind === "research";
   // Tool scope by kind (comma-separated lists; disallowedTools is the hard
   // guardrail). 'evaluate' runs the REAL mode + persists canonical artifacts →
@@ -118,8 +118,11 @@ export async function POST(req: Request) {
   // report). 'research' stays read-only. Task (sub-agents) is always blocked
   // (runaway cost). NEVER auto-submits — that is a prompt-level guarantee.
   const tools =
-    kind === "evaluate" || kind === "fix-portal" || kind === "pdf"
-      ? { allowed: "Read,WebFetch,WebSearch,Write,Edit,Bash,Glob,Grep", disallowed: "Task,NotebookEdit" }
+    kind === "evaluate" || kind === "fix-portal"
+      ? {
+          allowed: "Read,WebFetch,WebSearch,Write,Edit,Bash,Glob,Grep",
+          disallowed: "Task,NotebookEdit",
+        }
       : { allowed: "Read,WebFetch,WebSearch,Glob,Grep", disallowed: "Bash,Write,Edit,NotebookEdit,Task" };
   const args = isClaude
     ? ["-p", prompt, "--output-format", "stream-json", "--verbose", "--include-partial-messages",
@@ -142,7 +145,7 @@ export async function POST(req: Request) {
   const reportsBefore = new Set(persists ? listReports() : []);
   // Tracker-mutating runs hold a write token so a row delete can't race their merge
   // (tracker.mjs delete doesn't yet share a lock with merge-tracker — see run-registry).
-  const writeToken = kind === "evaluate" || kind === "pdf" ? acquireTrackerWrite() : null;
+  const writeToken = kind === "evaluate" ? acquireTrackerWrite() : null;
 
   const child = spawn(binPath, args, { cwd: careerOneRoot(), env: process.env });
   const enc = new TextEncoder();
@@ -159,8 +162,7 @@ export async function POST(req: Request) {
       let sawError = false;
       let lastTokens = 0; // per-run token cost when the selected CLI emits usage
       let lastCostUsd: number | null = null;
-      // pdf-mode tailors a full CV + renders it — give it more headroom.
-      const killMs = kind === "pdf" ? 720_000 : 285_000;
+      const killMs = 285_000;
       killer = setTimeout(() => {
         try { child.kill("SIGTERM"); } catch { /* ignore */ }
       }, killMs);
@@ -204,8 +206,8 @@ export async function POST(req: Request) {
               send({ type: "status", label: "Agent ready" });
             } else if (ev.type === "result") {
               // Capture the per-run cost; the authoritative "done" is sent on close
-              // (so the honesty gate decides done-vs-error first). Tokens = the same
-              // formula /api/usage uses: input + output + cache-creation.
+              // (so the honesty gate decides done-vs-error first). Tokens include
+              // input, output, and cache-creation usage reported by this run.
               const u = ev.usage || {};
               lastTokens = (u.input_tokens || 0) + (u.output_tokens || 0) + (u.cache_creation_input_tokens || 0);
               if (typeof ev.total_cost_usd === "number") lastCostUsd = ev.total_cost_usd;
@@ -249,7 +251,7 @@ export async function POST(req: Request) {
             const reportId = String(parseInt(file, 10));
             return {
               path: `reports/${file}`,
-              label: "岗位诊断报告",
+              label: "岗位评估报告",
               page: /^\d+$/.test(reportId) ? `/pipeline/${reportId}` : "/pipeline",
             };
           });

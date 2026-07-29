@@ -13,9 +13,7 @@ import { ExploreProvider } from "@/components/explore/explore-provider";
 import { FirstScoreView } from "@/components/explore/first-score-view";
 import { BetaBanner } from "@/components/beta/beta-banner";
 import { WorkerPills } from "@/components/jobs/worker-pills";
-import { UsageMeter } from "@/components/usage-meter";
 import { NAV_ITEMS, isActivePath } from "@/lib/nav-items";
-import { releaseDisplayLabel } from "@/lib/release";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -26,7 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <ExploreProvider>
       <MobileNav />
       <div className="flex min-h-screen">
-        <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface/30 p-4 md:flex">
+        <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col overflow-hidden border-r border-border bg-surface/30 p-4 md:flex">
           <Link href="/" className="mb-8 flex items-center gap-2.5 px-1">
             <CoMark size={32} />
             <span className="font-sans text-xl font-semibold tracking-normal text-landing">
@@ -34,7 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
           <nav className="flex flex-col gap-1">
-            {NAV_ITEMS.map(({ href, label, icon: Icon, chip }) => {
+            {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = isActivePath(href, pathname);
               return (
                 <Link
@@ -49,11 +47,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <Icon className="size-4" />
                   {label}
-                  {chip && (
-                    <span className="ml-auto rounded-full border border-brand/30 bg-brand-soft px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-brand-text">
-                      {chip}
-                    </span>
-                  )}
                 </Link>
               );
             })}
@@ -61,10 +54,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <WorkerPills />
 
-          <div className="mt-auto space-y-3 pt-4">
-            <UsageMeter />
-            <div className="flex items-center justify-between px-1">
-              <span className="font-display text-sm text-faint">本地优先 · {releaseDisplayLabel()}</span>
+          <div className="-mb-4 -mx-4 mt-auto border-t border-border px-4 py-2">
+            <div className="flex h-7 items-center justify-between px-1">
+              <span className="whitespace-nowrap font-sans text-sm font-normal leading-none tracking-[0.14em] text-faint">择路扬帆，前程似锦</span>
               <ThemeToggle />
             </div>
           </div>

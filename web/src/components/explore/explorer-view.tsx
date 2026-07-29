@@ -3,9 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Compass, ChevronDown, RotateCcw, AlertTriangle, Sparkles, Settings, Save, Check } from "lucide-react";
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import type { Application, InboxJob } from "@/lib/career-one";
 import { paramsToFilters, paramsToAi, type ExploreFilters } from "@/lib/explore";
+import { CONTEXTUAL_NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-items";
+import { isFeatureEnabled } from "@/lib/release";
 import { FilterBuilder } from "./filter-builder";
 import { DiscoveringState } from "./discovering-state";
 import { AiHuntView } from "./ai-hunt-view";
@@ -26,6 +29,9 @@ const CLI_NAMES: Record<string, string> = {
   qwen: "Qwen CLI",
   antigravity: "Antigravity CLI",
 };
+const PageIcon = PRIMARY_NAV_ITEMS.discoverJobs.icon;
+const JobSourcesItem = CONTEXTUAL_NAV_ITEMS.jobSources;
+const JobSourcesIcon = JobSourcesItem.icon;
 
 export function ExplorerView({
   seed,
@@ -102,13 +108,24 @@ export function ExplorerView({
   const isResults = phase === "results";
 
   return (
-    <div className="mx-auto max-w-5xl px-5 py-8 md:px-8">
+    <div className="page-shell py-8">
       <header className="mb-6">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2.5">
-            <Compass className="size-6 text-icon-brand" />
+          <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+            <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
             <h1 className={`font-display text-3xl text-foreground`}>发现岗位</h1>
-            <span className="rounded-full border border-brand/30 bg-brand-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-text">新</span>
+            {isFeatureEnabled(JobSourcesItem.feature) && (
+              <Link
+                href={JobSourcesItem.href}
+                className={cn(
+                  buttonVariants({ variant: "tertiary", size: "sm" }),
+                  "shrink-0",
+                )}
+              >
+                <JobSourcesIcon className="size-4" aria-hidden="true" />
+                {JobSourcesItem.label}
+              </Link>
+            )}
           </div>
           <div className="w-full sm:ml-auto sm:w-auto">
             <ExploreModeToggle mode={mode} onChange={setMode} cliConfigured={!!cli.id} />

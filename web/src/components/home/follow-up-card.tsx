@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Check, Clock, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { CompanyLogo } from "@/components/company-logo";
+import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export type FollowUp = { num?: number; company: string; role?: string; status?: string; appliedDate?: string; notes?: string };
 
@@ -30,7 +32,7 @@ export function FollowUpCard({ followup, onLogged }: { followup: FollowUp; onLog
   };
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-surface/40 px-3.5 py-3 transition hover:border-brand/30">
+    <Card compact className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
       <div className="flex min-w-0 flex-[1_1_55%] items-center gap-3">
         <CompanyLogo name={followup.company} size={22} />
         <div className="min-w-0 flex-1">
@@ -48,7 +50,7 @@ export function FollowUpCard({ followup, onLogged }: { followup: FollowUp; onLog
           type="button"
           disabled={state === "logging"}
           onClick={log}
-          className={cn("inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-outline-border bg-outline-bg px-2.5 py-1.5 text-xs font-medium text-outline-text transition hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px]")}
+          className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "whitespace-nowrap")}
         >
           {state === "logging" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} <span className="hidden sm:inline">标记已跟进</span><span className="sm:hidden">已跟进</span>
         </button>
@@ -61,6 +63,6 @@ export function FollowUpCard({ followup, onLogged }: { followup: FollowUp; onLog
           稍后提醒
         </button>
       </div>
-    </div>
+    </Card>
   );
 }

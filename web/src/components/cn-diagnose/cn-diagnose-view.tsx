@@ -1,1113 +1,192 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
-import Lightbox from "yet-another-react-lightbox";
-import Counter from "yet-another-react-lightbox/plugins/counter";
-import Inline from "yet-another-react-lightbox/plugins/inline";
-import Zoom from "yet-another-react-lightbox/plugins/zoom";
-import {
-  AlertTriangle,
-  BrainCircuit,
-  CheckCircle2,
-  Copy,
-  ExternalLink,
-  FileText,
-  History,
-  ImageUp,
-  Loader2,
-  MessageSquareText,
-  Radar,
-  Save,
-  Sparkles,
-  UploadCloud,
-  X,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { ArrowRight, FileText } from "lucide-react";
+import { type Job, useJobs } from "@/components/jobs/job-store";
+import { AgentTaskDetailPanel, findReportArtifact } from "@/components/jobs/worker-pills";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/cn";
+import { isEvaluationIntent } from "@/lib/format";
+import { PRIMARY_NAV_ITEMS } from "@/lib/nav-items";
 
-type DiagnoseResult = {
-  company: string;
-  role: string;
-  location: string;
-  salary: string;
-  score: number;
-  verdict: string;
-  scoreNote: string;
-  positiveSignals: string[];
-  risks: string[];
-  questions: string[];
-  openingMessage: string;
-  positioning: string[];
-  meters: { label: string; value: number; tone?: "risk" | "good" }[];
-  decisionRules: { label: string; body: string }[];
-  nextActions: string[];
-  confidence: "low" | "medium" | "high";
-};
+const PageIcon = PRIMARY_NAV_ITEMS.jobDiagnosis.icon;
 
-type ApiResponse = {
-  ok?: boolean;
-  result?: DiagnoseResult;
-  files?: { htmlRel?: string; htmlUrl?: string; screenshotRels?: string[] };
-  warnings?: string[];
-  error?: string;
-};
+function isEvaluationJob(job: Job) {
+  return isEvaluationIntent(job.kind);
+}
 
-type InputMode = "jd" | "screenshots";
-type ScreenshotInput = { id: string; name: string; dataUrl: string };
-type DiagnosisStage = "preparing" | "starting-agent" | "analyzing" | "validating" | "writing-report";
-type ProgressEvent = { type: "progress"; stage: DiagnosisStage; label: string; detail?: string };
-type DiagnosisTaskStatus = "running" | "stopping" | "completed" | "failed" | "stopped";
-type DiagnosisTask = {
+type EvaluationReportRecord = {
   id: string;
-  status: DiagnosisTaskStatus;
-  progress: ProgressEvent;
-  cliId: string;
-  agentName: string;
-  inputMode: InputMode;
-  company: string;
-  role: string;
-  createdAt: string;
-  updatedAt: string;
-  completedAt?: string;
-  result?: DiagnoseResult;
-  files?: ApiResponse["files"];
-  error?: string;
-  legacy?: boolean;
-};
-type DiagnosisApiEnvelope = {
-  ok?: boolean;
-  task?: DiagnosisTask;
-  active?: DiagnosisTask | null;
-  history?: DiagnosisTask[];
-  error?: string;
+  href: string;
+  title: string;
+  path: string;
+  score: number | null;
+  tone: "good" | "warn" | "bad" | "muted";
+  completedAt: number;
 };
 
-const MAX_SCREENSHOTS = 3;
-const MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024;
-const CONFIG_CHANGED_EVENT = "career-one:config-changed";
-const DIAGNOSIS_STAGES: Array<{ id: DiagnosisStage; label: string }> = [
-  { id: "preparing", label: "准备岗位材料" },
-  { id: "starting-agent", label: "启动所选 Agent" },
-  { id: "analyzing", label: "分析岗位与个人事实" },
-  { id: "validating", label: "校验诊断结果" },
-  { id: "writing-report", label: "生成本地报告" },
-];
+function evaluationReportFromJob(job: Job): EvaluationReportRecord | null {
+  if (!isEvaluationJob(job) || job.status !== "done") return null;
 
-function scoreTone(score: number): string {
-  if (score >= 4.2) return "text-emerald-500";
-  if (score >= 3.8) return "text-brand";
-  if (score >= 3.2) return "text-amber-500";
-  return "text-red-500";
+  const artifact = findReportArtifact(job);
+  if (
+    !artifact?.page ||
+    !artifact.path.startsWith("reports/") ||
+    !artifact.path.endsWith(".md") ||
+    !/^\/pipeline\/\d+/.test(artifact.page)
+  ) {
+    return null;
+  }
+
+  return {
+    id: job.id,
+    href: artifact.page,
+    title: job.title,
+    path: artifact.path,
+    score: job.result?.score ?? null,
+    tone: job.result?.tone ?? "muted",
+    completedAt: job.endedAt ?? job.startedAt,
+  };
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(reader.error || new Error("read failed"));
-    reader.readAsDataURL(file);
-  });
+function isEvaluationReportRecord(
+  report: EvaluationReportRecord | null,
+): report is EvaluationReportRecord {
+  return report !== null;
 }
 
-function formatElapsed(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return minutes > 0 ? `${minutes} 分 ${String(rest).padStart(2, "0")} 秒` : `${rest} 秒`;
+function formatReportTime(timestamp: number) {
+  const date = new Date(timestamp);
+  const twoDigits = (value: number) => String(value).padStart(2, "0");
+  return `${twoDigits(date.getMonth() + 1)}/${twoDigits(date.getDate())} ${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
 }
 
-function isActiveTask(task: DiagnosisTask): boolean {
-  return task.status === "running" || task.status === "stopping";
-}
-
-function responseFromTask(task: DiagnosisTask): ApiResponse {
-  return { ok: task.status === "completed", result: task.result, files: task.files, warnings: [] };
-}
-
-function formatDiagnosisModules(result: DiagnoseResult): string {
-  const bullets = (items: string[]) => items.map((item) => `- ${item}`).join("\n");
-  return [
-    `# ${result.company} · ${result.role}`,
-    `评分：${result.score.toFixed(1)}/5 · ${result.verdict}`,
-    `## 正向信号\n${bullets(result.positiveSignals)}`,
-    `## 匹配雷达\n${bullets(result.meters.map((meter) => `${meter.label}：${meter.value}%`))}`,
-    `## 剩余风险\n${bullets(result.risks)}`,
-    `## 沟通后的分流规则\n${bullets(result.decisionRules.map((rule) => `${rule.label}：${rule.body}`))}`,
-    `## 必须追问\n${bullets(result.questions)}`,
-    `## 你在这个岗位里的最佳表达\n${bullets(result.positioning)}`,
-  ].join("\n\n");
-}
-
-function formatTaskTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "时间未知";
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-}
-
-function ScreenshotLightboxDialog({
-  open,
-  index,
-  slides,
-  onClose,
-  onAfterClose,
-  onIndexChange,
-}: {
-  open: boolean;
-  index: number;
-  slides: Array<{ src: string; alt: string; title: string }>;
-  onClose: () => void;
-  onAfterClose: () => void;
-  onIndexChange: (index: number) => void;
-}) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    if (open) {
-      if (!dialog.open) dialog.showModal();
-      closeButtonRef.current?.focus();
-      const previousOverflow = document.documentElement.style.overflow;
-      document.documentElement.style.overflow = "hidden";
-      return () => {
-        document.documentElement.style.overflow = previousOverflow;
-      };
-    }
-
-    if (dialog.open) dialog.close();
-  }, [open]);
-
+function EvaluationReportCard({ report }: { report: EvaluationReportRecord }) {
   return (
-    <dialog
-      ref={dialogRef}
-      aria-label="岗位截图预览"
-      className="fixed inset-0 m-0 h-dvh w-screen max-h-none max-w-none bg-transparent p-4 open:flex open:items-center open:justify-center backdrop:bg-black/65 backdrop:backdrop-blur-sm sm:p-8"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClose={onAfterClose}
-      onKeyDownCapture={(event) => {
-        if (event.key !== "Escape") return;
-        event.preventDefault();
-        event.stopPropagation();
-        onClose();
-      }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <Link
+      data-evaluation-report-card
+      href={report.href}
+      aria-label={`打开评估报告：${report.title}`}
+      className="group flex min-h-28 items-center gap-5 rounded-2xl border border-border bg-surface/50 px-5 py-5 transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-border-hover focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-6"
     >
-      <div className="flex h-[min(82dvh,760px)] w-[min(92vw,1120px)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-black shadow-2xl">
-        <div className="flex min-h-14 items-center justify-between gap-4 border-b border-white/10 bg-neutral-950 px-4 text-white sm:px-5">
-          <span className="min-w-0 truncate text-sm font-medium">
-            {slides[index]?.title || "岗位截图"}
+      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-icon-brand">
+        <FileText className="size-5" aria-hidden="true" />
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="truncate text-[15px] font-semibold text-foreground transition-colors group-hover:text-landing">
+            {report.title}
           </span>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={onClose}
-            className="grid size-9 shrink-0 place-items-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            aria-label="关闭"
-          >
-            <X className="size-5" />
-          </button>
-        </div>
-        <div className="min-h-0 flex-1">
-          {open && slides.length > 0 && (
-            <Lightbox
-              open
-              close={onClose}
-              index={index}
-              slides={slides}
-              plugins={[Inline, Zoom, Counter]}
-              inline={{ style: { width: "100%", height: "100%" } }}
-              carousel={{ finite: true, imageFit: "contain" }}
-              zoom={{ scrollToZoom: true, maxZoomPixelRatio: 3, zoomInMultiplier: 2 }}
-              labels={{
-                Previous: "上一张",
-                Next: "下一张",
-                Close: "关闭",
-                Slide: "图片",
-                Carousel: "岗位截图",
-                Lightbox: "岗位截图查看器",
-                "Photo gallery": "岗位截图",
-                "{index} of {total}": "第 {index} 张，共 {total} 张",
-                "Zoom in": "放大",
-                "Zoom out": "缩小",
-              }}
-              on={{ view: ({ index: nextIndex }) => onIndexChange(nextIndex) }}
-              styles={{ container: { backgroundColor: "rgb(0 0 0 / 0.94)" } }}
-            />
-          )}
-        </div>
-      </div>
-    </dialog>
+          {report.score != null && <Badge tone={report.tone}>{report.score}/5</Badge>}
+        </span>
+        <span className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+          <span>岗位评估报告</span>
+          <span aria-hidden="true">·</span>
+          <time dateTime={new Date(report.completedAt).toISOString()} className="tabular-nums text-faint">
+            {formatReportTime(report.completedAt)}
+          </time>
+          <span aria-hidden="true">·</span>
+          <span className="max-w-full truncate text-faint">{report.path}</span>
+        </span>
+      </span>
+
+      <span className="hidden shrink-0 items-center gap-2 text-sm font-medium text-foreground sm:inline-flex">
+        打开报告
+        <ArrowRight
+          className="size-4 text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
+          aria-hidden="true"
+        />
+      </span>
+    </Link>
   );
 }
 
-function BulletList({ items, tone }: { items: string[]; tone: "good" | "risk" | "question" }) {
-  const Icon = tone === "good" ? CheckCircle2 : tone === "risk" ? AlertTriangle : MessageSquareText;
-  const color = tone === "good" ? "text-icon-success" : tone === "risk" ? "text-icon-danger" : "text-icon-info";
-  return (
-    <div className="grid gap-2">
-      {items.map((item) => (
-        <div key={item} className="flex gap-3 rounded-lg border border-border bg-surface/60 p-3 text-sm leading-6 text-muted">
-          <Icon className={cn("mt-1 size-4 shrink-0", color)} />
-          <span>{item}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function DiagnosisProgressPanel({
-  progress,
-  agentName,
-  elapsedSeconds,
-}: {
-  progress: ProgressEvent;
-  agentName: string;
-  elapsedSeconds: number;
-}) {
-  const currentIndex = Math.max(0, DIAGNOSIS_STAGES.findIndex((stage) => stage.id === progress.stage));
-  const isLongWait = elapsedSeconds >= 45;
-  const isNearTimeout = elapsedSeconds >= 180;
-
-  return (
-    <Card elevated className="flex min-h-[520px] flex-col bg-surface/55">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
-        <div>
-          <div className="mb-4 inline-flex size-12 items-center justify-center rounded-xl border border-brand/25 bg-brand-soft">
-            <Loader2 className="size-5 animate-spin text-icon-brand" />
-          </div>
-          <h2 className={`font-display text-4xl text-landing`}>AI 岗位诊断进行中</h2>
-          <div role="status" aria-live="polite" aria-atomic="true">
-            <p className="mt-3 text-sm leading-6 text-muted">{progress.label}</p>
-            {progress.detail && <p className="mt-1 text-xs leading-5 text-faint">{progress.detail}</p>}
-          </div>
-        </div>
-        <div className="grid shrink-0 gap-2 text-right text-xs">
-          <span className="rounded-md border border-border bg-background px-3 py-2 font-medium text-foreground">{agentName}</span>
-          <span className="tabular-nums text-faint">已用 {formatElapsed(elapsedSeconds)}</span>
-        </div>
-      </div>
-
-      <ol className="my-6 grid gap-2" aria-label="岗位诊断进度">
-        {DIAGNOSIS_STAGES.map((stage, index) => {
-          const complete = index < currentIndex;
-          const current = index === currentIndex;
-          return (
-            <li
-              key={stage.id}
-              className={cn(
-                "flex min-h-12 items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors",
-                current ? "border-brand/35 bg-brand-soft text-foreground" : "border-border bg-background/65",
-                complete ? "text-muted" : !current && "text-faint",
-              )}
-            >
-              <span className="grid size-6 shrink-0 place-items-center">
-                {complete ? (
-                  <CheckCircle2 className="size-5 text-icon-success" aria-hidden="true" />
-                ) : current ? (
-                  <Loader2 className="size-4 animate-spin text-icon-brand" aria-hidden="true" />
-                ) : (
-                  <span className="size-2 rounded-full bg-border" aria-hidden="true" />
-                )}
-              </span>
-              <span className={cn(current && "font-semibold")}>{stage.label}</span>
-              {current && <span className="ml-auto text-xs text-brand-text">进行中</span>}
-            </li>
-          );
-        })}
-      </ol>
-
-      <div className={cn(
-        "mt-auto rounded-xl border p-4 text-xs leading-6",
-        isNearTimeout ? "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300" : "border-border bg-background/70 text-faint",
-      )}>
-        {isNearTimeout
-          ? "任务已接近 4 分钟超时上限。可以继续等待，也可以停止后缩短 JD 或减少截图重试。"
-          : isLongWait
-            ? "Agent 进程仍在运行。视觉识别和证据匹配通常需要 1–4 分钟；离开此页面不会停止诊断。"
-            : "任务由本地 AI 服务持续执行，离开此页面不会停止诊断；返回后会自动恢复进度。"}
-      </div>
-    </Card>
-  );
-}
-
-function ResultPanel({ response }: { response: ApiResponse | null }) {
-  const result = response?.result;
-  if (!result) {
+function CurrentEvaluationTaskDetail({ job }: { job: Job | null }) {
+  if (!job) {
     return (
-      <Card elevated className="flex min-h-[520px] flex-col justify-between border-dashed bg-surface/30">
-        <div>
-          <div className="mb-5 inline-flex size-12 items-center justify-center rounded-xl border border-border bg-surface">
-            <Radar className="size-5 text-icon-brand" />
-          </div>
-          <h2 className={`font-display text-4xl text-landing`}>等待诊断输入</h2>
-          <p className="mt-4 max-w-xl text-sm leading-7 text-muted">
-            生成后这里会集中展示正向信号、匹配雷达、剩余风险、沟通分流规则、必须追问和最佳表达，并提供面试开场话术与本地 HTML 报告。
+      <Card elevated data-latest-evaluation className="bg-surface/55 px-5 py-6 sm:px-6">
+        <h2 className="text-lg font-semibold text-foreground">当前岗位评估</h2>
+        <div className="mt-5 rounded-xl border border-dashed border-border bg-background/35 px-5 py-9 text-center">
+          <p className="text-sm font-medium text-foreground">还没有岗位评估任务</p>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            请在 Agent 产品中发起岗位评估，任务进度和正式报告会自动同步到这里。
           </p>
-        </div>
-        <div className="rounded-xl border border-border bg-surface/70 p-4 text-xs leading-6 text-faint">
-          报告会保存到 <code className="font-mono text-brand-text">markets/china-mainland/output/</code>。AI 会读取择程AI评估规则与当前工作区内已确认的用户事实，完成证据化岗位匹配。
         </div>
       </Card>
     );
   }
 
   return (
-    <div className="grid gap-4">
-      <Card elevated corner="br" className="bg-surface/70">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="mb-2 flex flex-wrap gap-2 text-xs font-semibold text-faint">
-              <span>{result.company}</span>
-              <span>·</span>
-              <span>{result.location}</span>
-              <span>·</span>
-              <span>{result.salary}</span>
-              <span>·</span>
-              <span>confidence {result.confidence}</span>
-            </div>
-            <h2 className={`font-display max-w-2xl text-4xl leading-tight text-landing`}>{result.role}</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">{result.scoreNote}</p>
-          </div>
-          <div className="shrink-0 rounded-2xl border border-border bg-background p-5 text-center">
-            <div className={cn("text-6xl font-semibold tabular-nums", scoreTone(result.score))}>{result.score.toFixed(1)}</div>
-            <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-faint">/ 5</div>
-            <div className="mt-3 text-sm font-semibold text-foreground">{result.verdict}</div>
-          </div>
-        </div>
-      </Card>
+    <div data-latest-evaluation>
+      <h2 className="font-display text-2xl tracking-tight text-landing">当前岗位评估</h2>
+      <p className="mt-1 text-sm text-muted">展示当前评估的任务状态、执行过程与生成结果。</p>
 
-      <section aria-labelledby="diagnosis-modules-title" className="grid gap-4">
-        <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 id="diagnosis-modules-title" className="text-lg font-semibold text-foreground">岗位诊断结论</h2>
-            <p className="mt-1 text-sm leading-6 text-faint">六个模块使用同一份岗位信息与用户证据生成，便于放在一起复核和优化。</p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0 whitespace-nowrap"
-            onClick={() => navigator.clipboard?.writeText(formatDiagnosisModules(result))}
-          >
-            <Copy className="size-3.5" />
-            复制六模块
-          </Button>
-        </div>
-
-        <div className="grid gap-4 2xl:grid-cols-2">
-          <Card className="bg-surface/55">
-            <h3 className="mb-4 flex items-center gap-2 text-base font-semibold">
-              <CheckCircle2 className="size-4 text-icon-success" />
-              正向信号
-            </h3>
-            <BulletList items={result.positiveSignals} tone="good" />
-          </Card>
-
-          <Card className="bg-surface/55">
-            <h3 className="mb-4 flex items-center gap-2 text-base font-semibold">
-              <BrainCircuit className="size-4 text-icon-brand" />
-              匹配雷达
-            </h3>
-            <div className="grid gap-4">
-              {result.meters.map((m) => (
-                <div key={m.label}>
-                  <div className="mb-2 flex justify-between text-xs font-semibold text-muted">
-                    <span>{m.label}</span>
-                    <span>{m.value}%</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-surface-hover">
-                    <div
-                      className={cn("h-full rounded-full", m.tone === "risk" ? "bg-red-500" : "bg-gradient-to-r from-brand to-emerald-500")}
-                      style={{ width: `${m.value}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="bg-surface/55">
-            <h3 className="mb-4 flex items-center gap-2 text-base font-semibold">
-              <AlertTriangle className="size-4 text-icon-danger" />
-              剩余风险
-            </h3>
-            <BulletList items={result.risks} tone="risk" />
-          </Card>
-
-          <Card className="bg-surface/55">
-            <h3 className="mb-4 flex items-center gap-2 text-base font-semibold">
-              <Radar className="size-4 text-icon-brand" />
-              沟通后的分流规则
-            </h3>
-            <div className="grid gap-3">
-              {result.decisionRules.map((rule, index) => (
-                <div
-                  key={`${rule.label}-${index}`}
-                  className={cn(
-                    "border-l-2 bg-background/70 px-4 py-3",
-                    index === 0 ? "border-emerald-500" : index === 1 ? "border-brand" : "border-red-500",
-                  )}
-                >
-                  <div className="text-sm font-semibold text-foreground">{rule.label}</div>
-                  <p className="mt-1 text-sm leading-6 text-muted">{rule.body}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        <Card className="bg-surface/55">
-          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold">
-            <MessageSquareText className="size-4 text-icon-info" />
-            必须追问
-          </h3>
-          <BulletList items={result.questions} tone="question" />
-        </Card>
-
-        <Card className="bg-surface/55">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="flex items-center gap-2 text-base font-semibold">
-              <Sparkles className="size-4 text-icon-brand" />
-              你在这个岗位里的最佳表达
-            </h3>
-            <Button variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(result.positioning.join("\n"))}>
-              <Copy className="size-3.5" />
-              复制
-            </Button>
-          </div>
-          <BulletList items={result.positioning} tone="good" />
-        </Card>
-      </section>
-
-      <Card className="bg-surface/55">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-base font-semibold">面试开场话术</h3>
-          <Button variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(result.openingMessage)}>
-            <Copy className="size-3.5" />
-            复制
-          </Button>
-        </div>
-        <pre className="whitespace-pre-wrap rounded-xl border border-border bg-pre-bg p-4 text-sm leading-7 text-foreground">{result.openingMessage}</pre>
-      </Card>
-
-      <Card className="bg-surface/55">
-        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold"><Save className="size-4 text-icon-brand" /> 报告文件</h3>
-        <div className="space-y-3 text-sm leading-7 text-muted">
-          <p>HTML 报告已写入本地输出目录，内容与上方六个诊断模块保持一致。</p>
-          {response.files?.htmlUrl && (
-            <a className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover" href={response.files.htmlUrl} target="_blank" rel="noreferrer">
-              <ExternalLink className="size-4" />
-              打开报告页面
-            </a>
-          )}
-          {response.files?.htmlRel && <p className="break-all font-mono text-xs text-faint">{response.files.htmlRel}</p>}
-          {response.warnings?.length ? (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
-              {response.warnings.map((w) => <div key={w}>{w}</div>)}
-            </div>
-          ) : null}
-        </div>
-      </Card>
+      <div className="mt-4">
+        <AgentTaskDetailPanel job={job} artifactPlacement="summary" />
+      </div>
     </div>
   );
 }
 
-function DiagnosisHistory({
-  tasks,
-  activeTaskId,
-  onViewResult,
-}: {
-  tasks: DiagnosisTask[];
-  activeTaskId: string | null;
-  onViewResult: (task: DiagnosisTask) => void;
-}) {
-  const statusLabel: Record<DiagnosisTaskStatus, string> = {
-    running: "诊断中",
-    stopping: "停止中",
-    completed: "已完成",
-    failed: "失败",
-    stopped: "已停止",
-  };
-
-  return (
-    <Card elevated className="bg-surface/65">
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
-        <div>
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-            <History className="size-5 text-icon-brand" />
-            <span>诊断记录</span>
-          </h2>
-          <p className="mt-1 text-xs leading-5 text-faint">任务状态和 HTML 报告保存在当前电脑，重新打开页面仍可查看。</p>
-        </div>
-        <span className="text-xs tabular-nums text-faint">{tasks.length} 条</span>
-      </div>
-
-      {tasks.length === 0 ? (
-        <p className="py-8 text-center text-sm text-faint">完成第一次岗位诊断后，记录会显示在这里。</p>
-      ) : (
-        <div className="divide-y divide-border">
-          {tasks.map((task) => {
-            const active = task.id === activeTaskId && isActiveTask(task);
-            const failed = task.status === "failed" || task.status === "stopped";
-            return (
-              <div key={task.id} className="grid gap-3 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={cn(
-                      "rounded-md px-2 py-1 text-[11px] font-semibold",
-                      active ? "bg-brand-soft text-brand-text" : failed ? "bg-red-500/10 text-red-600 dark:text-red-300" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-                    )}>
-                      {statusLabel[task.status]}
-                    </span>
-                    {task.result && <span className={cn("text-sm font-semibold tabular-nums", scoreTone(task.result.score))}>{task.result.score.toFixed(1)}/5</span>}
-                    <span className="text-xs text-faint">{formatTaskTime(task.updatedAt)}</span>
-                    <span className="text-xs text-faint">{task.agentName}</span>
-                  </div>
-                  <p className="mt-2 truncate text-sm font-semibold text-foreground">{task.company} · {task.role}</p>
-                  {active && <p className="mt-1 text-xs text-brand-text">{task.progress.label}，离开页面后仍会继续。</p>}
-                  {task.error && <p className="mt-1 text-xs text-red-600 dark:text-red-300">{task.error}</p>}
-                </div>
-                <div className="flex flex-wrap gap-2 lg:justify-end">
-                  {task.result && (
-                    <Button variant="outline" size="sm" onClick={() => onViewResult(task)}>
-                      查看结果
-                    </Button>
-                  )}
-                  {task.files?.htmlUrl && (
-                    <a
-                      className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-hover"
-                      href={task.files.htmlUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <ExternalLink className="size-3.5" />
-                      打开报告
-                    </a>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </Card>
-  );
-}
-
 export function CnDiagnoseView() {
-  const [company, setCompany] = useState("");
-  const [role, setRole] = useState("");
-  const [jdText, setJdText] = useState("");
-  const [inputMode, setInputMode] = useState<InputMode>("screenshots");
-  const [screenshots, setScreenshots] = useState<ScreenshotInput[]>([]);
-  const [previewIndex, setPreviewIndex] = useState(-1);
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState<ProgressEvent>({
-    type: "progress",
-    stage: "preparing",
-    label: "正在准备岗位材料",
-  });
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [cliId, setCliId] = useState<string | null>(null);
-  const [selectedCliName, setSelectedCliName] = useState<string | null>(null);
-  const [response, setResponse] = useState<ApiResponse | null>(null);
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [activeAgentName, setActiveAgentName] = useState<string | null>(null);
-  const [taskCreatedAt, setTaskCreatedAt] = useState<string | null>(null);
-  const [history, setHistory] = useState<DiagnosisTask[]>([]);
-  const [error, setError] = useState("");
-  const jdTabRef = useRef<HTMLButtonElement>(null);
-  const screenshotsTabRef = useRef<HTMLButtonElement>(null);
-  const previewTriggerRef = useRef<HTMLButtonElement | null>(null);
-
-  const canRun = useMemo(
-    () => inputMode === "jd" ? Boolean(jdText.trim()) : screenshots.length > 0,
-    [inputMode, jdText, screenshots.length],
-  );
-  const lightboxSlides = useMemo(
-    () => screenshots.map((screenshot, index) => ({
-      src: screenshot.dataUrl,
-      alt: `岗位截图 ${index + 1}：${screenshot.name}`,
-      title: screenshot.name,
-    })),
-    [screenshots],
-  );
-
-  const watchTask = useCallback((task: DiagnosisTask) => {
-    setActiveTaskId(task.id);
-    setActiveAgentName(task.agentName);
-    setTaskCreatedAt(task.createdAt);
-    setProgress(task.progress);
-    setLoading(true);
-    setError("");
-  }, []);
-
-  const refreshTaskIndex = useCallback(async (restoreActive = false) => {
-    const res = await fetch("/api/cn-diagnose", { cache: "no-store" });
-    const json = (await res.json().catch(() => ({}))) as DiagnosisApiEnvelope;
-    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-    const tasks = json.history ?? [];
-    setHistory(tasks);
-    if (restoreActive && json.active && isActiveTask(json.active)) {
-      watchTask(json.active);
-    } else if (restoreActive) {
-      const latest = tasks.find((task) => task.status === "completed" && task.result);
-      if (latest) setResponse(responseFromTask(latest));
-    }
-    return json;
-  }, [watchTask]);
-
-  useEffect(() => {
-    function readConfig() {
-      try {
-        const config = JSON.parse(localStorage.getItem("career-one:config") || "{}") as { cliId?: unknown };
-        setCliId(typeof config.cliId === "string" && config.cliId.trim() ? config.cliId : null);
-      } catch {
-        setCliId(null);
-      }
-    }
-
-    readConfig();
-    window.addEventListener("storage", readConfig);
-    window.addEventListener(CONFIG_CHANGED_EVENT, readConfig);
-    return () => {
-      window.removeEventListener("storage", readConfig);
-      window.removeEventListener(CONFIG_CHANGED_EVENT, readConfig);
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    void refreshTaskIndex(true).catch((err) => {
-      if (!cancelled) setError(err instanceof Error ? err.message : "无法读取岗位诊断记录");
-    });
-    return () => { cancelled = true; };
-  }, [refreshTaskIndex]);
-
-  useEffect(() => {
-    if (!cliId) {
-      setSelectedCliName(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    fetch("/api/clis", { signal: controller.signal })
-      .then((result) => {
-        if (!result.ok) throw new Error("CLI registry unavailable");
-        return result.json() as Promise<{ clis?: Array<{ id: string; name: string }> }>;
-      })
-      .then(({ clis }) => {
-        setSelectedCliName(clis?.find((cli) => cli.id === cliId)?.name ?? null);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setSelectedCliName(null);
-      });
-
-    return () => controller.abort();
-  }, [cliId]);
-
-  useEffect(() => {
-    if (!loading) return;
-    const startedAt = taskCreatedAt ? Date.parse(taskCreatedAt) : Date.now();
-    const updateElapsed = () => setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
-    updateElapsed();
-    const timer = window.setInterval(() => {
-      updateElapsed();
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [loading, taskCreatedAt]);
-
-  useEffect(() => {
-    if (!activeTaskId) return;
-    let cancelled = false;
-    let timer: number | undefined;
-
-    const poll = async () => {
-      try {
-        const res = await fetch(`/api/cn-diagnose?taskId=${encodeURIComponent(activeTaskId)}`, { cache: "no-store" });
-        const json = (await res.json().catch(() => ({}))) as DiagnosisApiEnvelope;
-        if (!res.ok || !json.task) throw new Error(json.error || `HTTP ${res.status}`);
-        if (cancelled) return;
-        const task = json.task;
-        setActiveAgentName(task.agentName);
-        setProgress(task.progress);
-        setTaskCreatedAt(task.createdAt);
-        setHistory((current) => [task, ...current.filter((item) => item.id !== task.id)]);
-        if (isActiveTask(task)) {
-          timer = window.setTimeout(poll, 1200);
-          return;
-        }
-
-        setLoading(false);
-        setActiveTaskId(null);
-        setActiveAgentName(null);
-        if (task.status === "completed" && task.result) {
-          setResponse(responseFromTask(task));
-          setError("");
-        } else {
-          setError(task.error || (task.status === "stopped" ? "已停止本次岗位诊断" : "AI 岗位诊断失败，请重试"));
-        }
-        void refreshTaskIndex(false).catch(() => undefined);
-      } catch (err) {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "无法读取岗位诊断进度");
-        timer = window.setTimeout(poll, 2000);
-      }
-    };
-
-    void poll();
-    return () => {
-      cancelled = true;
-      if (timer) window.clearTimeout(timer);
-    };
-  }, [activeTaskId, refreshTaskIndex]);
-
-  function selectInputMode(nextMode: InputMode, moveFocus = false) {
-    setInputMode(nextMode);
-    setError("");
-    if (moveFocus) {
-      requestAnimationFrame(() => {
-        (nextMode === "jd" ? jdTabRef : screenshotsTabRef).current?.focus();
-      });
-    }
-  }
-
-  function onTabKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, currentMode: InputMode) {
-    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-    event.preventDefault();
-    const nextMode = event.key === "Home"
-      ? "screenshots"
-      : event.key === "End"
-        ? "jd"
-        : currentMode === "jd" ? "screenshots" : "jd";
-    selectInputMode(nextMode, true);
-  }
-
-  const addScreenshotFiles = useCallback(async (selected: File[]) => {
-    if (!selected.length) return;
-    const remaining = MAX_SCREENSHOTS - screenshots.length;
-    if (remaining <= 0) {
-      setError(`最多上传 ${MAX_SCREENSHOTS} 张岗位截图`);
-      return;
-    }
-
-    const invalidType = selected.find((file) => !["image/png", "image/jpeg", "image/webp"].includes(file.type));
-    if (invalidType) {
-      setError("仅支持 PNG、JPG 和 WebP 图片");
-      return;
-    }
-    const oversized = selected.find((file) => file.size > MAX_SCREENSHOT_BYTES);
-    if (oversized) {
-      setError(`单张截图不能超过 ${MAX_SCREENSHOT_BYTES / 1024 / 1024} MB`);
-      return;
-    }
-    if (selected.length > remaining) {
-      setError(`最多上传 ${MAX_SCREENSHOTS} 张，当前还可以添加 ${remaining} 张`);
-      return;
-    }
-
-    const startedAt = Date.now();
-    const next = await Promise.all(selected.map(async (file, index) => ({
-      id: `${startedAt}-${index}-${file.name}`,
-      name: file.name || `粘贴截图-${screenshots.length + index + 1}`,
-      dataUrl: await readFileAsDataUrl(file),
-    })));
-    setScreenshots((current) => [...current, ...next].slice(0, MAX_SCREENSHOTS));
-    setError("");
-  }, [screenshots.length]);
-
-  useEffect(() => {
-    if (inputMode !== "screenshots") return;
-
-    function handlePaste(event: ClipboardEvent) {
-      const clipboardItems = event.clipboardData?.items;
-      if (!clipboardItems) return;
-
-      const imageFiles = Array.from(clipboardItems)
-        .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
-        .map((item) => item.getAsFile())
-        .filter((file): file is File => file !== null);
-
-      if (!imageFiles.length) return;
-      event.preventDefault();
-      void addScreenshotFiles(imageFiles);
-    }
-
-    window.addEventListener("paste", handlePaste);
-    return () => window.removeEventListener("paste", handlePaste);
-  }, [addScreenshotFiles, inputMode]);
-
-  function removeScreenshot(id: string) {
-    setScreenshots((current) => current.filter((screenshot) => screenshot.id !== id));
-    setError("");
-  }
-
-  function closeScreenshotPreview() {
-    setPreviewIndex(-1);
-  }
-
-  async function run() {
-    if (!canRun) return;
-    if (!cliId) {
-      setError("请先在设置中连接并选择 Agent CLI");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    setResponse(null);
-    setProgress({ type: "progress", stage: "preparing", label: "正在准备岗位材料" });
-    try {
-      const res = await fetch("/api/cn-diagnose", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cliId,
-          inputMode,
-          company,
-          role,
-          jdText: inputMode === "jd" ? jdText : undefined,
-          screenshotNames: inputMode === "screenshots" ? screenshots.map((screenshot) => screenshot.name) : undefined,
-          screenshotDataUrls: inputMode === "screenshots" ? screenshots.map((screenshot) => screenshot.dataUrl) : undefined,
-        }),
-      });
-      const json = (await res.json().catch(() => ({}))) as DiagnosisApiEnvelope;
-      if (res.status === 409 && json.task && isActiveTask(json.task)) {
-        watchTask(json.task);
-        setError(json.error || "已有岗位诊断正在运行");
-        return;
-      }
-      if (!res.ok || !json.task) throw new Error(json.error || `HTTP ${res.status}`);
-      watchTask(json.task);
-      setHistory((current) => [json.task!, ...current.filter((task) => task.id !== json.task!.id)]);
-    } catch (err) {
-      setLoading(false);
-      const message = err instanceof Error ? err.message : "诊断失败";
-      setError(/network error|failed to fetch/i.test(message)
-        ? "无法连接本地 AI 服务，请确认前端服务仍在运行后重试"
-        : message);
-    }
-  }
-
-  async function stopRun() {
-    if (!activeTaskId) return;
-    setProgress((current) => ({ ...current, label: "正在停止本地 Agent", detail: "等待当前 Agent 进程安全退出" }));
-    try {
-      const res = await fetch(`/api/cn-diagnose?taskId=${encodeURIComponent(activeTaskId)}`, { method: "DELETE" });
-      const json = (await res.json().catch(() => ({}))) as DiagnosisApiEnvelope;
-      if (!res.ok && res.status !== 409) throw new Error(json.error || `HTTP ${res.status}`);
-      if (json.task) setProgress(json.task.progress);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "无法停止岗位诊断");
-    }
-  }
-
-  function viewHistoricalResult(task: DiagnosisTask) {
-    if (!task.result) return;
-    setResponse(responseFromTask(task));
-    setError("");
-    requestAnimationFrame(() => document.getElementById("diagnosis-result")?.scrollIntoView({ behavior: "smooth", block: "start" }));
-  }
+  const { jobs } = useJobs();
+  const evaluationJobs = jobs
+    .filter(isEvaluationJob)
+    .sort((a, b) => b.startedAt - a.startedAt);
+  const reportRecords = evaluationJobs
+    .map(evaluationReportFromJob)
+    .filter(isEvaluationReportRecord);
+  const currentEvaluation = evaluationJobs[0] ?? null;
 
   return (
-    <div className="min-h-screen bg-background px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-7xl gap-6">
-        <header className="relative overflow-hidden rounded-3xl border border-border bg-surface p-6 shadow-sm">
-          <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_70%_20%,rgba(221,118,39,.18),transparent_35%),radial-gradient(circle_at_40%_80%,rgba(16,185,129,.14),transparent_32%)] lg:block" />
-          <div className="relative w-full">
-            <h1 className={`font-display text-5xl leading-none text-landing sm:text-6xl`}>岗位诊断</h1>
-            <p className="mt-4 w-full text-sm leading-7 text-muted">
-              上传岗位截图，或填写岗位描述 JD，生成岗位诊断、沟通话术和本地 HTML 报告。适合先筛机会，再决定是否写入求职进度。
+    <div className="min-h-screen bg-background">
+      <div className="page-shell py-8">
+        <header>
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
+              <h1 className="font-display text-3xl tracking-tight text-landing">岗位评估</h1>
+            </div>
+            <p className="mt-2 w-full pl-9 text-sm leading-7 text-muted">
+              集中查看由 Agent 完成的岗位评估进度和正式报告。
             </p>
           </div>
         </header>
 
-        <div className="grid gap-6 xl:grid-cols-[430px_minmax(0,1fr)]">
-          <section className="grid gap-4">
-            <Card elevated className="bg-surface/70">
-              <div role="tablist" aria-label="岗位输入方式" className="grid grid-cols-2 rounded-xl border border-border bg-background p-1">
-                <button
-                  ref={screenshotsTabRef}
-                  type="button"
-                  role="tab"
-                  id="job-input-tab-screenshots"
-                  aria-selected={inputMode === "screenshots"}
-                  aria-controls="job-input-panel-screenshots"
-                  tabIndex={inputMode === "screenshots" ? 0 : -1}
-                  onClick={() => selectInputMode("screenshots")}
-                  onKeyDown={(event) => onTabKeyDown(event, "screenshots")}
-                  className={cn(
-                    "flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
-                    inputMode === "screenshots" ? "bg-brand-soft text-brand-text" : "text-muted hover:bg-surface-hover hover:text-foreground",
-                  )}
-                >
-                  <ImageUp className={cn("size-4", inputMode === "screenshots" ? "text-icon-brand" : "text-icon-muted")} />
-                  岗位截图
-                  {screenshots.length > 0 && <span className="rounded-full bg-surface px-1.5 py-0.5 text-[11px] tabular-nums text-muted">{screenshots.length}</span>}
-                </button>
-                <button
-                  ref={jdTabRef}
-                  type="button"
-                  role="tab"
-                  id="job-input-tab-jd"
-                  aria-selected={inputMode === "jd"}
-                  aria-controls="job-input-panel-jd"
-                  tabIndex={inputMode === "jd" ? 0 : -1}
-                  onClick={() => selectInputMode("jd")}
-                  onKeyDown={(event) => onTabKeyDown(event, "jd")}
-                  className={cn(
-                    "flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
-                    inputMode === "jd" ? "bg-brand-soft text-brand-text" : "text-muted hover:bg-surface-hover hover:text-foreground",
-                  )}
-                >
-                  <FileText className={cn("size-4", inputMode === "jd" ? "text-icon-brand" : "text-icon-muted")} />
-                  岗位描述 JD
-                </button>
-              </div>
+        <section className="mt-7" aria-label="当前岗位评估任务详情">
+          <CurrentEvaluationTaskDetail job={currentEvaluation} />
+        </section>
 
-              <div className="mt-5">
-                {inputMode === "jd" ? (
-                  <div role="tabpanel" id="job-input-panel-jd" aria-labelledby="job-input-tab-jd">
-                    <label className="grid gap-1.5 text-sm font-medium text-foreground">
-                      岗位描述 JD
-                      <textarea
-                        value={jdText}
-                        onChange={(e) => setJdText(e.target.value)}
-                        className="min-h-[300px] w-full resize-y rounded-xl border border-border bg-background p-3 text-sm leading-6 outline-none focus:border-brand"
-                        placeholder="粘贴完整的岗位描述，建议包含岗位职责、任职要求、薪资和工作地点…"
-                      />
-                    </label>
-                  </div>
-                ) : (
-                  <div role="tabpanel" id="job-input-panel-screenshots" aria-labelledby="job-input-tab-screenshots" className="grid gap-4">
-                    <label className={cn(
-                      "flex min-h-36 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-background p-5 text-center transition-colors",
-                      screenshots.length < MAX_SCREENSHOTS ? "cursor-pointer hover:bg-surface-hover" : "cursor-not-allowed opacity-60",
-                    )}>
-                      <UploadCloud className="mb-2 size-6 text-icon-brand" />
-                      <span className="text-sm font-medium text-foreground">
-                        {screenshots.length < MAX_SCREENSHOTS ? "上传或粘贴岗位截图" : "已上传 3 张截图"}
-                      </span>
-                      <span className="mt-1 text-xs text-faint">⌘V / Ctrl+V · PNG / JPG / WebP · 最多 3 张 · 单张不超过 8 MB</span>
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/png,image/jpeg,image/webp"
-                        disabled={screenshots.length >= MAX_SCREENSHOTS}
-                        className="hidden"
-                        onChange={(event) => {
-                          void addScreenshotFiles(Array.from(event.target.files ?? []));
-                          event.currentTarget.value = "";
-                        }}
-                      />
-                    </label>
-
-                    {screenshots.length > 0 && (
-                      <div className="grid grid-cols-3 gap-2" aria-label={`已上传 ${screenshots.length} 张岗位截图`}>
-                        {screenshots.map((screenshot, index) => (
-                          <div key={screenshot.id} className="group relative overflow-hidden rounded-xl border border-border bg-background">
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                previewTriggerRef.current = event.currentTarget;
-                                setPreviewIndex(index);
-                              }}
-                              className="relative block aspect-[4/3] w-full cursor-zoom-in overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50"
-                              aria-label={`查看岗位截图 ${index + 1}：${screenshot.name}`}
-                            >
-                              <Image
-                                src={screenshot.dataUrl}
-                                alt={`岗位截图 ${index + 1}：${screenshot.name}`}
-                                fill
-                                sizes="(max-width: 640px) 30vw, 130px"
-                                className="object-contain transition-transform duration-200 group-hover:scale-[1.02]"
-                                unoptimized
-                              />
-                            </button>
-                            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-background/90 px-2 py-1.5 text-[11px] text-muted backdrop-blur-sm">
-                              <span className="min-w-0 truncate">{index + 1}. {screenshot.name}</span>
-                              <button
-                                type="button"
-                                onClick={() => removeScreenshot(screenshot.id)}
-                                className="grid size-6 shrink-0 place-items-center rounded-md text-icon-muted hover:bg-surface-hover hover:text-icon-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
-                                aria-label={`移除岗位截图 ${index + 1}`}
-                              >
-                                <X className="size-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <p className="text-xs leading-5 text-faint">Agent 会按顺序读取并合并这些截图中的同一份岗位信息；请勿混入不同岗位。</p>
-                    <ScreenshotLightboxDialog
-                      open={previewIndex >= 0}
-                      index={previewIndex >= 0 ? previewIndex : 0}
-                      slides={lightboxSlides}
-                      onClose={closeScreenshotPreview}
-                      onAfterClose={() => previewTriggerRef.current?.focus()}
-                      onIndexChange={setPreviewIndex}
-                    />
-                  </div>
-                )}
-
-                <div className="mt-5 grid gap-3 border-t border-border pt-5 sm:grid-cols-2">
-                  <label className="grid gap-1.5 text-sm font-medium text-foreground">
-                    公司（选填）
-                    <input value={company} onChange={(e) => setCompany(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-brand" placeholder="例如：公司名称" />
-                  </label>
-                  <label className="grid gap-1.5 text-sm font-medium text-foreground">
-                    岗位（选填）
-                    <input value={role} onChange={(e) => setRole(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-brand" placeholder="例如：AI 产品经理" />
-                  </label>
-                </div>
-              </div>
-            </Card>
-
-            {loading ? (
-              <Button variant="outline" onClick={stopRun} className="min-h-12 w-full">
-                <X className="size-4" /><span>停止诊断</span>
-              </Button>
-            ) : (
-              <Button disabled={!canRun || loading} onClick={run} className="min-h-12 w-full">
-                <Sparkles className="size-4" />
-                AI 岗位诊断
-              </Button>
-            )}
-            {!error && (
-              <p className="text-center text-xs leading-5 text-faint">
-                {cliId ? `由设置中选择的 Agent（${selectedCliName ?? cliId}）读取岗位信息、评估规则和用户层事实后生成。` : <><a href="/config" className="font-medium text-brand-text hover:underline">前往设置连接 Agent CLI</a> 后开始诊断。</>}
+        <section className="mt-8" aria-labelledby="evaluation-reports-title">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h2 id="evaluation-reports-title" className="font-display text-2xl tracking-tight text-landing">
+                历史评估报告
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                只显示评估成功后生成的正式报告；执行记录请在 Agent 任务中查看。
               </p>
-            )}
-            {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">{error}</div>}
-          </section>
+            </div>
+            <span className="shrink-0 text-sm tabular-nums text-faint">{reportRecords.length} 条</span>
+          </div>
 
-          <section id="diagnosis-result" className="scroll-mt-6">
-            {loading ? (
-              <DiagnosisProgressPanel progress={progress} agentName={activeAgentName ?? selectedCliName ?? cliId ?? "Agent"} elapsedSeconds={elapsedSeconds} />
-            ) : (
-              <ResultPanel response={response} />
-            )}
-          </section>
-        </div>
-
-        <DiagnosisHistory
-          tasks={history}
-          activeTaskId={activeTaskId}
-          onViewResult={viewHistoricalResult}
-        />
+          {reportRecords.length === 0 ? (
+            <div className="mt-4 rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-12 text-center">
+              <FileText className="mx-auto size-5 text-icon-muted" aria-hidden="true" />
+              <p className="mt-3 text-sm font-medium text-foreground">还没有正式评估报告</p>
+              <p className="mt-1 text-sm text-muted">评估成功并生成正式报告后，报告会自动出现在这里。</p>
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-4" aria-label="历史评估报告">
+              {reportRecords.map((report) => (
+                <li key={report.id}>
+                  <EvaluationReportCard report={report} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
     </div>
   );

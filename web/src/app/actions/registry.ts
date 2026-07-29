@@ -10,7 +10,6 @@
 
 import type { Application, InboxJob } from "@/lib/career-one";
 import type { Job } from "@/components/jobs/job-store";
-import { validateStoryMarkdown } from "@/lib/story-bank.mjs";
 import { isPathEnabled } from "@/lib/release";
 
 export const AUTO_FIRE_MAX = 3; // fire ≤3 evaluations silently; confirm above that
@@ -37,6 +36,7 @@ export type ActionCtx = {
   push: (path: string) => void; // router.push — section/detail change
   replace: (path: string) => void; // router.replace — incremental filter tweak
   startJob: (opts: StartJobInput) => string | null;
+  queueAgentTask: (opts: StartJobInput) => { id: string; instruction: string };
   inbox: InboxJob[];
   applications: Application[]; // tracker snapshot — resolve #n → company/role for confirms
   jobForUrl: (url: string) => Job | undefined; // skip-if-done / retry logic
@@ -47,7 +47,6 @@ export type ActionCtx = {
   applyExplore?: (patch: Record<string, unknown>, opts?: { merge?: boolean; run?: boolean }) => void; // build a FREE discovery search
   writeProfile?: (patch: Record<string, unknown>) => void; // merge-safe config/profile.yml write
   writePortals?: (roles: string[], location?: string[]) => void; // merge-safe portals.yml title_filter write
-  writeStory?: (storyId: string, storyMarkdown: string, baseHash: string) => void; // single-story, version-checked merge
 };
 
 export type ProfilePatch = {
@@ -252,8 +251,14 @@ const ACTIONS: Record<string, ActionDef> = {
       const n = String(raw.n ?? "").trim();
       if (!n) return { status: "ignored", note: "缺少求职记录编号" };
       const app = ctx.applications.find((a) => a.n === n);
-      const id = ctx.startJob({ title: `简历 PDF · ${app?.company ?? `#${n}`}`, subtitle: "岗位定制简历", kind: "pdf", input: n, page: `/pipeline/${n}` });
-      return { status: "done", jobIds: id ? [id] : [] };
+      const handoff = ctx.queueAgentTask({
+        title: `生成定制简历 · ${app?.company ?? `#${n}`}`,
+        subtitle: "等待用户自己的 Agent 处理",
+        kind: "pdf",
+        input: n,
+        page: `/pipeline/${n}`,
+      });
+      return { status: "done", jobIds: [handoff.id], note: "已加入 Agent 待办，请回到你的 Agent 继续执行。" };
     },
   },
 
@@ -349,32 +354,19 @@ const ACTIONS: Record<string, ActionDef> = {
     },
   },
 
-  // The configured Agent can only PROPOSE one story block. The app validates
-  // its immutable ID and shows a confirm card before the server-side merge.
-  setStory: {
-    sideEffect: "write",
+  optimizeStory: {
+    sideEffect: "spend",
     run: (raw, ctx) => {
-      if (!ctx.writeStory) return { status: "ignored", note: "当前无法写入面试故事" };
       const storyId = typeof raw.storyId === "string" ? raw.storyId.trim().toUpperCase() : "";
-      const storyMarkdown = typeof raw.storyMarkdown === "string" ? raw.storyMarkdown : "";
-      const baseHash = typeof raw.baseHash === "string" ? raw.baseHash : "";
       if (!/^S\d+$/.test(storyId)) return { status: "ignored", note: "故事编号无效" };
-      if (!/^[a-f0-9]{64}$/.test(baseHash)) return { status: "ignored", note: "故事库版本信息无效，请重新生成草稿" };
-      if (new TextEncoder().encode(storyMarkdown).length > 100_000) return { status: "ignored", note: "故事草稿过大" };
-      const validation = validateStoryMarkdown(storyMarkdown, storyId);
-      if (!validation.ok) return { status: "ignored", note: validation.error };
-      const summary = typeof raw.summary === "string"
-        ? raw.summary.replace(/\s+/g, " ").trim().slice(0, 180)
-        : `优化 ${storyId} 的 STAR+Reflection 表达`;
-      return {
-        status: "confirm",
-        summary: `确认用 AI 草稿更新 ${storyId}？${summary ? `（${summary}）` : ""}`,
-        preview: storyMarkdown,
-        run: () => {
-          ctx.writeStory!(storyId, storyMarkdown, baseHash);
-          return { note: `已确认，正在安全保存 ${storyId}。` };
-        },
-      };
+      const handoff = ctx.queueAgentTask({
+        title: `优化面试故事 · ${storyId}`,
+        subtitle: "等待用户自己的 Agent 处理",
+        kind: "story",
+        input: storyId,
+        page: "/interview",
+      });
+      return { status: "done", jobIds: [handoff.id], note: "已加入 Agent 待办，请回到你的 Agent 继续执行。" };
     },
   },
 };
