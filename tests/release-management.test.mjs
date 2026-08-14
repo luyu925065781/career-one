@@ -69,6 +69,13 @@ test("Release workflow 执行完整门禁并发布校验和", () => {
     new URL("../.github/workflows/release.yml", import.meta.url),
     "utf8",
   );
+  const conditionalStarts = workflow.match(/^\s*if\b.*;\s*then\s*$/gm) ?? [];
+  const conditionalEnds = workflow.match(/^\s*fi\s*$/gm) ?? [];
+  assert.equal(
+    conditionalEnds.length,
+    conditionalStarts.length,
+    "Release shell conditionals must be closed before publish",
+  );
   assert.match(workflow, /run:\s*node test-all\.mjs\s*$/m);
   assert.doesNotMatch(workflow, /node test-all\.mjs --quick/);
   assert.match(workflow, /run:\s*npm ci --ignore-scripts\s*$/m);

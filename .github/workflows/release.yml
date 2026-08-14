@@ -100,3 +100,4 @@ jobs:
               --generate-notes \
               --prerelease \
               --title "择程AI ${VERSION}"
+          fi
