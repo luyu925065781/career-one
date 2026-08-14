@@ -21,7 +21,7 @@ jobs:
       - name: Build Codex and WorkBuddy packages
         run: npm run build:distributions
       - name: Upload marketplace packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: career-one-marketplace-packages
           path: dist/marketplaces/
