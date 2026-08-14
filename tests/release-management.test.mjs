@@ -74,6 +74,7 @@ test("Release workflow 执行完整门禁并发布校验和", () => {
   assert.match(workflow, /run:\s*npm ci --ignore-scripts\s*$/m);
   assert.doesNotMatch(workflow, /run:\s*npm install --ignore-scripts\s*$/m);
   assert.match(workflow, /npm audit --omit=dev --audit-level=high/);
+  assert.match(workflow, /uses:\s*actions\/upload-artifact@v7/);
   assert.match(workflow, /SHA256SUMS\.txt/);
   assert.match(workflow, /gh release create[\s\S]*SHA256SUMS\.txt/);
 
