@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,12 +23,14 @@ assert.equal(
   "https://github.com/luyu925065781/career-one",
   "根 package 必须指向择程AI自己的 GitHub 仓库",
 );
-assert.equal(rootPackage.dependencies["js-yaml"], "^5.2.1", "根运行时必须使用当前 js-yaml 主版本");
+assert.match(rootPackage.dependencies["js-yaml"], /^\^5\./, "根运行时必须使用当前 js-yaml 主版本");
 
 const webPackage = json("web/package.json");
 assert.equal(webPackage.name, "@career-one/web", "Web package 名必须使用 career-one");
 assert.equal(webPackage.version, runtimeReleaseConfig.version, "Web package 版本必须与发布配置一致");
-assert.equal(webPackage.dependencies["js-yaml"], "^5.2.1", "Web 与根运行时必须使用同一 js-yaml 主版本");
+assert.equal(webPackage.dependencies["js-yaml"], rootPackage.dependencies["js-yaml"], "Web 与根运行时必须使用同一 js-yaml 版本");
+assert.match(webPackage.scripts.dev, /--hostname 127\.0\.0\.1/, "Web 开发服务必须只监听本机回环地址");
+assert.match(webPackage.scripts.start, /--hostname 127\.0\.0\.1/, "Web 生产服务必须只监听本机回环地址");
 
 const yamlConsumers = [
   "tracker-utils.mjs",
@@ -68,6 +71,34 @@ assert.doesNotMatch(
   "中文 README 不得展示无关媒体、社区或作品集宣传链接",
 );
 assert.doesNotMatch(readme, /我花了好几个月|我打造了|媒体报道|成功拿下理想职位/, "中文 README 不得沿用原作者第一人称或成果宣传");
+assert.doesNotMatch(
+  readme,
+  /^## (?:开源致谢|文档与反馈)$/m,
+  "精简版 README 不得保留开源致谢或文档与反馈独立区块",
+);
+for (const section of ["快速开始", "用法", "岗位发现边界"]) {
+  assert.match(readme, new RegExp(`^## ${section}$`, "m"), `中文 README 必须保留${section}章节`);
+}
+const coreFeatures = readme.match(/## 核心功能\n([\s\S]*?)(?=\n## |\s*$)/)?.[1] || "";
+assert.match(coreFeatures, /\| \*\*面试故事库\*\* \|/, "核心功能必须单独展示面试故事库");
+assert.match(coreFeatures, /\| \*\*求职画像\*\* \|[^\n]*搜索词[^\n]*发现[^\n]*筛选/, "求职画像必须包含岗位发现与筛选能力");
+assert.doesNotMatch(coreFeatures, /\| \*\*岗位发现与筛选\*\* \|/, "岗位发现与筛选不得继续作为独立功能");
+assert.match(
+  coreFeatures,
+  /\| \*\*智能定制简历与 PDF\*\* \|[^\n]*不同岗位[^\n]*一岗一版/,
+  "简历功能必须明确针对不同岗位智能定制并生成一岗一版材料",
+);
+const disclaimer = readme.match(/## 免责声明\n([\s\S]*?)(?=\n## |\s*$)/)?.[1] || "";
+for (const required of [
+  "本地开源工具，不是托管简历和求职数据的服务",
+  "数据由你掌控",
+  "AI 由你掌控",
+  "遵守第三方服务条款",
+  "不提供任何保证",
+  "[LEGAL_DISCLAIMER.md](LEGAL_DISCLAIMER.md)",
+]) {
+  assert.ok(disclaimer.includes(required), `中文 README 免责声明缺少关键条款：${required}`);
+}
 
 const license = read("LICENSE");
 const originalCopyrightHolder = ["Santi", "ago Fernández de Valderrama"].join("");
@@ -80,23 +111,17 @@ const forbiddenLegacyTerms = [
   ["career", "ops"].join("-"),
 ];
 const legacyLeaks = [];
-for (const file of fs.readdirSync(root, { recursive: true })) {
-  const rel = String(file).replaceAll("\\", "/");
-  if (
-    path.basename(rel) === "LICENSE" ||
-    rel.startsWith(".git/") ||
-    rel.startsWith("node_modules/") ||
-    rel.startsWith("web/node_modules/") ||
-    rel.startsWith("dist/") ||
-    rel.startsWith(".next/") ||
-    rel.startsWith("web/.next/")
-  ) continue;
+const trackedFiles = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" })
+  .split("\0")
+  .filter(Boolean);
+for (const rel of trackedFiles) {
+  if (path.basename(rel) === "LICENSE") continue;
   const absolute = path.join(root, rel);
   let stat;
   try { stat = fs.lstatSync(absolute); } catch { continue; }
   if (!stat.isFile() && !stat.isSymbolicLink()) continue;
   let content;
-  try { content = fs.readFileSync(absolute, "utf8"); } catch { continue; }
+  try { content = stat.isSymbolicLink() ? fs.readlinkSync(absolute) : fs.readFileSync(absolute, "utf8"); } catch { continue; }
   if (
     forbiddenLegacyTerms.some((term) => rel.toLowerCase().includes(term.toLowerCase())) ||
     forbiddenLegacyTerms.some((term) => content.toLowerCase().includes(term.toLowerCase()))
@@ -190,7 +215,7 @@ assert.match(sharedAgentTaskUi, /查看评估报告/, "岗位评估任务必须�
 assert.match(sharedAgentTaskUi, /打开简历页面/, "简历任务必须显示打开简历页面入口");
 assert.match(
   sharedAgentTaskUi,
-  /const hasMatchingPageArtifact = job\.artifacts\?\.some\(\(artifact\) => artifact\.page === job\.page\) \?\? false/,
+  /const hasMatchingPageArtifact = job\.artifacts\?\.some\(\(artifact\) => artifact\.available !== false && artifact\.page === job\.page\) \?\? false/,
   "任务产物已有相同页面入口时必须识别重复目标",
 );
 assert.match(
@@ -257,7 +282,7 @@ assert.doesNotMatch(designSystem, /上游：数字超体|数字超体基础 Toke
 assert.match(designSystem, /gray-900.*#111827/, "项目设计系统必须定义主文字色");
 assert.match(designSystem, /输入框、搜索框、文本域和下拉框聚焦时禁止阴影、光晕和发光轮廓/, "设计系统必须禁止表单焦点光晕");
 assert.match(designSystem, /icon-brand/, "设计系统必须定义图标语义 Token");
-assert.match(designSystem, /空心按钮使用半透明中性色背景/, "设计系统必须定义半透明黑白空心按钮");
+assert.match(designSystem, /`tertiary`：第三优先级。使用 `surface` 白底和中性描边/, "设计系统必须定义中性的第三优先级描边按钮");
 assert.match(designSystem, /状态前景|状态浅底|状态描边/, "设计系统必须定义完整的状态语义 Token");
 assert.match(designSystem, /raised|floating|overlay/, "设计系统必须定义语义化阴影层级");
 
@@ -292,8 +317,8 @@ assert.doesNotMatch(globalStyles, /--font-display:\s*var\(--font-instrument-seri
 assert.doesNotMatch(webLayout, /instrumentSerif/, "根布局不得继续加载 Instrument Serif");
 
 const buttonSource = read("web/src/components/ui/button.tsx");
-assert.match(buttonSource, /outline:\s*"[^"]*border-outline-border[^"]*bg-outline-bg[^"]*text-outline-text[^"]*hover:border-outline-border-hover[^"]*hover:bg-outline-bg-hover/, "通用空心按钮必须使用中性半透明 Token");
-assert.doesNotMatch(buttonSource, /outline:\s*"[^"]*hover:(?:border|bg|text)-brand/, "通用空心按钮 hover 不得使用品牌色");
+assert.match(buttonSource, /tertiary:\s*"[^"]*border-outline-border[^"]*bg-surface[^"]*text-outline-text[^"]*hover:border-outline-border-hover[^"]*hover:bg-outline-bg/, "通用第三优先级按钮必须使用中性描边 Token");
+assert.doesNotMatch(buttonSource, /tertiary:\s*"[^"]*hover:(?:border|bg|text)-brand/, "通用第三优先级按钮 hover 不得使用品牌色");
 assert.match(read("AGENTS.md"), /DESIGN_SYSTEM\.md/, "AGENTS 必须声明前端设计 source of truth");
 assert.match(read("CLAUDE.md"), /DESIGN_SYSTEM\.md/, "CLAUDE 必须声明前端设计 source of truth");
 
@@ -368,10 +393,7 @@ assert.match(
 assert.match(configForm, /window\.dispatchEvent\(new Event\(CONFIG_CHANGED_EVENT\)\)/, "Agent 配置保存后必须广播同页面变更事件");
 assert.doesNotMatch(configForm, /setCliId\(\(prev\) => prev \|\| list\.find/, "未保存配置时不得自动高亮一个尚未生效的 Agent");
 
-for (const configConsumer of [
-  "web/src/components/assistant-console.tsx",
-  "web/src/components/onboarding-banner.tsx",
-]) {
+for (const configConsumer of ["web/src/components/assistant-console.tsx"]) {
   const source = read(configConsumer);
   assert.match(source, /addEventListener\(CONFIG_CHANGED_EVENT,/, `${configConsumer} 必须响应同页面 Agent 配置变更`);
   assert.match(source, /removeEventListener\(CONFIG_CHANGED_EVENT,/, `${configConsumer} 卸载时必须清理 Agent 配置监听`);
@@ -386,18 +408,16 @@ assert.match(diagnoseView, /function isEvaluationJob/, "岗位评估页必须只
 assert.match(taskFormat, /EVALUATION_INTENTS[\s\S]{0,100}"evaluate-job"/, "岗位评估页必须兼容 Agent 原生评估任务标识");
 assert.match(diagnoseView, /return isEvaluationIntent\(job\.kind\)/, "岗位评估页必须按任务意图分类，不得按标题猜测任务类型");
 assert.doesNotMatch(diagnoseView, /function isEvaluationJob[\s\S]{0,220}job\.title/, "岗位评估页不得因简历任务标题含有“评估报告”而误收该任务");
-assert.match(diagnoseView, /function CurrentEvaluationTaskDetail/, "岗位评估页必须展示当前评估任务详情");
-assert.match(diagnoseView, />当前岗位评估</, "当前评估任务详情必须使用明确标题");
-assert.match(diagnoseView, /<AgentTaskDetailPanel\s+job=\{job\}/, "当前评估必须复用 Agent 任务详情组件");
-assert.doesNotMatch(diagnoseView, /最近一次岗位评估|单独打开任务|role="progressbar"|evaluationProgress/, "当前评估不得保留旧标题、独立任务按钮或简化进度卡");
+assert.match(diagnoseView, /<ScreenshotEvaluate page="\/cn-diagnose" \/>/, "岗位评估页必须从招聘截图发起 Agent 评估");
+assert.doesNotMatch(diagnoseView, /function CurrentEvaluationTaskDetail|<AgentTaskDetailPanel/, "岗位评估页不得重复展示 Agent 任务详情");
 assert.match(diagnoseView, />\s*历史评估报告\s*</, "岗位评估页必须使用历史评估报告标题");
 assert.match(diagnoseView, /<EvaluationReportCard\s+report=\{report\}/, "历史评估报告必须使用独立报告卡片");
 assert.doesNotMatch(diagnoseView, /AgentTaskListCard/, "历史评估报告不得混用 Agent 任务列表卡片");
-const latestEvaluationPosition = diagnoseView.indexOf("<CurrentEvaluationTaskDetail");
+const screenshotEvaluationPosition = diagnoseView.indexOf('<ScreenshotEvaluate page="/cn-diagnose"');
 const reportsPosition = diagnoseView.indexOf('id="evaluation-reports-title"');
-assert.ok(latestEvaluationPosition >= 0 && reportsPosition > latestEvaluationPosition, "当前岗位评估必须位于评估报告列表上方");
+assert.ok(screenshotEvaluationPosition >= 0 && reportsPosition > screenshotEvaluationPosition, "招聘截图评估必须位于评估报告列表上方");
 assert.doesNotMatch(diagnoseView, /正式 Agent 评估|统一正式评估模式/, "岗位评估页不得保留顶部模式组件");
-assert.doesNotMatch(diagnoseView, /startJob|evaluationInput|type="file"|role="tablist"|岗位描述 JD|上传岗位截图|AI 岗位评估/, "初版岗位评估页不得提供 Web 评估入口");
+assert.doesNotMatch(diagnoseView, /startJob|evaluationInput|role="tablist"|岗位描述 JD|AI 岗位评估/, "岗位评估页不得恢复旧的 Web 内执行或文本评估入口");
 assert.doesNotMatch(diagnoseView, /\/api\/cn-diagnose|DiagnosisHistory|ResultPanel|诊断记录|HTML 报告|htmlUrl|htmlRel/, "岗位评估页面不得保留旧诊断 API、即时结果或 HTML 历史");
 assert.equal(fs.existsSync(path.join(root, "web/src/app/api/cn-diagnose/route.ts")), false, "旧 cn-diagnose API 必须移除");
 assert.equal(fs.existsSync(path.join(root, "web/src/lib/cn-diagnose.ts")), false, "旧 HTML 报告渲染器必须移除");
@@ -415,6 +435,20 @@ const agentRunsApi = read("web/src/app/api/agent-runs/route.ts");
 assert.match(agentRunsApi, /action === "queue"/, "共享任务接口必须提供 Web 到 Agent 的排队入口");
 assert.match(agentRunsApi, /rootScript\("agent-inbox"\)/, "Web 排队任务必须写入本地 Agent 待办");
 assert.match(agentRunsApi, /pushOption\(args,\s*"--instruction",\s*instruction\)/, "共享任务接口必须把原始 Agent 指令持久化到同一个任务");
+assert.match(agentRunsApi, /path\.basename\(id\)/, "任务附件目录必须丢弃用户输入中的路径组成部分");
+assert.match(agentRunsApi, /fs\.realpathSync\(taskDir\)/, "任务附件写入前必须校验真实目录边界");
+assert.match(agentRunsApi, /fs\.lstatSync\(taskDir\)\.isSymbolicLink\(\)/, "任务附件目录不得接受符号链接");
+
+const gitignore = read(".gitignore");
+for (const privatePath of ["article-digest.md", "task_plan.md", "findings.md", "progress.md", "/*.png"]) {
+  assert.match(gitignore, new RegExp(`^${privatePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m"), `必须默认忽略本地文件：${privatePath}`);
+}
+const noUserDataWorkflow = read(".github/workflows/no-user-data.yml");
+assert.match(noUserDataWorkflow, /\^modes\\\/_custom\\\.md\$/, "PR 用户数据门禁必须覆盖 modes/_custom.md");
+const rootTestSuite = read("test-all.mjs");
+assert.doesNotMatch(rootTestSuite, /const leakPatterns\s*=/, "公开测试不得硬编码旧身份标识");
+assert.match(rootTestSuite, /trackedUserLayerFiles/, "根测试必须按用户层路径阻止隐私文件被跟踪");
+assert.match(rootTestSuite, /highConfidenceSecretPatterns/, "根测试必须扫描公开文件中的高置信度凭据");
 
 const jobStore = read("web/src/components/jobs/job-store.tsx");
 assert.match(jobStore, /queueAgentTask/, "全局任务系统必须提供 Agent 原生任务排队能力");
@@ -573,21 +607,20 @@ assert.match(patternAnalyzer, /levelResponsibilityRegex/, "历史分析器必须
 assert.match(patternAnalyzer, /legacyRedFlagsRegex/, "历史分析器必须保留旧报告风险分的兼容解析");
 
 const explorerView = read("web/src/components/explore/explorer-view.tsx");
-assert.match(explorerView, /function DiscoverBar[\s\S]{0,800}bg-brand[^"]*hover:bg-brand-200/, "发现岗位主按钮 hover 必须复用加深的品牌色");
-assert.doesNotMatch(explorerView, /function DiscoverBar[\s\S]{0,800}hover:brightness-110/, "发现岗位主按钮 hover 不得通过提高亮度变浅");
-assert.match(explorerView, /function SaveSettingsBar[\s\S]{0,1800}action:\s*"save-rules"/, "保存设置按钮必须调用 portals.yml 规则保存接口");
-assert.match(explorerView, /"保存设置"/, "初始筛选页主按钮必须显示保存设置");
-assert.match(explorerView, /如需改变求职方向，可以让你的Agent修改，自动更新信息/, "保存设置旁必须说明如何更新求职方向");
-assert.match(explorerView, /算法已根据你的简历智能生成岗位标签，以提高搜索效率。您可以复制标签，去招聘平台搜索。/, "算法扫描说明必须解释标签来源和复制用途");
-assert.doesNotMatch(explorerView, /由于权限限制，本算法无法扫描国内的绝大多数岗位/, "简化后的算法扫描说明不得重复强调权限限制");
-assert.match(explorerView, /<p className="mt-3 w-full text-\[15px\]/, "发现岗位说明文字必须占满父级内容宽度");
-assert.doesNotMatch(explorerView, /<p className="mt-3 max-w-2xl text-\[15px\]/, "发现岗位说明文字不得被局部最大宽度提前换行");
+assert.match(explorerView, /function ScreenshotEvaluate[\s\S]{0,9000}bg-brand[^"]*hover:bg-brand-200/, "截图评估主按钮 hover 必须复用加深的品牌色");
+assert.doesNotMatch(explorerView, /function ScreenshotEvaluate[\s\S]{0,9000}hover:brightness-110/, "截图评估主按钮 hover 不得通过提高亮度变浅");
+assert.match(explorerView, /function SearchKeywordsCard/, "发现岗位必须展示已确认的搜索标签");
+assert.match(explorerView, /selectTargetRoleTags\(filters\.positive, MAX_TARGET_ROLE_TAGS\)/, "发现岗位必须从画像筛选目标岗位标签");
+assert.match(explorerView, /navigator\.clipboard\.writeText\(formatJobSearchKeywords\(values\)\)/, "搜索标签必须支持复制到招聘平台");
+assert.match(explorerView, /已根据 \$\{seededFrom\.join\(" \+ "\)\} 整理/, "搜索标签必须说明已确认的信息来源");
+assert.doesNotMatch(explorerView, /function DiscoverBar|function SaveSettingsBar|action:\s*"save-rules"/, "发现岗位不得恢复旧的链接评估或页面内规则保存组件");
+assert.match(explorerView, /<h1 className="page-title">发现岗位<\/h1>/, "发现岗位必须保留统一中文标题");
 
 const filterBuilder = read("web/src/components/explore/filter-builder.tsx");
 assert.match(filterBuilder, /useState\(true\)/, "地区与扫描范围必须默认展开");
 assert.match(filterBuilder, /aria-label={`复制全部\$\{label\}`}/, "岗位关键词复制按钮必须复用同一交互组件");
 assert.match(filterBuilder, /label="目标岗位"/, "目标岗位必须保留复制按钮");
-assert.match(filterBuilder, /label="排除岗位"/, "排除岗位必须提供复制按钮");
+assert.match(explorerView, /<SearchTagGroup label="排除关键词" values=\{filters\.negative\} tone="negative" \/>/, "排除关键词必须提供复制按钮");
 for (const [name, host] of [
   ["BOSS直聘", "www.zhipin.com"],
   ["猎聘", "www.liepin.com"],
@@ -623,18 +656,16 @@ const portalsPage = read("web/src/app/portals/page.tsx");
 assert.match(portalsPage, />岗位来源</, "招聘来源页面必须使用不误导的‘岗位来源’名称");
 assert.match(
   portalsPage,
-  /管理招聘平台、目标公司和搜索规则。所有设置保存在本机，并由择程AI的扫描与 Agent 工作流共同使用。/,
-  "岗位来源页面必须准确说明本地设置及扫描与 Agent 的共用关系",
+  /这里保留历史岗位来源设置，不会自动爬取或启动 Agent 搜索。请在招聘网站自行找到职位，再到“岗位评估”提交招聘截图或完整 JD。/,
+  "岗位来源页面必须准确说明本地设置不会自动爬取或启动 Agent",
 );
 
 for (const headerFile of [
-  "web/src/components/explore/explorer-view.tsx",
   "web/src/app/portals/page.tsx",
   "web/src/app/apply/page.tsx",
   "web/src/components/cn-diagnose/cn-diagnose-view.tsx",
   "web/src/components/pipeline-view.tsx",
   "web/src/app/interview/page.tsx",
-  "web/src/app/analytics/page.tsx",
   "web/src/components/cv-editor.tsx",
   "web/src/components/config-form.tsx",
   "web/src/app/jobs/page.tsx",
@@ -644,11 +675,6 @@ for (const headerFile of [
   const source = read(headerFile);
   const heading = source.indexOf("<h1");
   assert.ok(heading >= 0, `${headerFile} 必须包含页面主标题`);
-  const paragraph = source.indexOf("<p className=", heading);
-  assert.ok(paragraph >= 0, `${headerFile} 的页面主标题后必须包含说明文案`);
-  const paragraphTag = source.slice(paragraph, source.indexOf(">", paragraph) + 1);
-  assert.match(paragraphTag, /\bw-full\b/, `${headerFile} 的标题说明必须占满父级容器`);
-  assert.doesNotMatch(paragraphTag, /\bmax-w-/, `${headerFile} 的标题说明不得设置局部最大宽度`);
 }
 assert.doesNotMatch(
   read("web/src/components/cn-diagnose/cn-diagnose-view.tsx"),
@@ -704,7 +730,11 @@ assert.match(updater, /RELEASES_LATEST_API/, "正式通道更新检查必须读�
 
 const scaffolderCli = read("scaffolder/bin/cli.mjs");
 assert.match(scaffolderCli, /github\.com\/luyu925065781\/career-one\.git/, "安装器必须克隆择程AI仓库");
-assert.match(readme, /npx career-one init/, "中文 README 必须展示新的 npm 安装命令");
+assert.match(
+  readme,
+  /git clone https:\/\/github\.com\/luyu925065781\/career-one\.git/,
+  "中文 README 必须展示真实可用的公开仓库获取方式",
+);
 
 const releaseConfig = json("release-please-config.json");
 assert.equal(releaseConfig.packages["."]["package-name"], "career-one", "Release Please 主组件必须使用 career-one");

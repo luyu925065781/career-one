@@ -93,17 +93,16 @@ test("Release workflow 执行完整门禁并发布校验和", () => {
   );
 });
 
-test("邀请测试文档不把未发布的 npm installer 当作入口", () => {
+test("正式版 README 保留快速开始、用法与岗位发现边界", () => {
   const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
-  const setup = readFileSync(new URL("../docs/SETUP.md", import.meta.url), "utf8");
-  for (const source of [readme, setup]) {
-    assert.match(source, /v1\.1\.0-beta\.1/);
-    assert.match(source, /career-one-codex\.zip/);
-    assert.match(source, /career-one-workbuddy\.zip/);
-    assert.match(source, /npm ci --ignore-scripts/);
-  }
-  assert.match(readme, /不要使用[^\n]*npx career-one init/);
-  assert.match(setup, /do not use[^\n]*npx career-one init/i);
+  assert.match(readme, /^## 快速开始$/m);
+  assert.match(readme, /^## 用法$/m);
+  assert.match(readme, /^## 岗位发现边界$/m);
+  assert.doesNotMatch(readme, /^## 获取与使用$/m);
+  assert.doesNotMatch(readme, /内测|beta|prerelease/i);
+  assert.match(readme, /git clone https:\/\/github\.com\/luyu925065781\/career-one\.git/);
+  assert.match(readme, /npm ci --ignore-scripts/);
+  assert.match(readme, /国内多数招聘平台需要登录并有严格的访问控制/);
 });
 
 test("测试用户帮助入口不指向缺失的支持或商标政策", () => {

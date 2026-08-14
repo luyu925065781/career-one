@@ -38,7 +38,14 @@ const SCREENSHOT_MIME_EXTENSIONS = {
   "image/jpeg": "jpg",
   "image/webp": "webp",
 } as const;
-const TASK_ATTACHMENT_PATTERN = /^data\/task-attachments\/[a-zA-Z0-9][a-zA-Z0-9_-]{2,96}\/0[1-3]-[a-f0-9]{12}\.(?:png|jpg|webp)$/;
+const TASK_ATTACHMENT_PATTERN = /^data\/task-attachments\/([a-zA-Z0-9][a-zA-Z0-9_-]{2,96})\/(0[1-3]-[a-f0-9]{12}\.(?:png|jpg|webp))$/;
+
+class TaskAttachmentNotFoundError extends Error {
+  constructor() {
+    super("未找到任务附件");
+    this.name = "TaskAttachmentNotFoundError";
+  }
+}
 
 function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -103,6 +110,36 @@ function validateTaskId(value: string | undefined): string {
   return value;
 }
 
+function taskAttachmentRoot(): string {
+  const workspaceRoot = fs.realpathSync(path.resolve(careerOneRoot()));
+  const configuredRoot = path.resolve(workspaceRoot, "data", "task-attachments");
+  fs.mkdirSync(configuredRoot, { recursive: true, mode: 0o700 });
+  const attachmentRoot = fs.realpathSync(configuredRoot);
+  if (!attachmentRoot.startsWith(`${workspaceRoot}${path.sep}`)) throw new Error("任务附件目录超出当前工作区");
+  return attachmentRoot;
+}
+
+function taskAttachmentDirectory(taskId: string, create: boolean): { id: string; taskDir: string } {
+  const id = validateTaskId(taskId);
+  const safeId = path.basename(id);
+  if (safeId !== id) throw new Error("任务 ID 无效");
+
+  const attachmentRoot = taskAttachmentRoot();
+  const taskDir = path.resolve(attachmentRoot, safeId);
+  if (path.dirname(taskDir) !== attachmentRoot) throw new Error("任务附件目录超出允许范围");
+
+  if (!fs.existsSync(taskDir)) {
+    if (!create) throw new TaskAttachmentNotFoundError();
+    fs.mkdirSync(taskDir, { mode: 0o700 });
+  }
+  if (fs.lstatSync(taskDir).isSymbolicLink()) throw new Error("任务附件目录不能是符号链接");
+  if (!fs.statSync(taskDir).isDirectory()) throw new Error("任务附件目录无效");
+
+  const canonicalTaskDir = fs.realpathSync(taskDir);
+  if (path.dirname(canonicalTaskDir) !== attachmentRoot) throw new Error("任务附件目录超出允许范围");
+  return { id: safeId, taskDir: canonicalTaskDir };
+}
+
 function validateImageSignature(bytes: Buffer, mime: keyof typeof SCREENSHOT_MIME_EXTENSIONS): boolean {
   if (mime === "image/png") {
     return bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
@@ -113,10 +150,16 @@ function validateImageSignature(bytes: Buffer, mime: keyof typeof SCREENSHOT_MIM
 
 function attachmentAbsolutePath(relativePath: string): { absolute: string; contentType: string } {
   const normalized = relativePath.trim().replaceAll("\\", "/");
-  if (!TASK_ATTACHMENT_PATTERN.test(normalized)) throw new Error("任务附件路径无效");
-  const attachmentRoot = path.resolve(careerOneRoot(), "data", "task-attachments");
-  const absolute = path.resolve(careerOneRoot(), normalized);
-  if (!absolute.startsWith(`${attachmentRoot}${path.sep}`)) throw new Error("任务附件路径超出允许范围");
+  const match = normalized.match(TASK_ATTACHMENT_PATTERN);
+  if (!match) throw new Error("任务附件路径无效");
+  const { taskDir } = taskAttachmentDirectory(match[1], false);
+  const fileName = path.basename(match[2]);
+  if (fileName !== match[2]) throw new Error("任务附件路径无效");
+  const candidate = path.resolve(taskDir, fileName);
+  if (path.dirname(candidate) !== taskDir) throw new Error("任务附件路径超出允许范围");
+  if (!fs.existsSync(candidate)) throw new TaskAttachmentNotFoundError();
+  const absolute = fs.realpathSync(candidate);
+  if (path.dirname(absolute) !== taskDir) throw new Error("任务附件路径超出允许范围");
   const extension = path.extname(absolute).slice(1);
   const contentType = extension === "png" ? "image/png" : extension === "jpg" ? "image/jpeg" : "image/webp";
   return { absolute, contentType };
@@ -126,9 +169,7 @@ function storeScreenshotAttachments(taskId: string, rawAttachments: unknown): Ar
   if (!Array.isArray(rawAttachments) || rawAttachments.length === 0) return [];
   if (rawAttachments.length > MAX_SCREENSHOTS) throw new Error(`每个任务最多保存 ${MAX_SCREENSHOTS} 张招聘截图`);
 
-  const id = validateTaskId(taskId);
-  const taskDir = path.resolve(careerOneRoot(), "data", "task-attachments", id);
-  fs.mkdirSync(taskDir, { recursive: true, mode: 0o700 });
+  const { id, taskDir } = taskAttachmentDirectory(taskId, true);
 
   return (rawAttachments as ScreenshotAttachment[]).map((attachment, index) => {
     const originalName = text(attachment?.name)?.slice(0, 160) || `招聘截图-${index + 1}`;
@@ -147,7 +188,7 @@ function storeScreenshotAttachments(taskId: string, rawAttachments: unknown): Ar
     const fileName = `${String(index + 1).padStart(2, "0")}-${digest}.${extension}`;
     const absolute = path.join(taskDir, fileName);
     const temp = path.join(taskDir, `.${randomUUID()}.tmp`);
-    fs.writeFileSync(temp, bytes, { mode: 0o600 });
+    fs.writeFileSync(temp, bytes, { flag: "wx", mode: 0o600 });
     fs.renameSync(temp, absolute);
     return {
       path: path.posix.join("data", "task-attachments", id, fileName),
@@ -232,6 +273,9 @@ export async function GET(req: Request) {
     const result = proposalId ? runContract(["proposal", proposalId]) : withArtifactAvailability(runContract(["list"]));
     return NextResponse.json({ ...(result as object), workspaceId: workspaceFingerprint() });
   } catch (error) {
+    if (error instanceof TaskAttachmentNotFoundError) {
+      return NextResponse.json({ error: error.message, workspaceId: workspaceFingerprint() }, { status: 404 });
+    }
     return errorResponse(error);
   }
 }

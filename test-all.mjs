@@ -571,7 +571,7 @@ for (const f of systemFiles) {
 
 // Check user files are NOT tracked (gitignored)
 const userFiles = [
-  'config/profile.yml', 'modes/_profile.md', 'portals.yml',
+  'config/profile.yml', 'modes/_profile.md', 'modes/_custom.md', 'portals.yml', 'article-digest.md',
 ];
 for (const f of userFiles) {
   const tracked = run('git', ['ls-files', f]);
@@ -635,46 +635,61 @@ if (
 
 console.log('\n6. Personal data leak check');
 
-const leakPatterns = [
-  'luyu925065781 iRepair', 'Zinkee', 'ALMAS', '688921377', '/Users/luyu925065781/',
+const trackedFiles = (run('git', ['ls-files']) || '').split('\n').filter(Boolean);
+const userLayerFiles = new Set([
+  'cv.md',
+  'article-digest.md',
+  'config/profile.yml',
+  'modes/_profile.md',
+  'modes/_custom.md',
+  'portals.yml',
+]);
+const userLayerPrefixes = ['data/', 'reports/', 'output/', 'jds/', 'writing-samples/', 'interview-prep/'];
+const isUserLayerScaffold = (file) => file.endsWith('/.gitkeep') || file.endsWith('/README.md');
+const trackedUserLayerFiles = trackedFiles.filter((file) =>
+  userLayerFiles.has(file) ||
+  (userLayerPrefixes.some((prefix) => file.startsWith(prefix)) && !isUserLayerScaffold(file))
+);
+const trackedEnvironmentFiles = trackedFiles.filter((file) => {
+  const name = file.split('/').at(-1) || '';
+  return name === '.env' || (name.startsWith('.env.') && !name.endsWith('.example'));
+});
+const highConfidenceSecretPatterns = [
+  { label: 'private key', pattern: /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/ },
+  { label: 'GitHub token', pattern: /\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{50,})\b/ },
+  { label: 'API key', pattern: /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}\b/ },
+  { label: 'AWS access key', pattern: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/ },
+  { label: 'credential-bearing URL', pattern: /\b(?:https?|postgres(?:ql)?|mysql):\/\/[^/\s:@]+:[^/\s@]+@/i },
 ];
-
-const scanExtensions = ['md', 'yml', 'html', 'mjs', 'sh', 'go', 'json'];
-const allowedFiles = [
-  // Standard project files
-  'LICENSE', 'CITATION.cff', 'CONTRIBUTING.md', 'CHANGELOG.md',
-  'package.json', 'CLAUDE.md', 'AGENTS.md', 'go.mod', 'test-all.mjs',
-  '.claude-plugin/marketplace.json', '.claude-plugin/plugin.json',
-  'CODE_OF_CONDUCT.md', 'SECURITY.md',
-  // Dashboard credit string
-  'dashboard/internal/ui/screens/pipeline.go',
-  'dashboard/internal/ui/screens/progress.go',
-];
-
-// Build pathspec for git grep — only scan tracked files matching these
-// extensions. This is what `grep -rn` was trying to do, but git-aware:
-// untracked files (debate artifacts, AI tool scratch, local plans/) and
-// gitignored files can't trigger false positives because they were never
-// going to reach a commit anyway.
-const grepPathspec = scanExtensions.map(e => `'*.${e}'`).join(' ');
-
-let leakFound = false;
-for (const pattern of leakPatterns) {
-  const result = run(
-    `git grep -n "${pattern}" -- ${grepPathspec} 2>/dev/null`
-  );
-  if (result) {
-    for (const line of result.split('\n')) {
-      const file = line.split(':')[0];
-      if (allowedFiles.some(a => file.includes(a))) continue;
-      if (file.includes('dashboard/go.mod')) continue;
-      warn(`Possible personal data in ${file}: "${pattern}"`);
-      leakFound = true;
+const obviousCredentialPlaceholder = /(?:paste[-_]?your|your[_-]|example|replace|dummy|test[-_]?key|key[-_]?here)/i;
+const trackedSecretFindings = [];
+for (const file of trackedFiles) {
+  let bytes;
+  try { bytes = readFileSync(join(ROOT, file)); } catch { continue; }
+  if (bytes.includes(0)) continue;
+  const content = bytes.toString('utf8');
+  for (const { label, pattern } of highConfidenceSecretPatterns) {
+    const candidates = content.match(new RegExp(pattern.source, `${pattern.flags}g`)) || [];
+    if (candidates.some((candidate) => !obviousCredentialPlaceholder.test(candidate))) {
+      trackedSecretFindings.push(`${file} (${label})`);
     }
   }
 }
-if (!leakFound) {
-  pass('No personal data leaks outside allowed files');
+
+if (trackedUserLayerFiles.length === 0) {
+  pass('No user-layer personal data files are tracked');
+} else {
+  for (const file of trackedUserLayerFiles) fail(`User-layer personal data is tracked: ${file}`);
+}
+if (trackedEnvironmentFiles.length === 0) {
+  pass('No local .env credential files are tracked');
+} else {
+  for (const file of trackedEnvironmentFiles) fail(`Local environment file is tracked: ${file}`);
+}
+if (trackedSecretFindings.length === 0) {
+  pass('No high-confidence secrets found in tracked files');
+} else {
+  for (const finding of trackedSecretFindings) fail(`High-confidence secret found: ${finding}`);
 }
 
 // ── 7. ABSOLUTE PATH CHECK ──────────────────────────────────────
@@ -2290,7 +2305,7 @@ if (
   /CODEX\.md/.test(readmeDoc) &&
   /codex exec/.test(readmeDoc) &&
   /Codex/i.test(readmeDoc) &&
-  /(slash commands?.*not guaranteed|plain language|prompt)/i.test(readmeDoc)
+  /(slash commands?.*not guaranteed|plain language|prompt|中文自然语言)/i.test(readmeDoc)
 ) {
   pass('README documents CODEX.md and Codex interactive/headless usage');
 } else {
