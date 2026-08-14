@@ -548,6 +548,12 @@ test("Web screenshot evaluations persist local task attachments and expose them 
   assert.match(agentRunsApiSource, /MAX_SCREENSHOT_BYTES\s*=\s*8 \* 1024 \* 1024/);
   assert.match(agentRunsApiSource, /validateImageSignature/);
   assert.match(agentRunsApiSource, /"task-attachments"/);
+  assert.match(agentRunsApiSource, /path\.basename\(id\)/);
+  assert.match(agentRunsApiSource, /fs\.realpathSync\(taskDir\)/);
+  assert.match(agentRunsApiSource, /fs\.lstatSync\(taskDir\)\.isSymbolicLink\(\)/);
+  assert.match(agentRunsApiSource, /class TaskAttachmentNotFoundError extends Error/);
+  assert.match(agentRunsApiSource, /error instanceof TaskAttachmentNotFoundError/);
+  assert.match(agentRunsApiSource, /status: 404/);
   assert.match(agentRunsApiSource, /action === "attach" && id/);
   assert.match(agentRunsApiSource, /Content-Disposition/);
   assert.match(agentRunsContractSource, /if \(command === "attach"\)/);
