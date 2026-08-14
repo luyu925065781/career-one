@@ -1,8 +1,10 @@
-import { FileText, ExternalLink, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { FileText, ExternalLink, ChevronDown, ArrowRight, Images } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Application } from "@/lib/career-one";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   scoreTone,
   scoreNum,
@@ -11,13 +13,10 @@ import {
   parseReport,
   reportSectionPreview,
 } from "@/lib/format";
-import { StatusSelect } from "@/components/status-select";
 import { CompanyLogo } from "@/components/company-logo";
 import { ScoreMethodology } from "@/components/score-methodology";
-import { GeneratePdfButton } from "@/components/generate-pdf-button";
-import { ApplyButton } from "@/components/apply-button";
-import { DeleteFromTracker } from "@/components/delete-from-tracker";
 import { ReportBackButton } from "@/components/pipeline-view";
+import { resolveCompanyIdentity } from "@/lib/company";
 
 // Progressive disclosure of the report. The core writes prose blocks
 // "## F) Verdict (lead)", "## A) Role Summary", "## B) Match with CV", then
@@ -29,6 +28,15 @@ import { ReportBackButton } from "@/components/pipeline-view";
 // stays a server component).
 
 type Section = { heading: string; letter: string | null; content: string };
+
+const REPORT_SCREENSHOT_PATTERN = /^data\/task-attachments\/[a-zA-Z0-9][a-zA-Z0-9_-]{2,96}\/0[1-3]-[a-f0-9]{12}\.(?:png|jpg|webp)$/;
+
+function reportScreenshotPaths(value: string | undefined): string[] {
+  if (!value) return [];
+  return Array.from(new Set(
+    value.split("|").map((item) => item.trim()).filter((item) => REPORT_SCREENSHOT_PATTERN.test(item)),
+  )).slice(0, 3);
+}
 
 const HEADING_LABELS: Record<string, string> = {
   "岗位概览": "岗位预览",
@@ -200,7 +208,6 @@ export function ReportView({
   id,
   app,
   report,
-  canDelete = false,
 }: {
   id: string;
   app: Application | null;
@@ -208,7 +215,6 @@ export function ReportView({
   /** kept in the props contract (the page passes it) but no longer surfaced —
    *  the raw .md filename is a dev artifact, not header content. */
   file?: string | null;
-  canDelete?: boolean;
 }) {
   const meta = report ? parseReport(report) : null;
   const field = (label: string) => meta?.fields.find((f) => f.label === label)?.value;
@@ -216,20 +222,32 @@ export function ReportView({
   const date = app?.date || field("Date");
   const archetype = field("Archetype");
   const url = field("URL");
+  const screenshotPaths = reportScreenshotPaths(field("Screenshots"));
+  const reportCompanyLabel = app
+    ? resolveCompanyIdentity(app.company, app.via).label
+    : meta?.title ?? `报告 #${id}`;
 
   return (
     <div className="page-shell py-8">
-      <ReportBackButton />
+      <div className="flex min-h-11 items-center justify-between gap-4">
+        <ReportBackButton />
+        {app && (
+          <Link href={`/pipeline/${id}`} className={buttonVariants({ variant: "tertiary", size: "sm" })}>
+            查看求职进度
+            <ArrowRight className="size-3.5" aria-hidden="true" />
+          </Link>
+        )}
+      </div>
 
       <header className="mt-5">
-        <div className="flex min-h-8 items-center gap-3">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-faint">#{id}</p>
-        </div>
+        <p className="flex min-h-8 items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-faint">
+          <span>岗位评估报告</span>
+          <span aria-hidden="true">·</span>
+          <span>#{id}</span>
+        </p>
         <div className="mt-2 flex items-center gap-3">
           <CompanyLogo name={app?.company ?? meta?.title ?? `报告 #${id}`} size={40} />
-          <h1 className="font-display text-3xl tracking-tight text-landing">
-            {app?.company ?? meta?.title ?? `报告 #${id}`}
-          </h1>
+          <h1 className="font-display text-3xl tracking-tight text-landing">{reportCompanyLabel}</h1>
         </div>
         {app?.role && <p className="mt-1 text-muted">{app.role}</p>}
 
@@ -243,16 +261,7 @@ export function ReportView({
             return n >= 4.0 ? <Badge tone="good">建议投递</Badge> : <Badge tone="muted">低于投递线</Badge>;
           })()}
           {meta?.legitimacy && <Badge tone={legitimacyTone(meta.legitimacy)}>{legitimacyLabel(meta.legitimacy)}</Badge>}
-          {app && <StatusSelect n={id} current={app.status} />}
-          <GeneratePdfButton n={id} company={app?.company ?? meta?.title ?? id} pdfReady={(app?.pdf ?? "").includes("✅")} />
-          <ApplyButton n={id} url={url && url.startsWith("http") ? url : undefined} company={app?.company ?? meta?.title ?? id} pdfReady={(app?.pdf ?? "").includes("✅")} />
         </div>
-
-        {app && canDelete && (
-          <div className="mt-3">
-            <DeleteFromTracker n={id} />
-          </div>
-        )}
 
         {(archetype || date || (url && url.startsWith("http"))) && (
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
@@ -271,6 +280,37 @@ export function ReportView({
           </div>
         )}
       </header>
+
+      {screenshotPaths.length > 0 && (
+        <section className="mt-6 rounded-2xl border border-border bg-surface/35 p-4 sm:p-5" aria-labelledby="report-screenshots-title">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-icon-brand">
+              <Images className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 id="report-screenshots-title" className="text-sm font-semibold text-foreground">岗位原始截图</h2>
+              <p className="mt-1 text-xs leading-5 text-muted">截图保存在当前工作区；点击可查看原图。找到工作后可自行清理下列本地文件。</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {screenshotPaths.map((screenshotPath, index) => {
+              const attachmentHref = `/api/agent-runs?attachment=${encodeURIComponent(screenshotPath)}`;
+              return (
+                <figure key={screenshotPath} className="overflow-hidden rounded-xl border border-border bg-background/55">
+                  <a href={attachmentHref} target="_blank" rel="noreferrer" className="block bg-surface/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={attachmentHref} alt={`岗位原始截图 ${index + 1}`} loading="lazy" className="max-h-[36rem] w-full object-contain" />
+                  </a>
+                  <figcaption className="border-t border-border px-3 py-2 text-[11px] leading-5 text-faint">
+                    <span className="font-medium text-muted">截图 {index + 1}</span>
+                    <code className="mt-0.5 block break-all">{screenshotPath}</code>
+                  </figcaption>
+                </figure>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {report ? (
         <>

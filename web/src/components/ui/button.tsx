@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 // surfaced-and-bordered tertiary, then containerless ghost actions. Shape is
 // separate so pages can change sizing without rebuilding colors locally.
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-control px-3 py-2 text-sm font-medium transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background max-sm:min-h-[44px]",
+  "inline-flex items-center justify-center gap-2 rounded-button px-3 py-2 text-sm font-medium transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background max-sm:min-h-[44px]",
   {
     variants: {
       variant: {

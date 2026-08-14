@@ -29,3 +29,12 @@ export function cleanChips(v) {
 export function formatJobSearchKeywords(values) {
   return cleanChips(values).join("，");
 }
+
+/** Prefer Chinese role labels, then use English labels to fill the limit. */
+export function selectTargetRoleTags(values, limit = 5) {
+  const cleaned = cleanChips(values);
+  const chinese = cleaned.filter((value) => /[\u3400-\u9fff]/.test(value));
+  const other = cleaned.filter((value) => !/[\u3400-\u9fff]/.test(value));
+  const safeLimit = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 5;
+  return [...chinese, ...other].slice(0, safeLimit);
+}

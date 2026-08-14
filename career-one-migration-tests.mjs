@@ -172,6 +172,16 @@ assert.match(
   "Web 启动器必须识别新版首页，不能依赖已移除的旧副标题",
 );
 
+const doubleClickStarterPath = path.join(root, "启动择程AI.command");
+const doubleClickStarter = read("启动择程AI.command");
+assert.ok((fs.statSync(doubleClickStarterPath).mode & 0o111) !== 0, "macOS 双击启动文件必须保留可执行权限");
+assert.match(doubleClickStarter, /^#!\/bin\/zsh$/m, "macOS 双击启动文件必须由系统 zsh 执行");
+assert.match(doubleClickStarter, /readonly SCRIPT_DIR="\$\{0:A:h\}"/, "双击启动文件必须从自身所在目录定位工作区");
+assert.match(doubleClickStarter, /cd -- "\$SCRIPT_DIR"/, "双击启动文件必须先进入择程AI工作区");
+assert.match(doubleClickStarter, /npm run dev:web -- --page \/jobs/, "双击启动文件必须复用标准 Web 启动入口并打开任务页");
+assert.match(doubleClickStarter, /pause_on_error/, "双击启动失败时必须保留可读错误提示");
+assert.doesNotMatch(doubleClickStarter, /\/Users\/|Documents\/career-one/, "双击启动文件不得写死本机绝对路径");
+
 const jobDetailPage = read("web/src/app/jobs/[id]/page.tsx");
 const sharedAgentTaskUi = read("web/src/components/jobs/worker-pills.tsx");
 assert.match(jobDetailPage, /AgentTaskDetailPanel/, "任务详情页必须复用统一任务详情组件");
@@ -190,7 +200,7 @@ assert.match(
 );
 
 const updaterSource = read("update-system.mjs");
-for (const requiredPath of ["start-web.mjs", "web/src/", "web/package.json", "web/package-lock.json"]) {
+for (const requiredPath of ["start-web.mjs", "启动择程AI.command", "web/src/", "web/package.json", "web/package-lock.json"]) {
   assert.match(updaterSource, new RegExp(`['\"]${requiredPath.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}['\"]`), `更新器必须覆盖 ${requiredPath}`);
 }
 assert.match(read("DATA_CONTRACT.md"), /web\/src\//, "数据契约必须把 Web 源码声明为系统层");
@@ -223,9 +233,7 @@ const legacyBrandComponents = [
   "web/src/components/explore/first-score-view.tsx",
   "web/src/components/explore/filter-builder.tsx",
   "web/src/components/explore/discovering-state.tsx",
-  "web/src/components/explore/ai-hunt-trace.tsx",
   "web/src/components/explore/ai-search-box.tsx",
-  "web/src/components/explore/ai-hunt-view.tsx",
   "web/src/components/apply-view.tsx",
   "web/src/components/apply/apply-backdrop.tsx",
 ].map(read).join("\n");
@@ -444,7 +452,8 @@ const careerOneLib = read("web/src/lib/career-one.ts");
 assert.doesNotMatch(careerOneLib, /ReportLocale|reports["'],\s*locale/, "每份报告必须是独立记录，不能把中文报告建模为同编号的语言变体");
 
 const pipelineDetail = read("web/src/app/pipeline/[id]/page.tsx");
-assert.doesNotMatch(pipelineDetail, /searchParams|zh-CN|lang=/, "求职详情不得提供同一记录的语言切换");
+assert.doesNotMatch(pipelineDetail, /zh-CN|lang=/, "求职详情不得提供同一记录的语言切换");
+assert.match(pipelineDetail, /view === "report"/, "求职详情必须把岗位评估报告作为独立视图");
 
 const pipelineView = read("web/src/components/pipeline-view.tsx");
 assert.match(pipelineView, /const TABS = \[\s*"ALL",\s*"INBOX",/, "求职进度必须把“全部”放在标签导航首位");

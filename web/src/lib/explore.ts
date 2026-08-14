@@ -98,7 +98,7 @@ export type ScanEvent =
 // with the test suite without a TypeScript runner. Import for internal use
 // and re-export for external consumers (filter-builder.tsx, etc.).
 import { cleanChips } from "./clean-chips.mjs";
-export { cleanChips, formatJobSearchKeywords } from "./clean-chips.mjs";
+export { cleanChips, formatJobSearchKeywords, selectTargetRoleTags } from "./clean-chips.mjs";
 
 function clampNum(v: unknown, lo: number, hi: number, fallback: number): number {
   const n = Number(v);

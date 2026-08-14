@@ -13,14 +13,14 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return Response.json({ error: "bad json" }, { status: 400 });
+    return Response.json({ error: "请求格式不正确" }, { status: 400 });
   }
   const url = (body.url ?? "").trim();
-  if (!/^https?:\/\//i.test(url)) return Response.json({ error: "A valid application URL (https://…) is required" }, { status: 400 });
+  if (!/^https?:\/\//i.test(url)) return Response.json({ error: "请输入有效的申请链接（https://…）" }, { status: 400 });
   try {
     const session = await openSession(url, body.cliId, body.agent, body._noApplyBtn);
     return Response.json(session);
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message.slice(0, 200) : "could not open the form" }, { status: 500 });
+    return Response.json({ error: e instanceof Error ? e.message.slice(0, 200) : "无法打开申请表" }, { status: 500 });
   }
 }

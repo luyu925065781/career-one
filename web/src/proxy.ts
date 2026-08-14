@@ -33,6 +33,7 @@ export const config = {
     "/explore/:path*",
     "/cn-diagnose/:path*",
     "/pipeline/:path*",
+    "/profile/:path*",
     "/interview/:path*",
     "/portals/:path*",
     "/analytics/:path*",

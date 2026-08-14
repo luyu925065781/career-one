@@ -734,8 +734,21 @@ Paste job URLs below as \`- [ ] {url}\` then run \`/career-one pipeline\`.
 const PENDING_MARKERS = ['## Pending', '## Pendientes'];
 const PROCESSED_MARKERS = ['## Processed', '## Procesadas'];
 
+function pipelineUrlKey(value) {
+  const raw = normalizeScanScalar(value);
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    url.hash = '';
+    if (url.pathname !== '/') url.pathname = url.pathname.replace(/\/+$/, '');
+    return url.href;
+  } catch {
+    return raw;
+  }
+}
+
 export function appendToPipeline(offers) {
-  if (offers.length === 0) return;
+  if (offers.length === 0) return [];
 
   // Auto-create with standard skeleton if missing (fresh-install guard).
   if (!existsSync(PIPELINE_PATH)) {
@@ -743,6 +756,18 @@ export function appendToPipeline(offers) {
   }
 
   let text = readFileSync(PIPELINE_PATH, 'utf-8');
+  const seenUrls = new Set(
+    [...text.matchAll(/- \[[ x]\] (https?:\/\/\S+)/g)]
+      .map((match) => pipelineUrlKey(match[1]))
+      .filter(Boolean),
+  );
+  const freshOffers = offers.filter((offer) => {
+    const key = pipelineUrlKey(offer?.url);
+    if (!key || seenUrls.has(key)) return false;
+    seenUrls.add(key);
+    return true;
+  });
+  if (freshOffers.length === 0) return [];
 
   const marker = PENDING_MARKERS.find(m => text.includes(m)) ?? null;
   const idx = marker !== null ? text.indexOf(marker) : -1;
@@ -754,7 +779,7 @@ export function appendToPipeline(offers) {
       return (found === -1 || (i !== -1 && i < found)) ? i : found;
     }, -1);
     const insertAt = procIdx === -1 ? text.length : procIdx;
-    const block = `\n## Pending\n\n` + offers.map(formatPipelineOffer).join('\n') + '\n\n';
+    const block = `\n## Pending\n\n` + freshOffers.map(formatPipelineOffer).join('\n') + '\n\n';
     text = text.slice(0, insertAt) + block + text.slice(insertAt);
   } else {
     // Find the end of existing Pending content (next ## or end)
@@ -762,11 +787,12 @@ export function appendToPipeline(offers) {
     const nextSection = text.indexOf('\n## ', afterMarker);
     const insertAt = nextSection === -1 ? text.length : nextSection;
 
-    const block = '\n' + offers.map(formatPipelineOffer).join('\n') + '\n';
+    const block = '\n' + freshOffers.map(formatPipelineOffer).join('\n') + '\n';
     text = text.slice(0, insertAt) + block + text.slice(insertAt);
   }
 
   writeFileSync(PIPELINE_PATH, text, 'utf-8');
+  return freshOffers;
 }
 
 export function appendToScanHistory(offers, date, status = 'added') {

@@ -1503,13 +1503,16 @@ try {
     mkdirSync(join(fixtureRoot, 'data'), { recursive: true });
     process.chdir(fixtureRoot);
     appendToPipeline([{ url: 'https://jobs.example.com/1', company: 'Acme', title: 'Engineer' }]);
+    appendToPipeline([{ url: 'https://jobs.example.com/1', company: 'Acme', title: 'Engineer' }]);
     const pipeline = readFileSync(join(fixtureRoot, 'data', 'pipeline.md'), 'utf-8');
+    const urlOccurrences = pipeline.match(/https:\/\/jobs\.example\.com\/1/g)?.length ?? 0;
     if (
       pipeline.includes('# Pipeline') &&
       pipeline.includes('## Pending') &&
-      pipeline.includes('- [ ] https://jobs.example.com/1 | Acme | Engineer')
+      pipeline.includes('- [ ] https://jobs.example.com/1 | Acme | Engineer') &&
+      urlOccurrences === 1
     ) {
-      pass('scan.mjs creates data/pipeline.md before appending offers on fresh installs (#1252)');
+      pass('scan.mjs creates data/pipeline.md and ignores duplicate URL appends on fresh installs (#1252)');
     } else {
       fail(`scan.mjs fresh-install pipeline contents wrong: ${JSON.stringify(pipeline)}`);
     }

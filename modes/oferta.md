@@ -359,6 +359,7 @@ Save full evaluation in `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
 **Score:** {X/5}
 **Legitimacy:** {High Confidence | Proceed with Caution | Suspicious}
 **PDF:** {path or pending}
+**Screenshots:** {workspace-relative data/task-attachments/... paths separated by ` | `; omit for non-screenshot inputs}
 
 ---
 
@@ -394,6 +395,8 @@ Save full evaluation in `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
 ## Keywords extracted
 (list of 15-20 keywords from the JD for ATS optimization)
 ```
+
+When the task instruction supplies local screenshot paths, read every listed file and preserve those paths verbatim in the `Screenshots` header field. Never copy them into the system layer or convert them to absolute paths. The Web report uses this field to show the original posting screenshots.
 
 **Machine Summary (required):** every report carries a `## Machine Summary` YAML fence directly after the header — same schema, exact field names, and rules as the "Machine Summary" block in `batch/batch-prompt.md` (do not duplicate the schema here; that file is the source of truth). It includes `advertised_comp`: the JD's own salary figure **verbatim** (e.g. `"80-90k EUR"`), or `null` when the JD states nothing — never estimated, never replaced with researched market data. This key seeds the advertised salary observation read by `node salary-gap.mjs`.
 

@@ -1,6 +1,6 @@
 {
   "name": "@career-one/web",
-  "version": "1.1.0-dev.1",
+  "version": "1.1.0-beta.1",
   "private": true,
   "description": "择程AI：本地优先 AI 求职工作台",
   "engines": {
@@ -16,9 +16,9 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "js-yaml": "^5.2.1",
+    "js-yaml": "^5.2.3",
     "lucide-react": "^1.8.0",
-    "next": "16.2.10",
+    "next": "16.3.0",
     "playwright-core": "^1.61.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
@@ -33,7 +33,7 @@
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "postcss": "^8.5.9",
+    "postcss": "^8.5.23",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2"
   }

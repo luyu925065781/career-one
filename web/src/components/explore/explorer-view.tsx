@@ -1,445 +1,421 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Compass, ChevronDown, RotateCcw, AlertTriangle, Sparkles, Settings, Save, Check } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Bot, Check, Copy, ExternalLink, ImageUp, Search, ShieldCheck, UploadCloud, X } from "lucide-react";
 import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
-import type { Application, InboxJob } from "@/lib/career-one";
-import { paramsToFilters, paramsToAi, type ExploreFilters } from "@/lib/explore";
-import { CONTEXTUAL_NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-items";
-import { isFeatureEnabled } from "@/lib/release";
-import { FilterBuilder } from "./filter-builder";
-import { DiscoveringState } from "./discovering-state";
-import { AiHuntView } from "./ai-hunt-view";
-import { ExploreModeToggle } from "./explore-mode-toggle";
-import { AiSearchBox } from "./ai-search-box";
-import { ResultsList, type EnrichedOffer } from "./results-list";
-import { useExplore } from "./explore-provider";
+import { formatJobSearchKeywords, selectTargetRoleTags, type ExploreFilters } from "@/lib/explore";
+import { AgentTaskHandoffDialog } from "@/components/generate-pdf-button";
+import {
+  buildQueuedTaskInstruction,
+  isInvalidJob,
+  type AgentTaskHandoff,
+  useJobs,
+} from "@/components/jobs/job-store";
 
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-const CLI_NAMES: Record<string, string> = {
-  claude: "Claude Code",
-  codex: "Codex",
-  workbuddy: "WorkBuddy",
-  trae: "TRAE Agent CLI",
-  gemini: "Gemini CLI",
-  opencode: "OpenCode",
-  copilot: "Copilot CLI",
-  qwen: "Qwen CLI",
-  antigravity: "Antigravity CLI",
-};
-const PageIcon = PRIMARY_NAV_ITEMS.discoverJobs.icon;
-const JobSourcesItem = CONTEXTUAL_NAV_ITEMS.jobSources;
-const JobSourcesIcon = JobSourcesItem.icon;
+const PageIcon = Search;
+
+const SOURCES = [
+  { name: "BOSS直聘", href: "https://www.zhipin.com/" },
+  { name: "猎聘", href: "https://www.liepin.com/" },
+  { name: "智联招聘", href: "https://www.zhaopin.com/" },
+  { name: "脉脉", href: "https://maimai.cn/" },
+] as const;
+
+const MAX_TARGET_ROLE_TAGS = 5;
 
 export function ExplorerView({
-  seed,
-  inboxSnapshot,
-  appsSnapshot,
-  rootExists,
+  hasCv,
+  filters,
+  seededFrom,
 }: {
-  seed: { filters: ExploreFilters; seededFrom: string[] };
-  inboxSnapshot: InboxJob[];
-  appsSnapshot: Application[];
-  rootExists: boolean;
+  hasCv: boolean;
+  filters: ExploreFilters;
+  seededFrom: string[];
 }) {
-  const { filters, setFilters, initFilters, phase, running, offers, discover, status, error, mode, setMode, aiIntent, setAiIntent, discoverAI, companiesScanned, companiesAvailable, capHit, droppedNoDate, partial } = useExplore();
-  const scanNote =
-    companiesScanned > 0
-      ? `已扫描 ${companiesScanned.toLocaleString()}${companiesAvailable > companiesScanned ? ` / ${companiesAvailable.toLocaleString()}` : ""} 家公司${partial ? " · 部分来源无法访问" : ""}。`
-      : undefined;
-  const inited = useRef(false);
-  const [refineOpen, setRefineOpen] = useState(false);
-  const [cli, setCli] = useState<{ id: string | null; name?: string }>({ id: null });
-  const [firstRun, setFirstRun] = useState(false);
-
-  useEffect(() => {
-    try {
-      const id = JSON.parse(localStorage.getItem("career-one:config") || "{}").cliId || null;
-      setCli({ id, name: id ? CLI_NAMES[id] || id : undefined });
-    } catch {
-      setCli({ id: null });
-    }
-  }, []);
-
-  // Initialize once from the URL (shareable search) or the server seed — without
-  // clobbering anything the assistant set before this mount.
-  useEffect(() => {
-    if (inited.current) return;
-    inited.current = true;
-    const sp = new URLSearchParams(window.location.search);
-    const ai = paramsToAi(sp);
-    if (ai !== null) {
-      setMode("ai");
-      setAiIntent(ai);
-    } else {
-      initFilters(sp.toString() ? paramsToFilters(sp) : seed.filters);
-      // Onboarding hand-off: ?run=1 auto-fires the free scan + flags the first-run
-      // banner (the "matches found from your CV, free" reveal).
-      if (sp.get("run") === "1") {
-        setFirstRun(true);
-        void discover();
-      }
-    }
-  }, [seed.filters, initFilters, setMode, setAiIntent, discover]);
-
-  const inboxUrls = useMemo(() => new Set(inboxSnapshot.map((j) => j.url)), [inboxSnapshot]);
-  const enriched: EnrichedOffer[] = useMemo(
-    () =>
-      offers.map((o) => {
-        const inPipeline = inboxUrls.has(o.url);
-        const c = norm(o.company);
-        const t = norm(o.title);
-        const ev = appsSnapshot.find((a) => {
-          if (norm(a.company) !== c) return false;
-          const ar = norm(a.role);
-          return ar.length > 3 && (t.includes(ar) || ar.includes(t.split(" ").slice(0, 3).join(" ")));
-        });
-        return { ...o, inPipeline, evaluatedN: ev?.n };
-      }),
-    [offers, inboxUrls, appsSnapshot],
-  );
-
-  const isAi = mode === "ai";
-  if (running) return isAi ? <AiHuntView cliName={cli.name} /> : <DiscoveringState />;
-
-  const canDiscover = filters.ats.length > 0;
-  const isResults = phase === "results";
-
   return (
     <div className="page-shell py-8">
-      <header className="mb-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-            <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
-            <h1 className={`font-display text-3xl text-foreground`}>发现岗位</h1>
-            {isFeatureEnabled(JobSourcesItem.feature) && (
-              <Link
-                href={JobSourcesItem.href}
-                className={cn(
-                  buttonVariants({ variant: "tertiary", size: "sm" }),
-                  "shrink-0",
-                )}
-              >
-                <JobSourcesIcon className="size-4" aria-hidden="true" />
-                {JobSourcesItem.label}
-              </Link>
-            )}
-          </div>
-          <div className="w-full sm:ml-auto sm:w-auto">
-            <ExploreModeToggle mode={mode} onChange={setMode} cliConfigured={!!cli.id} />
-          </div>
+      <header className="mb-7">
+        <div className="flex items-center gap-2.5">
+          <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
+          <h1 className="page-title">发现岗位</h1>
         </div>
-        {!isResults && (
-          <p className="mt-3 w-full text-[15px] leading-relaxed text-muted">
-            {isAi
-              ? "用自然语言描述目标岗位，择程AI会调用你自己的 Agent 搜索公开信息。搜索结果需要进一步评估后才能确认匹配度。"
-              : "算法已根据你的简历智能生成岗位标签，以提高搜索效率。您可以复制标签，去招聘平台搜索。"}
-          </p>
-        )}
+        <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-muted">
+          你自己在招聘网站找到感兴趣的岗位，再把招聘截图或完整 JD 交给 Agent。择程AI不爬取招聘网站，岗位评估由你自己的 Agent 完成。
+        </p>
       </header>
 
-      {!rootExists && (
-        <div className="mb-5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
-          择程AI尚未完成初始化。请先完善简历和目标岗位，再开始发现职位。
+      {!hasCv && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-card border border-warning-border bg-warning-surface px-4 py-3 text-sm text-warning">
+          <span>开始评估前，请先创建一份 cv.md，让 Agent 有真实经历可以匹配。</span>
+          <Link href="/cv" className="font-semibold underline underline-offset-2">先去创建简历</Link>
         </div>
       )}
 
-      {isAi ? (
-        phase === "blocked" ? (
-          <BlockedCard />
-        ) : (
-          <div className="space-y-6">
-            <AiSearchBox
-              intent={aiIntent}
-              onIntent={setAiIntent}
-              onSubmit={() => void discoverAI()}
-              cliConfigured={!!cli.id}
-              cliName={cli.name}
-              onRunScan={() => setMode("scan")}
-            />
-            {phase === "results" && <ResultsList offers={enriched} />}
-            {phase === "empty-loose" && (
-              <EmptyState
-                tone="loose"
-                title="暂未找到公开匹配岗位"
-                body="AI 搜索基于公开信息。可以扩大目标范围，或改用目标公司官网扫描。"
-                onRerun={() => setMode("scan")}
-                rerunLabel="运行算法扫描"
-              />
-            )}
-            {phase === "failed" && <FailedCard msg={error || status} onRetry={() => void discoverAI()} />}
-          </div>
-        )
-      ) : (
-        <>
-          {isResults ? (
-            <div className="mb-6 rounded-xl border border-border bg-surface/30">
-              <button type="button" onClick={() => setRefineOpen((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-sm font-medium text-foreground">
-                <Compass className="size-4 text-icon-brand" /> 调整搜索条件
-                <ChevronDown className={cn("ml-auto size-4 text-icon-muted transition-transform", refineOpen && "rotate-180")} />
-              </button>
-              {refineOpen && (
-                <div className="space-y-4 border-t border-border p-4">
-                  <FilterBuilder filters={filters} onChange={setFilters} seededFrom={seed.seededFrom} />
-                  <DiscoverBar canDiscover={canDiscover} onDiscover={discover} label="重新扫描（免费）" />
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="mb-6 rounded-2xl border border-border bg-surface/30 p-5">
-              <FilterBuilder filters={filters} onChange={setFilters} seededFrom={seed.seededFrom} />
-              <div className="mt-5">
-                <SaveSettingsBar filters={filters} />
-              </div>
-            </div>
-          )}
+      <SearchKeywordsCard filters={filters} seededFrom={seededFrom} />
 
-          {isResults && firstRun && (
-            <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
-              <Sparkles className="mt-0.5 size-4 shrink-0 text-icon-success" />
-              <p className="text-[13px] leading-relaxed text-foreground">
-                这些是与简历匹配的在招岗位。<span className="text-emerald-600 dark:text-emerald-400">发现过程没有消耗 tokens。</span>选择最感兴趣的岗位进行评估，即可查看匹配度和原因。
+      <section aria-label="手动找岗步骤">
+        <Card corner="tr" className="p-6 sm:p-7">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-soft text-icon-brand">
+              <Search className="size-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand-text">第一步，找岗位</p>
+              <h2 className="mt-1 font-display text-2xl text-landing">在招聘网站找到岗位</h2>
+              <p className="mt-2 text-sm leading-6 text-muted">
+                根据你的目标和偏好，在熟悉的平台或公司官网浏览职位详情。
               </p>
             </div>
-          )}
+          </div>
+          <div className="mt-6 flex flex-wrap gap-2" aria-label="招聘网站入口">
+            {SOURCES.map((source) => (
+              <a
+                key={source.name}
+                href={source.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-button border border-outline-border bg-outline-bg px-3 py-2 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover"
+              >
+                {source.name}
+                <ExternalLink className="size-3.5 text-icon-muted" aria-hidden="true" />
+              </a>
+            ))}
+          </div>
+        </Card>
+      </section>
 
-          {isResults && capHit && (
-            <CappedBanner companiesScanned={companiesScanned} companiesAvailable={companiesAvailable} onRefine={() => setRefineOpen(true)} />
-          )}
-          {isResults && <ResultsList offers={enriched} />}
+      <Card corner="bl" elevated className="mt-4 p-6 sm:p-7">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-brand text-brand-foreground">
+            <Bot className="size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand-text">第二步 · 交给 Agent</p>
+            <h2 className="mt-1 font-display text-2xl text-landing">把岗位信息交给 Agent，开始评估</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+              把招聘截图或完整 JD 交给你的 Agent。Web 会把截图保存到当前本地工作区，不启动 CLI、不抓取招聘网站，也不会上传到外部服务。
+            </p>
+          </div>
+        </div>
+        <ScreenshotEvaluate />
+        <div className="mt-4 flex items-start gap-2 text-xs leading-5 text-faint">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-icon-success" aria-hidden="true" />
+          <span>评估报告会写入本地求职进度；是否投递始终由你决定。</span>
+        </div>
+      </Card>
 
-          {phase === "empty-current" && (
-            <EmptyState
-              tone="good"
-              title="已查看全部新岗位"
-              body="自上次扫描后没有新增结果，当前求职进度已是最新状态。"
-              note={scanNote}
-              onRerun={() => {
-                setFilters({ ...filters, sinceDays: Math.max(filters.sinceDays, 30) });
-                void discover();
-              }}
-              rerunLabel="查看最近 30 天"
-            />
-          )}
-          {phase === "empty-loose" && (
-            <EmptyState
-              tone="loose"
-              title="暂未发现新匹配"
-              body="发现岗位免费，可以放宽条件并重新扫描。"
-              note={scanNote}
-              onRerun={() => {
-                setFilters({ ...filters, sinceDays: 30, block: [], allow: [] });
-                void discover();
-              }}
-              rerunLabel="扩大到 30 天 · 清除地区限制"
-            />
-          )}
-          {phase === "degraded" && (
-            <DegradedCard
-              onRetry={() => void discover()}
-              companiesScanned={companiesScanned}
-              companiesAvailable={companiesAvailable}
-              capHit={capHit}
-              droppedNoDate={droppedNoDate}
-              partial={partial}
-            />
-          )}
-          {phase === "failed" && <FailedCard msg={error || status} onRetry={() => void discover()} />}
-        </>
-      )}
+      <ol className="mt-6 grid gap-3 sm:grid-cols-2" aria-label="手动找岗流程">
+        {[
+          ["01", "找到岗位", "在平台或公司官网查看真实职位"],
+          ["02", "查看评估", "把截图交给 Agent，根据报告决定下一步"],
+        ].map(([number, title, description], index) => (
+          <li key={number} className="relative rounded-card border border-border bg-surface/40 p-4">
+            {index < 1 && <span className="absolute right-[-0.75rem] top-1/2 hidden h-px w-3 bg-border sm:block" aria-hidden="true" />}
+            <span className={cn("text-xs font-semibold tabular-nums", index === 0 ? "text-brand-text" : "text-faint")}>{number}</span>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{title}</h3>
+            <p className="mt-1 text-xs leading-5 text-muted">{description}</p>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
 
-function DiscoverBar({ canDiscover, onDiscover, label }: { canDiscover: boolean; onDiscover: () => void; label: string }) {
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <button
-        type="button"
-        disabled={!canDiscover}
-        onClick={onDiscover}
-        className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground shadow-sm transition-all hover:bg-brand-200 disabled:opacity-50 max-sm:min-h-[44px]"
-      >
-        <Compass className="size-4" /> {label}
-      </button>
-      <span className="inline-flex items-center gap-1.5 text-[12px] text-muted">
-        <span className="size-1.5 rounded-full bg-emerald-500" />
-        发现岗位免费，只有后续评估会消耗 tokens。
-      </span>
-    </div>
-  );
+const MAX_SCREENSHOTS = 3;
+const MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024;
+
+type ScreenshotAsset = { id: string; name: string; type: string; dataUrl: string };
+
+function readScreenshotAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("读取截图失败"));
+    reader.readAsDataURL(file);
+  });
 }
 
-function SaveSettingsBar({ filters }: { filters: ExploreFilters }) {
-  const [state, setState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+export function ScreenshotEvaluate({ page = "/cn-diagnose" }: { page?: string }) {
+  const { jobs, queueAgentTaskWithAttachments, attachToAgentTask } = useJobs();
+  const [screenshots, setScreenshots] = useState<ScreenshotAsset[]>([]);
+  const [error, setError] = useState("");
+  const [handoff, setHandoff] = useState<AgentTaskHandoff | null>(null);
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const queuingRef = useRef(false);
+  const screenshotKey = screenshots.map((screenshot) => screenshot.name).join(" | ");
+  const taskOpts = useMemo(() => ({
+    title: `评估 · 招聘截图${screenshots.length > 0 ? `（${screenshots.length} 张）` : ""}`,
+    subtitle: "等待用户自己的 Agent 处理",
+    kind: "evaluate",
+    input: `screenshot:${screenshotKey}`,
+    page,
+    attachments: screenshots,
+  }), [page, screenshotKey, screenshots]);
+  const job = useMemo(
+    () => jobs
+      .filter((item) => item.kind === "evaluate" && item.input === taskOpts.input)
+      .sort((a, b) => b.startedAt - a.startedAt)[0],
+    [jobs, taskOpts.input],
+  );
 
-  const save = async () => {
-    if (state === "saving" || filters.positive.length === 0) return;
-    setState("saving");
-    try {
-      const response = await fetch("/api/portals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "save-rules",
-          rules: {
-            positive: filters.positive,
-            negative: filters.negative,
-            allow: filters.allow,
-            block: filters.block,
-            alwaysAllow: filters.alwaysAllow,
-          },
-        }),
-      });
-      if (!response.ok) throw new Error("save failed");
-      setState("saved");
-    } catch {
-      setState("failed");
+  const addScreenshotFiles = useCallback(async (selected: File[]) => {
+    if (!selected.length) return;
+    const remaining = MAX_SCREENSHOTS - screenshots.length;
+    if (remaining <= 0) {
+      setError(`最多上传 ${MAX_SCREENSHOTS} 张招聘截图`);
+      return;
     }
-    window.setTimeout(() => setState("idle"), 1800);
+    const invalidType = selected.find((file) => !["image/png", "image/jpeg", "image/webp"].includes(file.type));
+    if (invalidType) {
+      setError("仅支持 PNG、JPG 和 WebP 图片");
+      return;
+    }
+    const oversized = selected.find((file) => file.size > MAX_SCREENSHOT_BYTES);
+    if (oversized) {
+      setError("单张截图不能超过 8 MB");
+      return;
+    }
+    if (selected.length > remaining) {
+      setError(`最多上传 ${MAX_SCREENSHOTS} 张，当前还可以添加 ${remaining} 张`);
+      return;
+    }
+    const startedAt = Date.now();
+    const next = await Promise.all(selected.map(async (file, index) => ({
+      id: `${startedAt}-${index}-${file.name}`,
+      name: file.name || `招聘截图-${screenshots.length + index + 1}`,
+      type: file.type,
+      dataUrl: await readScreenshotAsDataUrl(file),
+    })));
+    setScreenshots((current) => [...current, ...next].slice(0, MAX_SCREENSHOTS));
+    setError("");
+  }, [screenshots.length]);
+
+  useEffect(() => {
+    function handlePaste(event: ClipboardEvent) {
+      const imageFiles = Array.from(event.clipboardData?.items ?? [])
+        .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+        .map((item) => item.getAsFile())
+        .filter((file): file is File => file !== null);
+      if (!imageFiles.length) return;
+      event.preventDefault();
+      void addScreenshotFiles(imageFiles);
+    }
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [addScreenshotFiles]);
+
+  function showExistingHandoff() {
+    if (!job) return;
+    const attachmentPaths = job.artifacts
+      ?.map((artifact) => artifact.path)
+      .filter((artifactPath) => artifactPath.startsWith("data/task-attachments/"));
+    setHandoff({
+      id: job.id,
+      instruction: buildQueuedTaskInstruction({ ...taskOpts, attachmentPaths }, job.id),
+      attachmentPaths,
+    });
+    setHandoffOpen(true);
+  }
+
+  async function beginHandoff() {
+    if (!screenshots.length || queuingRef.current) return;
+    queuingRef.current = true;
+    setIsSaving(true);
+    setError("");
+    try {
+      const existingAttachmentPaths = job?.artifacts
+        ?.map((artifact) => artifact.path)
+        .filter((artifactPath) => artifactPath.startsWith("data/task-attachments/")) ?? [];
+      if (job && existingAttachmentPaths.length > 0) {
+        showExistingHandoff();
+        return;
+      }
+      const next = job && (
+        job.runStatus === "queued"
+        || job.runStatus === "waiting_input"
+        || job.runStatus === "waiting_approval"
+        || job.status === "running"
+        || isInvalidJob(job)
+      )
+        ? await attachToAgentTask(job.id, taskOpts)
+        : await queueAgentTaskWithAttachments(taskOpts);
+      setHandoff(next);
+      setHandoffOpen(true);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "保存招聘截图失败");
+    } finally {
+      setIsSaving(false);
+      queuingRef.current = false;
+    }
+  }
+
+  return (
+    <div className="mt-5 rounded-card border border-brand/20 bg-surface/55 p-4 sm:p-5" aria-label="招聘截图评估">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <ImageUp className="size-4 text-icon-brand" aria-hidden="true" />
+            招聘截图评估
+          </div>
+          <p className="mt-1 text-xs leading-5 text-muted">上传或粘贴截图后，将保存到当前本地工作区并随任务交给 Agent；不会上传到外部服务。</p>
+        </div>
+        {screenshots.length > 0 && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand-text">已选 {screenshots.length} 张</span>}
+      </div>
+
+      <label className={cn(
+        "mt-4 flex min-h-28 flex-col items-center justify-center rounded-card border border-dashed border-outline-border bg-background/45 p-4 text-center transition-colors",
+        screenshots.length < MAX_SCREENSHOTS ? "cursor-pointer hover:border-outline-border-hover hover:bg-surface-hover" : "cursor-not-allowed opacity-60",
+      )}>
+        <UploadCloud className="size-5 text-icon-brand" aria-hidden="true" />
+        <span className="mt-2 text-sm font-medium text-foreground">{screenshots.length < MAX_SCREENSHOTS ? "上传或粘贴招聘截图" : "已选择 3 张截图"}</span>
+        <span className="mt-1 text-xs text-faint">⌘V / Ctrl+V · PNG / JPG / WebP · 最多 3 张 · 单张不超过 8 MB</span>
+        <input
+          type="file"
+          multiple
+          accept="image/png,image/jpeg,image/webp"
+          disabled={screenshots.length >= MAX_SCREENSHOTS}
+          className="hidden"
+          onChange={(event) => {
+            void addScreenshotFiles(Array.from(event.target.files ?? []));
+            event.currentTarget.value = "";
+          }}
+        />
+      </label>
+
+      {screenshots.length > 0 && (
+        <div className="mt-3 grid grid-cols-3 gap-2" aria-label={`已选择 ${screenshots.length} 张招聘截图`}>
+          {screenshots.map((screenshot, index) => (
+            <div key={screenshot.id} className="group relative overflow-hidden rounded-lg border border-border bg-background">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={screenshot.dataUrl} alt={`招聘截图 ${index + 1}：${screenshot.name}`} className="aspect-[4/3] w-full object-contain" />
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-background/90 px-1.5 py-1 text-[10px] text-muted backdrop-blur-sm">
+                <span className="min-w-0 truncate">{index + 1}. {screenshot.name}</span>
+                <button type="button" onClick={() => setScreenshots((current) => current.filter((item) => item.id !== screenshot.id))} className="grid size-5 shrink-0 place-items-center rounded text-icon-muted hover:bg-surface-hover hover:text-foreground" aria-label={`移除招聘截图 ${index + 1}`}>
+                  <X className="size-3" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          ref={triggerRef}
+          type="button"
+          disabled={!screenshots.length || isSaving}
+          onClick={() => void beginHandoff()}
+          aria-haspopup="dialog"
+          aria-expanded={handoffOpen}
+          className="inline-flex min-h-10 items-center gap-2 rounded-button bg-brand px-4 text-sm font-semibold text-brand-foreground transition-colors hover:bg-brand-200 disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          <Bot className="size-4" aria-hidden="true" />
+          {isSaving ? "正在保存到本地…" : job?.artifacts?.some((artifact) => artifact.path.startsWith("data/task-attachments/")) ? "查看 Agent 指令" : "保存并交给 Agent 评估"}
+        </button>
+        <span className="text-xs leading-5 text-faint">本地保存位置：data/task-attachments/&lt;任务ID&gt;/；评估报告会保留截图和路径。</span>
+      </div>
+      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+
+      <AgentTaskHandoffDialog
+        handoff={handoff}
+        open={handoffOpen}
+        onClose={() => setHandoffOpen(false)}
+        returnFocusRef={triggerRef}
+      />
+    </div>
+  );
+}
+
+export function SearchKeywordsCard({ filters, seededFrom }: { filters: ExploreFilters; seededFrom: string[] }) {
+  const targetRoleValues = selectTargetRoleTags(filters.positive, MAX_TARGET_ROLE_TAGS);
+  const locationValues = Array.from(new Set([...filters.alwaysAllow, ...filters.allow]));
+  return (
+    <Card className="mt-6 p-6 sm:p-7" aria-labelledby="search-keywords-title">
+      <div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand-text">岗位筛选标签</p>
+        <h2 id="search-keywords-title" className="mt-1 font-display text-2xl text-landing">复制已确认的搜索标签</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+          {seededFrom.length > 0
+            ? `已根据 ${seededFrom.join(" + ")} 整理。可直接复制到招聘网站或公司职位搜索框。`
+            : "暂时没有已确认的搜索标签；完善画像后，Agent 可以继续补充。"}
+        </p>
+      </div>
+
+      <div className="mt-6 grid gap-5 md:grid-cols-2">
+        <SearchTagGroup label="目标岗位" values={targetRoleValues} />
+        <SearchTagGroup label="排除关键词" values={filters.negative} tone="negative" />
+      </div>
+
+      <div className="mt-5">
+        <SearchTagGroup label="优先地点" values={locationValues} />
+      </div>
+
+    </Card>
+  );
+}
+
+export function CopyTagValuesButton({ label, values }: { label: string; values: string[] }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    if (values.length === 0) return;
+    try {
+      await navigator.clipboard.writeText(formatJobSearchKeywords(values));
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+    window.setTimeout(() => setCopied(false), 1600);
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <button
-        type="button"
-        disabled={filters.positive.length === 0 || state === "saving"}
-        onClick={() => void save()}
-        className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground shadow-sm transition-all hover:bg-brand-200 disabled:opacity-50 max-sm:min-h-[44px]"
-      >
-        {state === "saved" ? <Check className="size-4" /> : <Save className="size-4" />}
-        {state === "saving" ? "保存中…" : state === "saved" ? "已保存" : "保存设置"}
-      </button>
-      <span className={cn("text-[12px]", state === "failed" ? "text-red-600 dark:text-red-400" : "text-muted")}>
-        {state === "failed" ? "保存失败，请稍后重试。" : "如需改变求职方向，可以让你的Agent修改，自动更新信息"}
-      </span>
-    </div>
+    <button
+      type="button"
+      onClick={() => void copy()}
+      disabled={values.length === 0}
+      className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-button border border-outline-border bg-outline-bg px-2.5 py-1 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover disabled:cursor-not-allowed disabled:opacity-40 max-sm:min-h-11"
+      aria-label={`复制${label}`}
+      title={`复制${label}，可粘贴到招聘平台搜索`}
+    >
+      {copied ? <Check className="size-3.5 text-icon-success" aria-hidden="true" /> : <Copy className="size-3.5" aria-hidden="true" />}
+      {copied ? "已复制" : "复制"}
+    </button>
   );
 }
 
-function EmptyState({ tone, title, body, note, onRerun, rerunLabel }: { tone: "good" | "loose"; title: string; body: string; note?: string; onRerun: () => void; rerunLabel: string }) {
-  return (
-    <div className="rounded-2xl border border-border bg-surface/30 px-6 py-12 text-center">
-      <div className={cn("mx-auto grid size-12 place-items-center rounded-full", tone === "good" ? "bg-emerald-500/12 text-emerald-500" : "bg-brand-soft text-brand")}>
-        <Sparkles className="size-6" />
-      </div>
-      <h2 className={`font-display mt-4 text-2xl text-foreground`}>{title}</h2>
-      <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">{body}</p>
-      {note && <p className="mx-auto mt-1 max-w-md text-[12px] text-faint">{note}</p>}
-      <button onClick={onRerun} className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-outline-border bg-outline-bg px-3.5 py-2 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover">
-        <RotateCcw className="size-4" /> {rerunLabel}
-      </button>
-    </div>
-  );
-}
-
-function DegradedCard({
-  onRetry,
-  companiesScanned,
-  companiesAvailable,
-  capHit,
-  droppedNoDate,
-  partial,
+function SearchTagGroup({
+  label,
+  values,
+  tone = "positive",
 }: {
-  onRetry: () => void;
-  companiesScanned: number;
-  companiesAvailable: number;
-  capHit: boolean;
-  droppedNoDate: number;
-  partial: boolean;
+  label: string;
+  values: string[];
+  tone?: "positive" | "negative";
 }) {
-  let title = "尚未配置可扫描的目标公司官网。";
-  let body = "请先在“岗位来源”中为目标公司添加公开招聘网址；需要登录或授权的来源不会参与扫描。";
-  if (companiesScanned > 0 && capHit) {
-    title = "当前扫描范围内没有匹配结果。";
-    body = `本次检查了 ${companiesScanned.toLocaleString()}${companiesAvailable > companiesScanned ? ` / ${companiesAvailable.toLocaleString()}` : ""} 家目标公司。`;
-  } else if (companiesScanned > 0 && droppedNoDate > 0) {
-    title = "部分岗位缺少发布日期。";
-    body = `${droppedNoDate.toLocaleString()} 个岗位没有明确发布日期。`;
-  } else if (companiesScanned > 0 && partial) {
-    title = "部分公司官网无法访问。";
-    body = `已检查 ${companiesScanned.toLocaleString()} 家公司，但部分公开招聘页没有响应，因此当前结果不完整。`;
-  }
   return (
-    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 text-center">
-      <AlertTriangle className="mx-auto size-6 text-icon-warning" />
-      <p className="mt-2 text-sm font-medium text-foreground">{title}</p>
-      <p className="mx-auto mt-1 max-w-md text-[13px] text-muted">{body}</p>
-      <button onClick={onRetry} className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-brand-soft px-3 py-1.5 text-sm font-medium text-brand">
-        <RotateCcw className="size-4" /> 重新扫描
-      </button>
-    </div>
-  );
-}
-
-function CappedBanner({ companiesScanned, companiesAvailable, onRefine }: { companiesScanned: number; companiesAvailable: number; onRefine: () => void }) {
-  // Results ARE present, but the scan was capped — tell the user there's more, so a
-  // partial list never reads as "everything there is".
-  return (
-    <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-4 py-2.5 text-[13px]">
-      <span className="text-foreground">
-        当前仅展示受限范围：已扫描 {companiesScanned.toLocaleString()}
-        {companiesAvailable > companiesScanned ? ` / ${companiesAvailable.toLocaleString()}` : ""} 家公司。
-      </span>
-      <button onClick={onRefine} className="font-medium text-brand hover:underline">
-        提高扫描深度
-      </button>
-    </div>
-  );
-}
-
-function FailedCard({ msg, onRetry }: { msg: string; onRetry: () => void }) {
-  // The scanner-missing 400 (data-only / pre-scan-ats-full checkout) must NOT
-  // offer a "Try again" that re-fails forever — give a real next step instead.
-  const scannerMissing = /isn'?t available|data only|complete career-(?:one|ops) checkout|scanner|扫描器不可用/i.test(msg);
-  if (scannerMissing) {
-    return (
-      <div className="rounded-2xl border border-border bg-surface/30 px-6 py-10 text-center">
-        <div className="mx-auto grid size-12 place-items-center rounded-full bg-brand-soft text-brand">
-          <Compass className="size-6" />
-        </div>
-        <h2 className={`font-display mt-4 text-2xl text-foreground`}>岗位发现需要完整工作区</h2>
-        <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">
-          当前择程AI工作区可能只有数据文件，或版本较旧。请先更新完整工具，或者直接在求职进度中粘贴岗位链接进行评估。
-        </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Link href="/pipeline" className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-brand-foreground transition hover:brightness-110">
-            打开求职进度
-          </Link>
-          <Link href="/config" className="inline-flex items-center gap-1.5 rounded-lg border border-outline-border bg-outline-bg px-3.5 py-2 text-sm font-medium text-outline-text transition hover:border-outline-border-hover hover:bg-outline-bg-hover">
-            打开设置
-          </Link>
-        </div>
+    <section aria-label={label}>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-foreground">{label}</h3>
+        <CopyTagValuesButton label={label} values={values} />
       </div>
-    );
-  }
-  return (
-    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 text-center">
-      <AlertTriangle className="mx-auto size-6 text-icon-warning" />
-      <p className="mt-2 text-sm font-medium text-foreground">未能完成搜索。</p>
-      <p className="mt-1 text-[13px] text-muted">{msg}</p>
-      <button onClick={onRetry} className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-brand-soft px-3 py-1.5 text-sm font-medium text-brand">
-        <RotateCcw className="size-4" /> 重试
-      </button>
-    </div>
-  );
-}
-
-function BlockedCard() {
-  return (
-    <div className="rounded-2xl border border-border bg-surface/30 px-6 py-12 text-center">
-      <div className="mx-auto grid size-12 place-items-center rounded-full bg-brand-soft text-brand">
-        <Sparkles className="size-6" />
+      <div className="mt-2 flex min-h-10 flex-wrap content-center gap-2 rounded-card border border-border bg-surface/40 p-2.5">
+        {values.length > 0 ? values.map((value) => (
+          <span
+            key={value}
+            className={cn(
+              "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
+              tone === "positive"
+                ? "border-brand/35 bg-brand-soft text-brand-text"
+                : "border-border bg-surface-hover text-muted",
+            )}
+          >
+            {value}
+          </span>
+        )) : <span className="px-1 text-xs text-faint">暂无已确认标签</span>}
       </div>
-      <h2 className={`font-display mt-4 text-2xl text-foreground`}>AI 搜索需要 Agent CLI</h2>
-      <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">
-        请连接 Codex、Claude Code、OpenCode 等 Agent CLI。没有 CLI 时仍可使用算法扫描。
-      </p>
-      <Link href="/config" className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-brand-foreground transition hover:brightness-110">
-        <Settings className="size-4" /> 打开设置
-      </Link>
-    </div>
+    </section>
   );
 }

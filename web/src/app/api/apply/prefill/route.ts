@@ -77,7 +77,7 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return Response.json({ error: "bad json" }, { status: 400 });
+    return Response.json({ error: "请求格式不正确" }, { status: 400 });
   }
   const { sessionId, cliId } = body;
   const t0 = Date.now();
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
         }
       };
       const fail = (m: string, raw?: string) => {
-        log(`ERROR: ${m}`);
+        log(`错误：${m}`);
         emit({ t: "error", m, raw });
         controller.close();
       };
@@ -119,9 +119,9 @@ export async function POST(req: Request) {
       }
 
       const s = sessionId ? getSession(sessionId) : undefined;
-      if (!s) return fail("apply session not found (it may have expired)");
+      if (!s) return fail("未找到申请会话，它可能已经过期");
       const resolved = cliId ? resolveCli(cliId) : null;
-      if (!resolved) return fail(`CLI '${cliId}' not found on this machine`);
+      if (!resolved) return fail(`未找到 Agent CLI“${cliId}”，请先安装或在设置中选择其他 CLI`);
       const { spec, binPath } = resolved;
 
       const fieldsList = s.fields
@@ -141,8 +141,8 @@ For each field give the best answer:
 
 Output ONLY a compact JSON object mapping each field id → {"value": "...", "needs_confirmation": boolean}. No prose, no markdown, no code fence.`;
 
-      log(`Form: "${s.title}" · ${s.fields.length} fields · prompt ${prompt.length} chars · memory ${mem.length} chars`);
-      log(`Planner: ${cliId} (${binPath})`);
+      log(`表单：“${s.title}” · ${s.fields.length} 个字段 · 指令 ${prompt.length} 字符 · 用户资料 ${mem.length} 字符`);
+      log(`规划 Agent：${cliId}（${binPath}）`);
 
       const isClaude = cliId === "claude";
       // --strict-mcp-config with no --mcp-config = load ZERO MCP servers → much
@@ -153,7 +153,7 @@ Output ONLY a compact JSON object mapping each field id → {"value": "...", "ne
         : spec.args(prompt);
       // Scale the timeout with form size (big forms = more drafting). Cap < maxDuration.
       const killMs = Math.min(300_000, 150_000 + s.fields.length * 6_000);
-      log(`Spawning planner (timeout ${Math.round(killMs / 1000)}s)…`);
+      log(`正在启动规划 Agent（超时 ${Math.round(killMs / 1000)} 秒）…`);
 
       const result = await new Promise<{ buf: string; code: number | null; signal: NodeJS.Signals | null }>((resolve) => {
         // stdin = /dev/null so the CLI doesn't wait 3s for piped input.
@@ -161,21 +161,21 @@ Output ONLY a compact JSON object mapping each field id → {"value": "...", "ne
         let buf = "";
         let firstByteAt = 0;
         const hb = setInterval(() => {
-          log(`…running ${Math.round((Date.now() - t0) / 1000)}s · ${buf.length} chars received`);
+          log(`…已运行 ${Math.round((Date.now() - t0) / 1000)} 秒 · 已接收 ${buf.length} 个字符`);
         }, 4000);
         child.stdout.on("data", (d: Buffer) => {
           if (!firstByteAt) {
             firstByteAt = Date.now();
-            log(`first output byte at ${Math.round((firstByteAt - t0) / 1000)}s`);
+            log(`首次收到输出：${Math.round((firstByteAt - t0) / 1000)} 秒`);
           }
           buf += d.toString();
         });
         child.stderr.on("data", (d: Buffer) => {
           const e = d.toString().trim();
-          if (e) log(`stderr: ${e.slice(0, 160).replace(/\s+/g, " ")}`);
+          if (e) log(`CLI 错误输出：${e.slice(0, 160).replace(/\s+/g, " ")}`);
         });
         const killer = setTimeout(() => {
-          log("TIMEOUT reached → SIGTERM");
+          log("已达到超时时间，正在终止任务");
           try {
             child.kill("SIGTERM");
           } catch {
@@ -190,28 +190,28 @@ Output ONLY a compact JSON object mapping each field id → {"value": "...", "ne
         child.on("error", (e) => {
           clearTimeout(killer);
           clearInterval(hb);
-          log(`spawn error: ${e.message}`);
+          log(`启动失败：${e.message}`);
           resolve({ buf, code: null, signal: null });
         });
       });
 
-      log(`Planner exited code=${result.code} signal=${result.signal} · ${result.buf.length} chars total`);
-      log(`output head: ${result.buf.slice(0, 100).replace(/\s+/g, " ") || "(empty)"}`);
-      log(`output tail: ${result.buf.slice(-100).replace(/\s+/g, " ") || "(empty)"}`);
+      log(`规划 Agent 已退出：代码=${result.code}，信号=${result.signal} · 共 ${result.buf.length} 个字符`);
+      log(`输出开头：${result.buf.slice(0, 100).replace(/\s+/g, " ") || "（空）"}`);
+      log(`输出末尾：${result.buf.slice(-100).replace(/\s+/g, " ") || "（空）"}`);
 
       if (!result.buf.trim()) {
-        return fail(result.signal ? "planner was killed before producing any output (try again / smaller form)" : "planner produced no output (check the CLI works in this folder)");
+        return fail(result.signal ? "规划 Agent 在输出前被终止，请重试或减少表单字段" : "规划 Agent 没有返回内容，请确认所选 CLI 能在当前目录正常运行");
       }
 
       const { obj, truncated } = extractJsonObject(result.buf);
       if (!obj) {
         return fail(
-          result.signal ? "planner was killed mid-answer (form too large/slow) — couldn't recover any fields" : "couldn't parse the planner's answer as JSON",
+          result.signal ? "规划 Agent 在回答途中被终止，表单可能过大或处理过慢，未能恢复任何字段" : "无法将规划 Agent 的回答解析为 JSON",
           result.buf.slice(-300),
         );
       }
       const count = Object.keys(obj).length;
-      log(`Parsed ${count} answers${truncated ? " (RECOVERED from truncated output — some fields may be missing)" : ""}`);
+      log(`已解析 ${count} 个答案${truncated ? "（从截断输出中恢复，部分字段可能缺失）" : ""}`);
       emit({ t: "done", answers: obj, truncated, count });
       controller.close();
     },

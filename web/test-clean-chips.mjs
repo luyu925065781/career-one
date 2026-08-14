@@ -6,7 +6,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cleanChips, formatJobSearchKeywords } from "./src/lib/clean-chips.mjs";
+import { cleanChips, formatJobSearchKeywords, selectTargetRoleTags } from "./src/lib/clean-chips.mjs";
 
 /** Split a raw input string the same way filter-builder's commit() does —
  *  on unambiguous item separators only (never bare spaces). */
@@ -99,6 +99,29 @@ test("drops blank and duplicate target roles before copying", () => {
 
 test("returns an empty copy value when no target role is configured", () => {
   assert.equal(formatJobSearchKeywords([]), "");
+});
+
+test("target role suggestions prefer Chinese labels before English labels", () => {
+  assert.deepEqual(
+    selectTargetRoleTags([
+      "Agent Engineer",
+      "资深 Agent 工程师",
+      "Agent Platform Engineer",
+      "Agent 工程师",
+      "智能体工程师",
+      "AI Platform Engineer",
+      "智能体平台工程师",
+      "大模型平台工程师",
+    ]),
+    ["资深 Agent 工程师", "Agent 工程师", "智能体工程师", "智能体平台工程师", "大模型平台工程师"],
+  );
+});
+
+test("target role suggestions use English labels only to fill remaining slots", () => {
+  assert.deepEqual(
+    selectTargetRoleTags(["Agent Engineer", "智能体工程师", "AI Platform Engineer", "Agent 工程师"], 5),
+    ["智能体工程师", "Agent 工程师", "Agent Engineer", "AI Platform Engineer"],
+  );
 });
 
 test("'12345' → 1 chip (has digits)", () => {

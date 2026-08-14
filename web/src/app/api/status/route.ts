@@ -15,18 +15,18 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "bad json" }, { status: 400 });
+    return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
   }
   const { n, status } = body;
   if (!n || typeof status !== "string" || !status.trim()) {
-    return NextResponse.json({ error: "n and status required" }, { status: 400 });
+    return NextResponse.json({ error: "缺少岗位编号或目标状态" }, { status: 400 });
   }
   if (/[|\r\n*]/.test(status)) {
-    return NextResponse.json({ error: "invalid status (table-breaking characters)" }, { status: 400 });
+    return NextResponse.json({ error: "状态包含不允许的字符" }, { status: 400 });
   }
   const canon = canonicalizeStatus(status);
   if (!canon) {
-    return NextResponse.json({ error: `not a canonical status: ${status}` }, { status: 400 });
+    return NextResponse.json({ error: `不支持的求职状态：${status}` }, { status: 400 });
   }
 
   const file = path.join(careerOneRoot(), "data", "applications.md");
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   try {
     md = fs.readFileSync(file, "utf8");
   } catch {
-    return NextResponse.json({ error: "tracker not found" }, { status: 404 });
+    return NextResponse.json({ error: "未找到求职进度数据" }, { status: 404 });
   }
 
   const lines = md.split("\n");
@@ -63,12 +63,12 @@ export async function POST(req: Request) {
     changed = true;
     break;
   }
-  if (!changed) return NextResponse.json({ error: "row not found" }, { status: 404 });
+  if (!changed) return NextResponse.json({ error: "未找到对应的求职记录" }, { status: 404 });
 
   try {
     atomicWrite(file, lines.join("\n"));
   } catch {
-    return NextResponse.json({ error: "write failed" }, { status: 500 });
+    return NextResponse.json({ error: "状态保存失败，请稍后重试" }, { status: 500 });
   }
   return NextResponse.json({ ok: true, status: canon });
 }

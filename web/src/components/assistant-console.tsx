@@ -10,7 +10,6 @@ import { CoMark } from "@/components/co-mark";
 import { useJobs } from "@/components/jobs/job-store";
 import { usePipeline } from "@/components/pipeline/pipeline-provider";
 import { useApply } from "@/components/apply/apply-provider";
-import { useExplore } from "@/components/explore/explore-provider";
 import { WorkerCard } from "@/components/jobs/worker-card";
 import { dispatch, type ActionCtx, type DoneInfo } from "@/app/actions/registry";
 import { scoreNum } from "@/lib/format";
@@ -148,9 +147,6 @@ export function AssistantConsole() {
   pipelineRef.current = pipeline;
   const applyRef = useRef(apply);
   applyRef.current = apply;
-  const explore = useExplore();
-  const exploreRef = useRef(explore);
-  exploreRef.current = explore;
   const handledRef = useRef<Set<string>>(new Set());
   const confirmRuns = useRef<Map<string, () => DoneInfo>>(new Map());
 
@@ -277,7 +273,6 @@ export function AssistantConsole() {
         router.push("/apply");
         setTimeout(() => applyRef.current.open(u), 60);
       },
-      applyExplore: (patch, opts) => exploreRef.current.applyPatch(patch, opts),
       writeProfile: (patch) => {
         fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) })
           .then(() => router.refresh())
@@ -418,9 +413,9 @@ export function AssistantConsole() {
           }
         }
       }
-      if (!acc.trim()) setStreamText("_(no output — is the CLI authenticated?)_");
+      if (!acc.trim()) setStreamText("_(Agent CLI 没有返回内容，请确认所选 CLI 已完成登录。)_");
     } catch {
-      setStreamText("⚠️ Connection error.");
+      setStreamText("⚠️ 连接中断，请检查 Agent CLI 后重试。");
     } finally {
       setBusy(false);
       router.refresh();
@@ -560,7 +555,7 @@ export function AssistantConsole() {
             <Link
               href="/config"
               onClick={() => setOpen(false)}
-              className="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-border bg-surface/50 px-3 py-2 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+              className="mx-4 mb-2 flex items-center gap-2 rounded-button border border-border bg-surface/50 px-3 py-2 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
             >
               <Settings className="size-3.5" /> 请先在设置中选择 Agent →
             </Link>

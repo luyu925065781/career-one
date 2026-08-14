@@ -71,6 +71,35 @@ export function isEvaluationIntent(intent: string | null | undefined): boolean {
   return EVALUATION_INTENTS.has((intent ?? "").trim().toLowerCase());
 }
 
+const USER_MESSAGE_TRANSLATIONS: Record<string, string> = {
+  "The CLI produced no output — is it installed and authenticated?":
+    "Agent CLI 没有返回任何内容。请确认所选 CLI 已安装并完成登录，然后重试。",
+  "The CLI exited with an error — is it installed and authenticated?":
+    "Agent CLI 异常退出。请确认所选 CLI 已安装并完成登录，然后重试。",
+  "This evaluation didn't save a report, so it's not in your tracker. Check that the selected CLI can write to the workspace.":
+    "本次岗位评估未保存报告，因此没有加入求职进度。请确认所选 CLI 拥有当前工作区的写入权限，然后重试。",
+  "This run hit an error before finishing, so it isn't recorded as a confident result — re-run it to verify.":
+    "本次任务在完成前发生错误，结果未被记录。请重试以确认结果。",
+  "Interrupted (page reloaded)": "页面重新加载，任务已中断",
+  "Failed to start": "任务启动失败，请重试",
+  "Connection error": "连接中断，请检查 Agent CLI 后重试",
+  "Agent ready": "Agent 已就绪",
+  Done: "任务已完成",
+  Error: "任务执行失败",
+  "_(no output — is the CLI authenticated?)_": "_(Agent CLI 没有返回内容，请确认所选 CLI 已完成登录。)_",
+};
+
+/** Translate product-authored legacy feedback at render time so historical
+ * tasks saved before the Chinese UI migration do not keep leaking English. */
+export function localizeUserMessage(message: string): string {
+  const normalized = message.trim();
+  const exact = USER_MESSAGE_TRANSLATIONS[normalized];
+  if (exact) return exact;
+  const missingCli = normalized.match(/^CLI '([^']+)' not found(?: on this machine)?$/);
+  if (missingCli) return `未找到 Agent CLI“${missingCli[1]}”，请先安装或在设置中选择其他 CLI。`;
+  return message;
+}
+
 const REPORT_SECTION_PREVIEW_LENGTH = 96;
 const ORDERED_LIST_ITEM = /^\s*\d+\s*[.)、）]\s*(.*)$/;
 
@@ -169,12 +198,13 @@ const FIELD_KEYS: Record<string, string> = {
   legitimacy: "Legitimacy",
   legitimidad: "Legitimacy",
   pdf: "PDF",
+  screenshots: "Screenshots",
 };
 
 /**
  * Tolerant report parser (per maintainer: adapt the render, don't migrate the
  * old data). Extracts the bold key/value header fields (Date/URL/Archetype/
- * Score/Legitimacy/PDF) when present and returns the body without the header
+ * Score/Legitimacy/PDF/Screenshots) when present and returns the body without the header
  * block. Degrades gracefully on legacy reports that lack some fields.
  */
 export function parseReport(md: string): ReportMeta {

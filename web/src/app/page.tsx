@@ -3,20 +3,17 @@ import {
   doctorState,
   readFollowupSnapshot,
   readFreshOffers,
+  readStoryBank,
 } from "@/lib/career-one";
-import { OnboardingBanner } from "@/components/onboarding-banner";
-import { FirstRunHome } from "@/components/home/first-run-home";
 import { TodayDashboard } from "@/components/home/today-dashboard";
 
 export const dynamic = "force-dynamic"; // always read fresh local files at request time (never at build — CI has no user data)
 
 export default async function Home() {
-  const { phase, onboardingNeeded } = doctorState();
-  // First run (truly empty install): the CV-upload takeover IS the home — value
-  // before commitment. The full dashboard returns once they have a CV or any data.
-  if (phase === "first-run") return <FirstRunHome />;
-
+  const { missing, hasCv } = doctorState();
   const { inbox, applications } = pipelineSummary();
+  const stories = readStoryBank().stories;
+  const storyCount = stories.length;
   const [followupSnapshot, initialFresh] = await Promise.all([
     readFollowupSnapshot(),
     readFreshOffers(),
@@ -24,20 +21,19 @@ export default async function Home() {
   const initialFollowupCount =
     (followupSnapshot.metadata?.overdue ?? 0)
     + (followupSnapshot.metadata?.urgent ?? 0);
-  // Established / in-between: the dual-loop retention dashboard. Show the setup
-  // banner whenever ANY prereq is missing (mirrors the core doctor.mjs), so a
-  // portals-missing user is nudged rather than told "all caught up".
+  // Every lifecycle phase shares the same Dashboard. A truly empty workspace
+  // starts at 0/6 in the onboarding card instead of being diverted to a separate
+  // first-run page; the explicit profile step precedes interview stories.
   return (
-    <>
-      {onboardingNeeded && <OnboardingBanner />}
-      <TodayDashboard
-        applications={applications}
-        inbox={inbox}
-        inBetween={phase === "in-between"}
-        initialFollowups={followupSnapshot.entries}
-        initialFollowupCount={initialFollowupCount}
-        initialFresh={initialFresh}
-      />
-    </>
+    <TodayDashboard
+      applications={applications}
+      inbox={inbox}
+      hasCv={hasCv}
+      storyCount={storyCount}
+      setupMissing={missing}
+      initialFollowups={followupSnapshot.entries}
+      initialFollowupCount={initialFollowupCount}
+      initialFresh={initialFresh}
+    />
   );
 }

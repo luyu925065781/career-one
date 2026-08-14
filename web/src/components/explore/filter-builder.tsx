@@ -174,11 +174,6 @@ export function FilterBuilder({
         )}
       </div>
 
-      <div>
-        <Label action={<CopyKeywordsButton values={filters.negative} label="排除岗位" />}>排除岗位</Label>
-        <KeywordField values={filters.negative} tone="exc" placeholder="销售、外包、纯开发…" onChange={(v) => set({ negative: v })} />
-      </div>
-
       <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
         <div>
           <Label hint="官网提供日期时按此筛选">
@@ -231,17 +226,19 @@ export function FilterBuilder({
       <button
         type="button"
         onClick={() => setAdvanced((v) => !v)}
-        className="inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-foreground transition-colors max-sm:min-h-[44px]"
+        aria-expanded={advanced}
+        aria-controls="explore-location-filters"
+        className="inline-flex items-center gap-1.5 text-[12px] text-muted transition-colors hover:text-foreground max-sm:min-h-[44px]"
       >
-        <SlidersHorizontal className="size-3.5 text-icon-muted" />
+        <SlidersHorizontal className="size-3.5 text-icon-muted" aria-hidden="true" />
         地区与扫描范围
-        <ChevronDown className={cn("size-3.5 text-icon-muted transition-transform", advanced && "rotate-180")} />
+        <ChevronDown className={cn("size-3.5 text-icon-muted transition-transform", advanced && "rotate-180")} aria-hidden="true" />
       </button>
 
       {advanced && (
-        <div className="space-y-3 rounded-xl border border-border bg-surface/30 p-3">
+        <div id="explore-location-filters" className="space-y-3 rounded-xl border border-border bg-surface/30 p-3">
           <div className="flex items-center gap-1.5 text-[12px] text-muted">
-            <MapPin className="size-3.5 text-icon-muted" /> 地区
+            <MapPin className="size-3.5 text-icon-muted" aria-hidden="true" /> 地区
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div>

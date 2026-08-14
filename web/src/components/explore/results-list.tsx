@@ -11,8 +11,7 @@ import { useExplore } from "./explore-provider";
 export type EnrichedOffer = DiscoveredOffer & { inPipeline: boolean; evaluatedN?: string };
 
 export function ResultsList({ offers }: { offers: EnrichedOffer[] }) {
-  const { companiesScanned, partial, addToPipeline, added, mode } = useExplore();
-  const isAi = mode === "ai";
+  const { companiesScanned, partial, addToPipeline, added } = useExplore();
   const [sort, setSort] = useState<"fresh" | "company">("fresh");
   const [q, setQ] = useState("");
 
@@ -33,13 +32,11 @@ export function ResultsList({ offers }: { offers: EnrichedOffer[] }) {
       <div className="flex flex-wrap items-center gap-3">
         <div>
           <p className="text-sm text-foreground">
-            <span className="font-semibold">{offers.length}</span> 个{isAi ? "候选岗位" : "新岗位"}
-            <CostBadge kind={isAi ? "spend" : "free-network"} size="xs" className="ml-2 align-middle" />
+            <span className="font-semibold">{offers.length}</span> 个新岗位
+            <CostBadge kind="free-network" size="xs" className="ml-2 align-middle" />
           </p>
           <p className="text-[12px] text-faint">
-            {isAi
-              ? "由 Agent 从公开信息中发现 · 评估前尚未验证"
-              : `${companiesScanned > 0 ? `已扫描 ${companiesScanned.toLocaleString()} 家公司 · ` : ""}消耗 0 tokens${partial ? " · 部分渠道暂时无法访问" : ""}`}
+            {`${companiesScanned > 0 ? `已扫描 ${companiesScanned.toLocaleString()} 家公司 · ` : ""}消耗 0 tokens${partial ? " · 部分渠道暂时无法访问" : ""}`}
           </p>
         </div>
 

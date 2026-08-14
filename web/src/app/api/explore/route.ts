@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   // Guard: a data-only checkout (or pre-onboarding) has no scanner. Fail soft.
   if (!fs.existsSync(rootScript("scan"))) {
     return Response.json(
-      { error: "The discovery scanner isn't available in this checkout yet." },
+      { error: "当前工作区暂不包含岗位扫描器，请更新择程AI后重试。" },
       { status: 400 },
     );
   }
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       try {
         offers = await runDiscovery(filters, (e: ScanEvent) => send(e));
       } catch (err) {
-        send({ kind: "error", message: err instanceof Error ? err.message : "discovery failed" } satisfies ScanEvent);
+        send({ kind: "error", message: err instanceof Error ? err.message : "岗位发现失败，请稍后重试" } satisfies ScanEvent);
       }
       send({ kind: "done", count: offers.length, offers, cost: { tokens: 0, usd: 0 } } satisfies ScanEvent);
       controller.close();

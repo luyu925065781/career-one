@@ -12,6 +12,7 @@ data/pdf-index.tsv
 data/agent-inbox.md
 data/agent-runs.json
 data/.agent-runs.lock
+data/task-attachments/
 data/reply-candidates.json
 data/parser-output/**/*.json
 !data/parser-output/.gitkeep
@@ -111,8 +112,6 @@ data/model-blacklist.json
 .opencode/memory/
 career-dashboard
 career-dashboard.exe
-package-lock.json
-!web/package-lock.json
 
 # Playwright MCP server run artifacts (ephemeral, machine-local)
 .playwright-mcp/

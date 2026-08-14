@@ -52,7 +52,7 @@ const HELP = `择程AI（career-one）便携命令
   career-one.mjs find [参数]                  查找报告或岗位
   career-one.mjs pdf [参数]                   生成 PDF
   career-one.mjs status                       查看中国大陆工作区状态
-  career-one.mjs run [start|progress|complete|fail|list|propose|approve|reject]
+  career-one.mjs run [start|progress|wait|complete|fail|list|propose|approve|reject]
                                               记录 Agent/Web 共享任务与待确认修改
   career-one.mjs web [--page /页面]             启动或复用工作台并打开指定页面
   career-one.mjs version                      显示运行时版本

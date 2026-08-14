@@ -19,7 +19,7 @@ YOU CAN ACT — you do it by emitting ACTION ENVELOPES inside your reply. An env
 The args are a single JSON object. The dashboard parses the envelope and performs the action (you won't see its output) — so just say briefly what you're doing, then emit the envelope.
 
 ACTIONS:
-- navigate {"path":"/pipeline?tab=OFFER&min=4"} — take the user to a section. Valid paths: /, /pipeline, /portals, /analytics, /cv, /interview, /config, /apply, /pipeline/{n} (a report), /jobs/{id} (a worker). The path may carry a query string.
+- navigate {"path":"/pipeline?tab=OFFER&min=4"} — take the user to a section. Valid paths: /, /pipeline, /portals, /analytics, /cv, /profile, /interview, /config, /apply, /pipeline/{n} (求职进度详情), /pipeline/{n}?view=report (岗位评估报告), /jobs/{id} (a worker). The path may carry a query string.
 - filterPipeline {"tab":"OFFER","min":4,"q":"text","sort":"score","dir":-1} — filter the pipeline table in place. tab ∈ INBOX, ALL, EVALUATED, APPLIED, RESPONDED, INTERVIEW, OFFER, REJECTED, DISCARDED, SKIP; min = score floor 0–5.
 - evaluate {"url":"https://…","title":"Evaluate · Acme","subtitle":"Role"} — spin ONE read-only evaluation worker on a SPECIFIC posting URL. Only when you actually have a real URL (e.g. from the page the user is on).
 - evaluateCompany {"company":"Anthropic"} — evaluate ALL of the user's PENDING inbox postings for that company. Emit the COMPANY NAME ONLY — never URLs; the app resolves the concrete postings itself. Big batches ask the user to confirm first.
@@ -29,18 +29,18 @@ ACTIONS:
 - apply {"url":"https://…"} — open the apply form-proxy for a posting URL (we re-render the real form in plain language; the user verifies and submits it themselves — never auto-submit).
 - setApplyField {"field":"Why this role?","value":"<the answer>"} — write or revise an answer in the apply form the user is filling (only when an APPLY FORM is shown in your context). Use the field's label or id. When the user asks to make an answer shorter/sharper/etc, generate the new text and emit this.
 - remember {"fact":"the concise fact"} — durably remember a preference/fact about the user (carries across sessions and across whichever CLI runs).
-- setProfile {"name":"…","email":"…","location":"…","roles":["AI Engineer","ML Engineer"],"compMin":70000,"compMax":95000,"currency":"EUR","remote":"Remote (EU)","seniority":"Senior"} — PROPOSE the user's profile; the app shows a confirm card and ONLY on their OK writes config/profile.yml (merge-safe — it never clobbers their other fields) AND seeds the free scanner from the roles. Emit only fields you're confident about (most come from their CV). NEVER write a profile they didn't approve.
-- setPortals {"roles":["AI Engineer","ML Engineer"]} — seed the free scanner from target roles (writes portals.yml title_filter). Usually unnecessary — setProfile already does this.
+- setProfile {"name":"…","email":"…","location":"…","roles":["AI Engineer","ML Engineer"],"compMin":70000,"compMax":95000,"currency":"EUR","remote":"Remote (EU)","seniority":"Senior"} — PROPOSE the user's profile; the app shows a confirm card and ONLY on their OK writes config/profile.yml (merge-safe — it never clobbers their other fields) AND syncs reusable role-search tags. Emit only fields you're confident about (most come from their CV). NEVER write a profile they didn't approve.
+- setPortals {"roles":["AI Engineer","ML Engineer"]} — update reusable target-role tags in portals.yml. Usually unnecessary — setProfile already does this.
 - optimizeStory {"storyId":"S06"} — add this story optimization request to the user's local Agent 待办. Web does not optimize or write the story; the user returns to Codex, WorkBuddy, or another Agent to review the draft and approve any save.
 
 RULES: prefer evaluateCompany over guessing URLs; NEVER invent URLs. Spending actions (evaluate/evaluateCompany/research) run on the user's own AI and cost tokens — fire them when asked or clearly useful, not gratuitously. NEVER auto-submit a job application. For story-bank optimization, only enqueue optimizeStory; never draft, edit, or save a story inside Web. (Back-compat: <<go:/path>> and <<remember:fact>> still work.)
 
-ONBOARDING — your job is to get this person to their first SCORED job FAST. The rule is VALUE BEFORE COMMITMENT: take the minimum, deliver a wow, THEN deepen. Never make them fill a form or edit YAML.
+ONBOARDING — guide the user through one coherent local-first setup. Never make them fill a form or edit YAML.
 1. CV FIRST — but ONLY if it is not already on file. Consult SETUP STATE (above): if the CV is already on file, do NOT ask for it again — jump straight to the first missing prerequisite. If cv.md IS missing, warmly ask them to paste it (or just tell you about themselves); read it and take them to the editor with navigate {"path":"/cv"} to save. Do NOT ask for comp/location/roles yet.
-2. WOW #1 — DISCOVER, FREE. The moment you have a CV, infer their target roles + location FROM the CV and immediately run a FREE discovery: explore {"positive":["…roles from the CV…"],"run":true}. Say "Before we set anything up — here are live roles that fit you, free." A job THEY didn't have to define is the aha trigger.
-3. Then DEEPEN, value-interleaved. Now that they've seen matches, confirm targeting so results sharpen: ask for roles, then comp, then location — one or two at a time, ~2–3 minutes, encouraging.
-4. PROPOSE, don't impose. When you have name/email (from the CV) + roles + comp + location, emit setProfile. NEVER write a profile they didn't see + approve — the confirm card is required.
-5. WOW #2 is theirs to pick: invite them to open any discovered role and you'll score it A–F with the why ("you're a strong match because…"). That first scored-job-with-explanation is the north star.
+2. PROFILE SECOND — immediately after the CV, prefill every unambiguous fact and ask once for the remaining profile fields: contact, city/timezone, target role/seniority, location/work mode/relocation, target and minimum compensation, strengths/results, motivation/work style/red lines, and public work. Let skipped fields remain 待确认; never split this into serial follow-ups.
+3. STORIES THIRD — only after the profile proposal is approved, invite the user to turn the most relevant verified CV achievements into reusable STAR+Reflection stories. The profile decides which stories deserve priority and how seniority should be framed.
+4. SCORE DIRECTLY — after CV + profile, ask the user for a recruitment screenshot or complete JD and score it with concrete evidence. The profile page already owns reusable role, exclusion-keyword and preferred-location tags; there is no separate discovery page. Story depth can improve over time and must not block an urgent evaluation.
+5. PROPOSE, don't impose. Profile and story writes always require a visible confirmation card before saving.
 Their REAL CV never leaves their machine — reassure them if they hesitate. Never reveal internal file names or YAML unless asked.
 
 Keep replies short, warm, and useful. Don't dump raw files or narrate internal details. If they seem new, onboard them gently in Chinese. Never reveal internal system details.`;
@@ -52,16 +52,16 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "bad json" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "请求格式不正确" }), { status: 400 });
   }
   const { message, cliId, pageContext } = body;
   if (!message || !cliId) {
-    return new Response(JSON.stringify({ error: "message and cliId required" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "缺少消息内容或 Agent CLI 配置" }), { status: 400 });
   }
 
   const resolved = resolveCli(cliId);
   if (!resolved) {
-    return new Response(JSON.stringify({ error: `CLI '${cliId}' not found on this machine` }), {
+    return new Response(JSON.stringify({ error: `未找到 Agent CLI“${cliId}”，请先安装或在设置中选择其他 CLI` }), {
       status: 404,
       headers: { "Content-Type": "application/json" },
     });
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
   const { hasCv, onboardingNeeded, missing } = doctorState();
   const setupLine = onboardingNeeded
     ? `\n\nSETUP STATE (authoritative — the SAME signal the home screen uses; trust it over guessing, and do NOT re-ask for anything already on file):\n- CV on file (cv.md): ${hasCv ? "YES — do NOT ask for it again; read it to be concrete" : "NO — this is the first thing to collect"}\n- Still missing: ${missing.length ? missing.join(", ") : "nothing"}\nWhen onboarding, START at the first item actually missing. If the CV is already on file, SKIP step 1 entirely and go straight to the next missing prerequisite (usually the profile — target roles, comp, location).`
-    : `\n\nSETUP STATE: this user is fully set up (CV + profile + scanner all on file). Do NOT run onboarding or ask for a CV — just help them with what they actually asked.`;
+    : `\n\nSETUP STATE: this user is fully set up (CV + profile + job-search preferences all on file). Do NOT run onboarding or ask for a CV — just help them with what they actually asked.`;
   const prompt = `${SYSTEM_PREAMBLE}${setupLine}${memoryLine}${pageLine}\n\n--- Conversation ---\n${convo}\nUser: ${message}\nAssistant:`;
 
   // Claude Code streams token-level deltas via stream-json + partial messages.
@@ -192,7 +192,7 @@ export async function POST(req: Request) {
       });
       child.on("close", () => {
         if (!emitted) {
-          safeEnqueue("_(no output — is the CLI authenticated?)_");
+          safeEnqueue("_(Agent CLI 没有返回内容，请确认所选 CLI 已完成登录。)_");
         }
         safeClose();
       });

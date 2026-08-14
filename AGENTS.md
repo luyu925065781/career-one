@@ -135,7 +135,7 @@ To rollback: `node update-system.mjs rollback`
 | `salary-gap.mjs` | Desired/advertised/actual compensation gap analyzer — folds report `advertised_comp` + `data/salary-observations.tsv` (JSON or `--summary`) |
 | `data/salary-observations.tsv` | Append-only salary observation log (user layer) |
 | `data/follow-ups.md` | Follow-up history tracker |
-| `agent-runs.mjs` | Shared local Agent/Web task registry and preview-before-apply proposal CLI (`run start/progress/complete/fail/propose/approve/reject`) |
+| `agent-runs.mjs` | Shared local Agent/Web task registry and preview-before-apply proposal CLI (`run start/progress/wait/complete/fail/propose/approve/reject`) |
 | `scan.mjs` | Zero-token portal scanner — hits Greenhouse/Ashby/Lever APIs directly, zero LLM cost |
 | `check-liveness.mjs` | Job posting liveness checker |
 | `liveness-core.mjs` | Shared liveness logic (expired signals win over generic Apply text) |
@@ -178,13 +178,20 @@ Create `cv.md` from whatever they provide. Make it clean markdown with standard 
 
 #### Step 2: Profile (required)
 If `config/profile.yml` is missing, copy from `config/profile.example.yml` and then ask:
-> "我还需要几项信息来完成个性化：
-> - 姓名和联系方式
-> - 所在城市和时区
-> - 目标岗位与职级，例如 AI 产品经理、智能体产品经理
-> - 目标薪资范围和最低接受值
+> "请一次性确认下面这组求职画像信息；已能从简历明确提取的内容我会预填，你只需纠正或补充：
+> 1. 姓名和联系方式
+> 2. 所在城市和时区
+> 3. 目标岗位与职级
+> 4. 地点、工作方式与迁居意愿
+> 5. 目标薪资范围和最低接受值
+> 6. 核心优势与最有说服力的职业成果
+> 7. 最有动力和最消耗你的工作类型、理想工作方式
+> 8. 明确求职红线，例如城市、加班、出差、行业或公司阶段
+> 9. 公开项目、文章、案例或作品集
 >
-> 我会先整理成草稿，确认后再写入本地配置。"
+> 请在一条回复中按编号回答；暂时不想回答的项目可以留空，我会标为“待确认”，不会继续逐项追问。随后我会生成完整草稿和待确认提案，只有你批准后才写入本地配置。"
+
+Before asking, read the allowed user-layer sources and prefill every unambiguous fact. Ask this checklist once; do not split it into serial field-by-field follow-ups. A skipped item remains `待确认` and must not block the proposal.
 
 Fill in `config/profile.yml` with their answers. For archetypes and targeting narrative, store the user-specific mapping in `modes/_profile.md` or `config/profile.yml` rather than editing `modes/_shared.md`.
 
@@ -203,20 +210,9 @@ If `data/applications.md` doesn't exist, create it:
 |---|------|---------|------|-------|--------|-----|--------|-------|
 ```
 
-#### Step 5: Get to know the user (important for quality)
+#### Step 5: Keep learning without a second questionnaire
 
-After the basics are set up, proactively ask for more context. The more you know, the better your evaluations will be:
-
-> "基础资料已经完成。为了让岗位判断更准确，我还想了解：
-> - 你最有辨识度的能力是什么？
-> - 哪类工作让你有动力，哪类工作会消耗你？
-> - 有哪些明确红线，例如城市、加班、公司阶段或工作方式？
-> - 你在面试中最想主讲的职业成果是什么？
-> - 是否有公开项目、文章、案例或作品集？
->
-> 我只会把你确认过的事实写入本地用户层文件。"
-
-Store any insights the user shares in `config/profile.yml` (under narrative), `modes/_profile.md`, or in `article-digest.md` if they share proof points. Do not put user-specific archetypes or framing into `modes/_shared.md`.
+The quality fields previously collected after setup — distinctive strengths, motivating or draining work, red lines, preferred achievements, and public work — are now part of the single Step 2 checklist. Do not launch a second onboarding questionnaire or split skipped fields into serial follow-ups. If the user voluntarily shares additional context later, store confirmed insights in `config/profile.yml` (under narrative), `modes/_profile.md`, or `article-digest.md` for proof points. Do not put user-specific archetypes or framing into `modes/_shared.md`.
 
 **After every evaluation, learn.** If the user says "this score is too high, I wouldn't apply here" or "you missed that I have experience in X", update your understanding in `modes/_profile.md`, `config/profile.yml`, or `article-digest.md`. The system should get smarter with every interaction without putting personalization into system-layer files.
 

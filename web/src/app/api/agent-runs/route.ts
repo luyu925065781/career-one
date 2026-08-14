@@ -1,12 +1,15 @@
 import { execFileSync } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
 import { NextResponse } from "next/server";
 import { careerOneRoot, rootScript } from "@/lib/career-one";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Artifact = { path?: unknown; label?: unknown; page?: unknown };
+type Artifact = { path?: unknown; label?: unknown; page?: unknown; available?: unknown };
+type ScreenshotAttachment = { name?: unknown; type?: unknown; dataUrl?: unknown };
 type Body = {
   action?: unknown;
   id?: unknown;
@@ -17,13 +20,25 @@ type Body = {
   input?: unknown;
   page?: unknown;
   progress?: unknown;
+  question?: unknown;
   summary?: unknown;
   score?: unknown;
   error?: unknown;
   artifacts?: unknown;
   proposalId?: unknown;
   instruction?: unknown;
+  attachments?: unknown;
 };
+
+const MAX_SCREENSHOTS = 3;
+const MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024;
+const MAX_TASK_INSTRUCTION_CHARS = 1_000;
+const SCREENSHOT_MIME_EXTENSIONS = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+} as const;
+const TASK_ATTACHMENT_PATTERN = /^data\/task-attachments\/[a-zA-Z0-9][a-zA-Z0-9_-]{2,96}\/0[1-3]-[a-f0-9]{12}\.(?:png|jpg|webp)$/;
 
 function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -32,6 +47,131 @@ function text(value: unknown): string | undefined {
 function pushOption(args: string[], name: string, value: unknown) {
   const normalized = text(value);
   if (normalized) args.push(name, normalized);
+}
+
+function workspaceFingerprint(): string {
+  const configuredRoot = path.resolve(careerOneRoot());
+  let canonicalRoot = configuredRoot;
+  try {
+    canonicalRoot = fs.realpathSync(configuredRoot);
+  } catch {
+    // A missing or temporarily unavailable root still needs a stable namespace
+    // so the browser never falls back to another workspace's cached tasks.
+  }
+  return createHash("sha256").update(canonicalRoot).digest("hex").slice(0, 16);
+}
+
+function artifactExistsInWorkspace(value: unknown): boolean {
+  const relativePath = text(value)?.replaceAll("\\", "/");
+  if (!relativePath || path.isAbsolute(relativePath) || relativePath.split("/").includes("..")) return false;
+
+  try {
+    const root = fs.realpathSync(path.resolve(careerOneRoot()));
+    const candidate = fs.realpathSync(path.resolve(root, relativePath));
+    if (candidate !== root && !candidate.startsWith(`${root}${path.sep}`)) return false;
+    return fs.statSync(candidate).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function withArtifactAvailability(result: unknown): unknown {
+  if (!result || typeof result !== "object" || Array.isArray(result)) return result;
+  const payload = result as Record<string, unknown>;
+  if (!Array.isArray(payload.runs)) return result;
+  return {
+    ...payload,
+    runs: payload.runs.map((rawRun) => {
+      if (!rawRun || typeof rawRun !== "object" || Array.isArray(rawRun)) return rawRun;
+      const run = rawRun as Record<string, unknown>;
+      return {
+        ...run,
+        artifacts: Array.isArray(run.artifacts)
+          ? run.artifacts.map((rawArtifact) => {
+              if (!rawArtifact || typeof rawArtifact !== "object" || Array.isArray(rawArtifact)) return rawArtifact;
+              const artifact = rawArtifact as Artifact;
+              return { ...artifact, available: artifactExistsInWorkspace(artifact.path) };
+            })
+          : run.artifacts,
+      };
+    }),
+  };
+}
+
+function validateTaskId(value: string | undefined): string {
+  if (!value || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{2,96}$/.test(value)) throw new Error("任务 ID 无效");
+  return value;
+}
+
+function validateImageSignature(bytes: Buffer, mime: keyof typeof SCREENSHOT_MIME_EXTENSIONS): boolean {
+  if (mime === "image/png") {
+    return bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  }
+  if (mime === "image/jpeg") return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  return bytes.length >= 12 && bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP";
+}
+
+function attachmentAbsolutePath(relativePath: string): { absolute: string; contentType: string } {
+  const normalized = relativePath.trim().replaceAll("\\", "/");
+  if (!TASK_ATTACHMENT_PATTERN.test(normalized)) throw new Error("任务附件路径无效");
+  const attachmentRoot = path.resolve(careerOneRoot(), "data", "task-attachments");
+  const absolute = path.resolve(careerOneRoot(), normalized);
+  if (!absolute.startsWith(`${attachmentRoot}${path.sep}`)) throw new Error("任务附件路径超出允许范围");
+  const extension = path.extname(absolute).slice(1);
+  const contentType = extension === "png" ? "image/png" : extension === "jpg" ? "image/jpeg" : "image/webp";
+  return { absolute, contentType };
+}
+
+function storeScreenshotAttachments(taskId: string, rawAttachments: unknown): Artifact[] {
+  if (!Array.isArray(rawAttachments) || rawAttachments.length === 0) return [];
+  if (rawAttachments.length > MAX_SCREENSHOTS) throw new Error(`每个任务最多保存 ${MAX_SCREENSHOTS} 张招聘截图`);
+
+  const id = validateTaskId(taskId);
+  const taskDir = path.resolve(careerOneRoot(), "data", "task-attachments", id);
+  fs.mkdirSync(taskDir, { recursive: true, mode: 0o700 });
+
+  return (rawAttachments as ScreenshotAttachment[]).map((attachment, index) => {
+    const originalName = text(attachment?.name)?.slice(0, 160) || `招聘截图-${index + 1}`;
+    const mime = text(attachment?.type) as keyof typeof SCREENSHOT_MIME_EXTENSIONS | undefined;
+    const dataUrl = text(attachment?.dataUrl);
+    if (!mime || !(mime in SCREENSHOT_MIME_EXTENSIONS) || !dataUrl) throw new Error(`第 ${index + 1} 张截图格式无效`);
+
+    const match = dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
+    if (!match || match[1] !== mime) throw new Error(`第 ${index + 1} 张截图编码无效`);
+    const bytes = Buffer.from(match[2], "base64");
+    if (bytes.length === 0 || bytes.length > MAX_SCREENSHOT_BYTES) throw new Error(`第 ${index + 1} 张截图不能超过 8 MB`);
+    if (!validateImageSignature(bytes, mime)) throw new Error(`第 ${index + 1} 张截图内容与图片格式不一致`);
+
+    const extension = SCREENSHOT_MIME_EXTENSIONS[mime];
+    const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
+    const fileName = `${String(index + 1).padStart(2, "0")}-${digest}.${extension}`;
+    const absolute = path.join(taskDir, fileName);
+    const temp = path.join(taskDir, `.${randomUUID()}.tmp`);
+    fs.writeFileSync(temp, bytes, { mode: 0o600 });
+    fs.renameSync(temp, absolute);
+    return {
+      path: path.posix.join("data", "task-attachments", id, fileName),
+      label: `招聘截图 ${index + 1} · ${originalName}`,
+    };
+  });
+}
+
+function instructionWithAttachments(instruction: string, attachments: Artifact[]): string {
+  if (attachments.length === 0 || instruction.includes("**Screenshots:**")) {
+    return instruction.slice(0, MAX_TASK_INSTRUCTION_CHARS);
+  }
+  const paths = attachments.map((attachment) => String(attachment.path));
+  const suffix = `截图已保存在当前工作区：${paths.join("、")}。请直接读取这些本地文件；生成报告时在报告头加入“**Screenshots:** ${paths.join(" | ")}”，让 Web 报告展示原始岗位截图。`;
+  const baseBudget = Math.max(0, MAX_TASK_INSTRUCTION_CHARS - suffix.length - 1);
+  return `${instruction.slice(0, baseBudget).trimEnd()} ${suffix}`.trim();
+}
+
+function appendArtifacts(args: string[], artifacts: Artifact[]) {
+  for (const artifact of artifacts) {
+    const artifactPath = text(artifact.path);
+    if (!artifactPath) continue;
+    args.push("--artifact", [artifactPath, text(artifact.label) || artifactPath, text(artifact.page) || ""].join("|"));
+  }
 }
 
 function runContract(args: string[]): unknown {
@@ -62,15 +202,35 @@ function runInbox(args: string[]): string {
 function errorResponse(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   const stderr = typeof (error as { stderr?: unknown })?.stderr === "string" ? (error as { stderr: string }).stderr : "";
-  const detail = stderr.trim().split("\n").at(-1) || message;
-  return NextResponse.json({ error: detail.replace(/^择程AI：/, "") }, { status: 400 });
+  const lines = stderr.split("\n").map((line) => line.trim()).filter(Boolean);
+  const detail = (lines.find((line) => line.startsWith("择程AI：")) || lines[0] || message).replace(/^择程AI：/, "");
+  const userMessage = /^(?:Unknown command|未知命令)\b/.test(detail)
+    ? "当前工作区的 Agent 任务协议版本不兼容，请更新择程AI后重试"
+    : detail;
+  return NextResponse.json({ error: userMessage, workspaceId: workspaceFingerprint() }, { status: 400 });
 }
 
 export async function GET(req: Request) {
-  const proposalId = new URL(req.url).searchParams.get("proposalId");
+  const searchParams = new URL(req.url).searchParams;
+  const proposalId = searchParams.get("proposalId");
+  const attachment = searchParams.get("attachment");
   try {
-    const result = proposalId ? runContract(["proposal", proposalId]) : runContract(["list"]);
-    return NextResponse.json(result);
+    if (attachment) {
+      const { absolute, contentType } = attachmentAbsolutePath(attachment);
+      if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) {
+        return NextResponse.json({ error: "未找到任务附件", workspaceId: workspaceFingerprint() }, { status: 404 });
+      }
+      return new Response(fs.readFileSync(absolute), {
+        headers: {
+          "Content-Type": contentType,
+          "Content-Disposition": `inline; filename="${path.basename(absolute)}"`,
+          "Cache-Control": "private, no-store",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
+    const result = proposalId ? runContract(["proposal", proposalId]) : withArtifactAvailability(runContract(["list"]));
+    return NextResponse.json({ ...(result as object), workspaceId: workspaceFingerprint() });
   } catch (error) {
     return errorResponse(error);
   }
@@ -88,10 +248,12 @@ export async function POST(req: Request) {
   const id = text(body.id);
   try {
     if (action === "queue") {
-      const instruction = text(body.instruction)?.slice(0, 1_000);
-      if (!instruction) {
+      const baseInstruction = text(body.instruction)?.slice(0, 1_000);
+      if (!baseInstruction) {
         return NextResponse.json({ error: "缺少交给 Agent 的任务指令" }, { status: 400 });
       }
+      const attachments = storeScreenshotAttachments(validateTaskId(id), body.attachments);
+      const instruction = instructionWithAttachments(baseInstruction, attachments);
       const args = ["queue"];
       pushOption(args, "--id", id);
       pushOption(args, "--intent", body.intent);
@@ -101,19 +263,25 @@ export async function POST(req: Request) {
       pushOption(args, "--input", body.input);
       pushOption(args, "--page", body.page);
       pushOption(args, "--instruction", instruction);
-      const run = runContract(args) as { id?: string };
+      let run = runContract(args) as { id?: string };
       if (!run.id) throw new Error("Agent 待办任务创建失败");
+      const runId = run.id;
+      if (attachments.length > 0) {
+        const attachArgs = ["attach", runId, "--label", "招聘截图已保存到本地附件目录", "--instruction", instruction];
+        appendArtifacts(attachArgs, attachments);
+        run = runContract(attachArgs) as { id?: string };
+      }
       try {
-        runInbox(["add", `[task:${run.id}] ${instruction}`]);
+        runInbox(["add", `[task:${runId}] ${instruction}`]);
       } catch (error) {
         try {
-          runContract(["fail", run.id, "--error", "写入 Agent 待办失败"]);
+          runContract(["fail", runId, "--error", "写入 Agent 待办失败"]);
         } catch {
           // Preserve the original inbox error.
         }
         throw error;
       }
-      return NextResponse.json({ ...run, instruction });
+      return NextResponse.json({ ...run, instruction, attachmentPaths: attachments.map((attachment) => attachment.path) });
     }
     if (action === "start") {
       const args = ["start"];
@@ -129,18 +297,30 @@ export async function POST(req: Request) {
     if (action === "progress" && id) {
       return NextResponse.json(runContract(["progress", id, "--label", text(body.progress) || "执行中"]));
     }
+    if (action === "attach" && id) {
+      const baseInstruction = text(body.instruction)?.slice(0, 1_000);
+      if (!baseInstruction) return NextResponse.json({ error: "缺少交给 Agent 的任务指令" }, { status: 400 });
+      runContract(["get", validateTaskId(id)]);
+      const attachments = storeScreenshotAttachments(id, body.attachments);
+      if (attachments.length === 0) return NextResponse.json({ error: "没有可保存的招聘截图" }, { status: 400 });
+      const instruction = instructionWithAttachments(baseInstruction, attachments);
+      const args = ["attach", id, "--label", "招聘截图已保存到本地附件目录", "--instruction", instruction];
+      appendArtifacts(args, attachments);
+      const run = runContract(args);
+      return NextResponse.json({ ...run as object, instruction, attachmentPaths: attachments.map((attachment) => attachment.path) });
+    }
+    if (action === "wait" && id) {
+      const args = ["wait", id];
+      pushOption(args, "--question", body.question);
+      pushOption(args, "--label", body.progress);
+      return NextResponse.json(runContract(args));
+    }
     if (action === "complete" && id) {
       const args = ["complete", id];
       pushOption(args, "--summary", body.summary);
       pushOption(args, "--page", body.page);
       if (body.score !== undefined && body.score !== null) args.push("--score", String(body.score));
-      if (Array.isArray(body.artifacts)) {
-        for (const artifact of body.artifacts as Artifact[]) {
-          const artifactPath = text(artifact?.path);
-          if (!artifactPath) continue;
-          args.push("--artifact", [artifactPath, text(artifact.label) || artifactPath, text(artifact.page) || ""].join("|"));
-        }
-      }
+      if (Array.isArray(body.artifacts)) appendArtifacts(args, body.artifacts as Artifact[]);
       return NextResponse.json(runContract(args));
     }
     if (action === "fail" && id) {
@@ -150,7 +330,10 @@ export async function POST(req: Request) {
       return NextResponse.json(runContract(["archive", id]));
     }
     if ((action === "approve" || action === "reject") && text(body.proposalId)) {
-      return NextResponse.json(runContract([action, text(body.proposalId)!]));
+      const proposal = runContract([action, text(body.proposalId)!]) as { runId?: string };
+      if (!proposal.runId) throw new Error("修改提案缺少关联任务");
+      const run = runContract(["get", proposal.runId]);
+      return NextResponse.json({ proposal, run });
     }
     return NextResponse.json({ error: "不支持的任务操作" }, { status: 400 });
   } catch (error) {

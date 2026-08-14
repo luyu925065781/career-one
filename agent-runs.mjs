@@ -20,7 +20,7 @@ const CONTRACT_VERSION = 1;
 const MAX_RUNS = 200;
 const MAX_PROGRESS = 60;
 const MAX_DRAFT_BYTES = 2 * 1024 * 1024;
-const RUN_STATUSES = new Set(["queued", "running", "waiting_approval", "completed", "failed", "cancelled"]);
+const RUN_STATUSES = new Set(["queued", "running", "waiting_input", "waiting_approval", "completed", "failed", "cancelled"]);
 const SOURCES = new Set(["agent", "web"]);
 const ALLOWED_TARGETS = new Set([
   "cv.md",
@@ -50,15 +50,15 @@ function cleanId(value, prefix = "run") {
 function normalizePage(value) {
   const page = String(value ?? "").trim();
   if (!page) return undefined;
-  if (!page.startsWith("/") || page.startsWith("//") || /[\r\n]/.test(page)) throw new Error("Web page must be an in-app relative route");
+  if (!page.startsWith("/") || page.startsWith("//") || /[\r\n]/.test(page)) throw new Error("Web 页面必须使用应用内相对路由");
   return page.slice(0, 300);
 }
 
 function normalizeArtifact(root, artifact) {
   const rawPath = String(artifact?.path ?? "").trim().replaceAll("\\", "/");
-  if (!rawPath || isAbsolute(rawPath) || rawPath.split("/").includes("..")) throw new Error("Artifact path must stay inside the workspace");
+  if (!rawPath || isAbsolute(rawPath) || rawPath.split("/").includes("..")) throw new Error("产物路径必须位于当前工作区内");
   const absolute = resolve(root, rawPath);
-  if (absolute !== root && !absolute.startsWith(`${root}${sep}`)) throw new Error("Artifact path escapes the workspace");
+  if (absolute !== root && !absolute.startsWith(`${root}${sep}`)) throw new Error("产物路径超出了当前工作区");
   return {
     path: rawPath.slice(0, 500),
     label: cleanText(artifact?.label || rawPath, 120),
@@ -101,7 +101,7 @@ function withLock(root, fn) {
       sleep(20);
     }
   }
-  if (fd === undefined) throw new Error("Agent run registry is busy; try again");
+  if (fd === undefined) throw new Error("Agent 任务记录正在使用中，请稍后重试");
   try {
     return fn();
   } finally {
@@ -124,10 +124,10 @@ function readState(root) {
   try {
     parsed = JSON.parse(readFileSync(file, "utf8"));
   } catch (error) {
-    throw new Error(`Cannot read data/agent-runs.json safely: ${error.message}`);
+    throw new Error(`无法安全读取 data/agent-runs.json：${error.message}`);
   }
   if (!parsed || parsed.version !== CONTRACT_VERSION || !Array.isArray(parsed.runs)) {
-    throw new Error("Unsupported or corrupt Agent run registry");
+    throw new Error("Agent 任务记录格式不受支持或文件已损坏");
   }
   return parsed;
 }
@@ -141,7 +141,7 @@ function writeState(root, state) {
 
 function proposalPath(root, proposalId) {
   const id = cleanId(proposalId, "proposal");
-  if (id !== proposalId) throw new Error("Invalid proposal id");
+  if (id !== proposalId) throw new Error("修改提案 ID 无效");
   return join(proposalsDir(root), `${id}.json`);
 }
 
@@ -151,12 +151,12 @@ function hashContent(content) {
 
 function normalizeTarget(root, value) {
   const target = String(value ?? "").trim().replaceAll("\\", "/").replace(/^\.\//, "");
-  if (!target || isAbsolute(target) || target.split("/").includes("..")) throw new Error("Proposal target is not an approved user-layer target");
+  if (!target || isAbsolute(target) || target.split("/").includes("..")) throw new Error("不允许将修改提案应用到该用户层文件");
   if (!ALLOWED_TARGETS.has(target) && !ALLOWED_TARGET_PREFIXES.some((prefix) => target.startsWith(prefix))) {
-    throw new Error("Proposal target is not an approved user-layer target");
+    throw new Error("不允许将修改提案应用到该用户层文件");
   }
   const absolute = resolve(root, target);
-  if (absolute !== root && !absolute.startsWith(`${root}${sep}`)) throw new Error("Proposal target escapes the workspace");
+  if (absolute !== root && !absolute.startsWith(`${root}${sep}`)) throw new Error("修改提案的目标超出了当前工作区");
 
   // Existing targets and parent directories may not escape through symlinks.
   const realRoot = realpathSync(root);
@@ -164,7 +164,7 @@ function normalizeTarget(root, value) {
   while (!existsSync(existingAncestor) && existingAncestor !== root) existingAncestor = dirname(existingAncestor);
   const realAncestor = realpathSync(existingAncestor);
   if (realAncestor !== realRoot && !realAncestor.startsWith(`${realRoot}${sep}`)) {
-    throw new Error("Proposal target escapes the workspace through a symlink");
+    throw new Error("修改提案的目标通过符号链接超出了当前工作区");
   }
   return { target, absolute };
 }
@@ -224,9 +224,9 @@ export function createRun({
   const runId = cleanId(id, "run");
   const normalizedIntent = cleanText(intent, 80);
   const normalizedTitle = cleanText(title, 140);
-  if (!normalizedIntent || !normalizedTitle) throw new Error("Run intent and title are required");
-  if (!SOURCES.has(source)) throw new Error("Run source must be agent or web");
-  if (!["queued", "running"].includes(status)) throw new Error("New runs must start as queued or running");
+  if (!normalizedIntent || !normalizedTitle) throw new Error("任务意图和标题不能为空");
+  if (!SOURCES.has(source)) throw new Error("任务来源必须是 agent 或 web");
+  if (!["queued", "running"].includes(status)) throw new Error("新任务必须从排队中或运行中状态开始");
   const timestamp = now();
   const run = {
     version: CONTRACT_VERSION,
@@ -251,7 +251,7 @@ export function createRun({
   };
   return withLock(root, () => {
     const state = readState(root);
-    if (state.runs.some((item) => item.id === runId)) throw new Error(`Run ${runId} already exists`);
+    if (state.runs.some((item) => item.id === runId)) throw new Error(`任务 ${runId} 已存在`);
     state.runs.unshift(run);
     writeState(root, state);
     return attachProposalSummaries(root, run);
@@ -271,19 +271,24 @@ export function listRuns(rawRoot = process.cwd(), { includeArchived = false } = 
     .map((run) => attachProposalSummaries(root, run));
 }
 
-export function updateRun({ root: rawRoot = process.cwd(), id, status, progress, summary, score, error, page, artifacts }) {
+export function updateRun({ root: rawRoot = process.cwd(), id, status, progress, question, summary, score, error, page, artifacts, instruction }) {
   const root = resolve(rawRoot);
   return withLock(root, () => {
     const state = readState(root);
     const index = state.runs.findIndex((item) => item.id === id);
-    if (index < 0) throw new Error(`Run ${id} not found`);
+    if (index < 0) throw new Error(`未找到任务 ${id}`);
     const current = state.runs[index];
     const timestamp = now();
     const next = { ...current, updatedAt: timestamp };
     if (status !== undefined) {
-      if (!RUN_STATUSES.has(status)) throw new Error(`Unsupported run status: ${status}`);
+      if (!RUN_STATUSES.has(status)) throw new Error(`不支持的任务状态：${status}`);
       next.status = status;
-      if (["completed", "failed", "cancelled"].includes(status)) next.completedAt = timestamp;
+      if (["completed", "failed", "cancelled"].includes(status)) {
+        next.completedAt = timestamp;
+      } else {
+        delete next.completedAt;
+      }
+      if (status !== "waiting_input") delete next.question;
     }
     if (progress) {
       next.progress = [
@@ -291,11 +296,24 @@ export function updateRun({ root: rawRoot = process.cwd(), id, status, progress,
         { kind: "status", label: cleanText(progress, 180), at: timestamp },
       ].slice(-MAX_PROGRESS);
     }
+    if (question !== undefined) {
+      const normalizedQuestion = cleanText(question, 500);
+      if (!normalizedQuestion) throw new Error("等待用户回复时必须提供具体问题");
+      next.question = normalizedQuestion;
+    }
+    if (next.status === "waiting_input" && !next.question) {
+      throw new Error("等待用户回复时必须提供具体问题");
+    }
     if (summary !== undefined) next.summary = cleanText(summary, 500);
     if (error !== undefined) next.error = cleanText(error, 500);
+    if (instruction !== undefined) {
+      const normalizedInstruction = cleanText(instruction, 1_000);
+      if (!normalizedInstruction) throw new Error("Agent 任务指令不能为空");
+      next.instruction = normalizedInstruction;
+    }
     if (score !== undefined && score !== null && score !== "") {
       const parsed = Number(score);
-      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 5) throw new Error("Run score must be between 0 and 5");
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 5) throw new Error("任务评分必须在 0 到 5 之间");
       next.score = parsed;
     }
     if (page !== undefined) next.page = normalizePage(page);
@@ -320,7 +338,7 @@ export function archiveRun({ root: rawRoot = process.cwd(), id }) {
   return withLock(root, () => {
     const state = readState(root);
     const index = state.runs.findIndex((item) => item.id === id);
-    if (index < 0) throw new Error(`Run ${id} not found`);
+    if (index < 0) throw new Error(`未找到任务 ${id}`);
     state.runs[index] = { ...state.runs[index], archivedAt: now(), updatedAt: now() };
     writeState(root, state);
     return attachProposalSummaries(root, state.runs[index]);
@@ -337,11 +355,11 @@ export function getProposal(rawRoot, proposalId) {
 export function createProposal({ root: rawRoot = process.cwd(), runId, target: rawTarget, draftPath, summary, title }) {
   const root = resolve(rawRoot);
   const run = getRun(root, runId);
-  if (!run) throw new Error(`Run ${runId} not found`);
+  if (!run) throw new Error(`未找到任务 ${runId}`);
   const { target, absolute } = normalizeTarget(root, rawTarget);
-  if (!draftPath || !existsSync(draftPath)) throw new Error("Proposal draft file not found");
+  if (!draftPath || !existsSync(draftPath)) throw new Error("未找到修改提案草稿");
   const proposedContent = readFileSync(draftPath, "utf8");
-  if (Buffer.byteLength(proposedContent) > MAX_DRAFT_BYTES) throw new Error("Proposal draft is too large");
+  if (Buffer.byteLength(proposedContent) > MAX_DRAFT_BYTES) throw new Error("修改提案草稿过大");
   const currentContent = existsSync(absolute) ? readFileSync(absolute, "utf8") : null;
   const timestamp = now();
   const proposal = {
@@ -363,12 +381,13 @@ export function createProposal({ root: rawRoot = process.cwd(), runId, target: r
   withLock(root, () => {
     const state = readState(root);
     const index = state.runs.findIndex((item) => item.id === runId);
-    if (index < 0) throw new Error(`Run ${runId} not found`);
+    if (index < 0) throw new Error(`未找到任务 ${runId}`);
     const proposalIds = [...new Set([...(state.runs[index].proposalIds ?? []), proposal.id])];
-    state.runs[index] = {
+    const waitingRun = {
       ...state.runs[index],
       page: state.runs[index].page || pageForTarget(target),
       status: "waiting_approval",
+      completedAt: undefined,
       proposalIds,
       updatedAt: timestamp,
       progress: [
@@ -376,6 +395,8 @@ export function createProposal({ root: rawRoot = process.cwd(), runId, target: r
         { kind: "status", label: "等待用户确认修改", at: timestamp },
       ].slice(-MAX_PROGRESS),
     };
+    delete waitingRun.question;
+    state.runs[index] = waitingRun;
     writeState(root, state);
   });
   return proposal;
@@ -383,11 +404,11 @@ export function createProposal({ root: rawRoot = process.cwd(), runId, target: r
 
 export function decideProposal({ root: rawRoot = process.cwd(), proposalId, decision }) {
   const root = resolve(rawRoot);
-  if (!["approve", "reject"].includes(decision)) throw new Error("Proposal decision must be approve or reject");
+  if (!["approve", "reject"].includes(decision)) throw new Error("修改提案只能选择批准或拒绝");
   return withLock(root, () => {
     const proposal = getProposal(root, proposalId);
-    if (!proposal) throw new Error(`Proposal ${proposalId} not found`);
-    if (proposal.status !== "pending") throw new Error(`Proposal ${proposalId} is already ${proposal.status}`);
+    if (!proposal) throw new Error(`未找到修改提案 ${proposalId}`);
+    if (proposal.status !== "pending") throw new Error(`修改提案 ${proposalId} 当前状态为 ${proposal.status}`);
     const timestamp = now();
 
     if (decision === "approve") {
@@ -397,7 +418,7 @@ export function decideProposal({ root: rawRoot = process.cwd(), proposalId, deci
       if (currentHash !== proposal.baseHash) {
         const stale = { ...proposal, status: "stale", updatedAt: timestamp };
         atomicWrite(proposalPath(root, proposal.id), `${JSON.stringify(stale, null, 2)}\n`);
-        throw new Error("Target changed since the proposal was created; review it again before applying");
+        throw new Error("目标文件在提案创建后已发生变化，请重新审阅后再应用");
       }
       atomicWrite(absolute, proposal.proposedContent);
     }
@@ -421,7 +442,7 @@ export function decideProposal({ root: rawRoot = process.cwd(), proposalId, deci
         ...current,
         status: stillPending ? "waiting_approval" : "completed",
         updatedAt: timestamp,
-        completedAt: stillPending ? current.completedAt : timestamp,
+        completedAt: stillPending ? undefined : timestamp,
         progress: [
           ...(current.progress ?? []),
           { kind: "status", label: decision === "approve" ? "用户已确认并应用修改" : "用户已拒绝修改", at: timestamp },
@@ -464,6 +485,8 @@ function cliHelp() {
     `  node agent-runs.mjs start --intent <意图> --title <标题> [--source agent|web]\n` +
     `  node agent-runs.mjs queue --intent <意图> --title <标题> [--source web] [--instruction <续接指令>]\n` +
     `  node agent-runs.mjs progress <run-id> --label <进度>\n` +
+    `  node agent-runs.mjs attach <run-id> --artifact path|label|/page [--label <进度>]\n` +
+    `  node agent-runs.mjs wait <run-id> --question <需要用户回答的问题> [--label <进度>]\n` +
     `  node agent-runs.mjs complete <run-id> [--summary <摘要>] [--artifact path|label|/page]\n` +
     `  node agent-runs.mjs fail <run-id> --error <原因>\n` +
     `  node agent-runs.mjs list | get <run-id> | archive <run-id>\n` +
@@ -500,12 +523,34 @@ export function runCli(argv = process.argv.slice(2)) {
   }
   if (command === "get") {
     const run = getRun(root, positional);
-    if (!run) throw new Error(`Run ${positional} not found`);
+    if (!run) throw new Error(`未找到任务 ${positional}`);
     print(run);
     return 0;
   }
   if (command === "progress") {
     print(updateRun({ root, id: positional, status: "running", progress: option(args, "--label") }));
+    return 0;
+  }
+  if (command === "attach") {
+    const artifacts = repeatedOptions(args, "--artifact").map(artifactFromCli);
+    if (artifacts.length === 0) throw new Error("保存任务附件时必须提供至少一个产物路径");
+    print(updateRun({
+      root,
+      id: positional,
+      progress: option(args, "--label") || "任务附件已保存到本地工作区",
+      artifacts,
+      instruction: option(args, "--instruction"),
+    }));
+    return 0;
+  }
+  if (command === "wait") {
+    print(updateRun({
+      root,
+      id: positional,
+      status: "waiting_input",
+      progress: option(args, "--label") || "等待您回复",
+      question: option(args, "--question"),
+    }));
     return 0;
   }
   if (command === "complete") {
@@ -542,7 +587,7 @@ export function runCli(argv = process.argv.slice(2)) {
   }
   if (command === "proposal") {
     const proposal = getProposal(root, positional);
-    if (!proposal) throw new Error(`Proposal ${positional} not found`);
+    if (!proposal) throw new Error(`未找到修改提案 ${positional}`);
     print(proposal);
     return 0;
   }
@@ -550,7 +595,7 @@ export function runCli(argv = process.argv.slice(2)) {
     print(decideProposal({ root, proposalId: positional, decision: command }));
     return 0;
   }
-  throw new Error(`Unknown command ${command}\n\n${cliHelp()}`);
+  throw new Error(`未知命令 ${command}\n\n${cliHelp()}`);
 }
 
 const invokedAsScript = process.argv[1] && existsSync(process.argv[1])

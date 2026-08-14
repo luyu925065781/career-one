@@ -6,16 +6,13 @@ import {
   DEFAULT_FILTERS,
   ATS_LABEL,
   filtersToParams,
-  aiToParams,
   isBroadSearch,
   parseExplorePatch,
   type AtsSource,
   type DiscoveredOffer,
   type ExploreFilters,
-  type ExploreMode,
   type ScanEvent,
 } from "@/lib/explore";
-import { makeAiStreamParser, type AiTraceChunk } from "@/lib/explore-ai";
 
 export type Phase =
   | "idle"
@@ -26,10 +23,7 @@ export type Phase =
   | "empty-current"
   | "empty-loose"
   | "failed"
-  | "degraded" // scan completed but searched nothing (transient fetch/rate-limit) — not "all caught up"
-  | "hunting" // AI search streaming
-  | "blocked"; // AI search needs a CLI
-export type AiCost = { searches: number; candidates: number; fetches: number };
+  | "degraded"; // scan completed but searched nothing (transient fetch/rate-limit) — not "all caught up"
 export type SourceState = {
   state: "queued" | "active" | "swept" | "noisy";
   companies?: number;
@@ -63,14 +57,6 @@ type ExploreCtx = {
   addToPipeline: (offers: DiscoveredOffer[]) => Promise<number>;
   applyPatch: (raw: Record<string, unknown>, opts?: { merge?: boolean; run?: boolean }) => void;
   reset: () => void;
-  // ── AI search (modes/discover.md) ──
-  mode: ExploreMode;
-  setMode: (m: ExploreMode) => void;
-  aiIntent: string;
-  setAiIntent: (s: string) => void;
-  discoverAI: () => Promise<void>;
-  aiTrace: AiTraceChunk[];
-  aiCost: AiCost;
 };
 
 const Ctx = createContext<ExploreCtx | null>(null);
@@ -80,12 +66,11 @@ export function useExplore(): ExploreCtx {
   return c;
 }
 
-// Persist settled scans per tab so a reload or mode toggle never
-// throws the work away (disc#5 — "came back to explore, work is lost").
+// Persist settled scans per tab so a reload or revisit never throws the work
+// away (disc#5 — "came back to explore, work is lost").
 const RESULTS_KEY = "career-one:explore-results";
 type ResultSnapshot = {
   v: number;
-  mode: ExploreMode;
   phase: Phase;
   offers: DiscoveredOffer[];
   matchCount: number;
@@ -98,9 +83,6 @@ type ResultSnapshot = {
   status: string;
   error: string;
   added: string[];
-  aiTrace: AiTraceChunk[];
-  aiCost: AiCost;
-  aiIntent: string;
 };
 
 export function ExploreProvider({ children }: { children: React.ReactNode }) {
@@ -122,13 +104,7 @@ export function ExploreProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState("");
   const [added, setAdded] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState<Set<string>>(new Set());
-  const [mode, setModeState] = useState<ExploreMode>("scan");
-  const [aiIntent, setAiIntent] = useState("");
-  const [aiTrace, setAiTrace] = useState<AiTraceChunk[]>([]);
-  const [aiCost, setAiCost] = useState<AiCost>({ searches: 0, candidates: 0, fetches: 0 });
   const runningRef = useRef(false);
-  const aiIntentRef = useRef(aiIntent);
-  aiIntentRef.current = aiIntent;
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
 
@@ -326,121 +302,11 @@ export function ExploreProvider({ children }: { children: React.ReactNode }) {
     setStatus("");
     setPartial(false);
     setError("");
-    setAiTrace([]);
-    setAiCost({ searches: 0, candidates: 0, fetches: 0 });
     try {
       sessionStorage.removeItem(RESULTS_KEY);
     } catch {
       /* ignore */
     }
-  }, []);
-
-  // AI search — orchestrate modes/discover.md via the user's CLI, streamed.
-  const discoverAI = useCallback(async () => {
-    if (runningRef.current) return;
-    const intent = aiIntentRef.current.trim();
-    if (!intent) return;
-    let cliId: string | null = null;
-    try {
-      cliId = JSON.parse(localStorage.getItem("career-one:config") || "{}").cliId || null;
-    } catch {
-      cliId = null;
-    }
-    if (!cliId) {
-      setPhase("blocked");
-      return;
-    }
-    runningRef.current = true;
-    setPhase("casting");
-    setOffers([]);
-    setMatchCount(0);
-    setAiTrace([]);
-    setAiCost({ searches: 0, candidates: 0, fetches: 0 });
-    setError("");
-    setStatus("正在搜索公开信息…");
-    if (typeof window !== "undefined") window.history.replaceState(null, "", `/explore?${aiToParams(intent)}`);
-
-    let knownUrls = new Set<string>();
-    try {
-      const k = await fetch("/api/explore/ai/known").then((r) => r.json());
-      knownUrls = new Set<string>(Array.isArray(k.urls) ? k.urls : []);
-    } catch {
-      /* best-effort dedup */
-    }
-    const parser = makeAiStreamParser({ knownUrls });
-
-    const acc: DiscoveredOffer[] = [];
-    let sawError = "";
-    const handle = (chunks: AiTraceChunk[]) => {
-      for (const ch of chunks) {
-        if (ch.kind === "offer") {
-          acc.push(ch.offer);
-          setOffers((o) => [...o, ch.offer]);
-          setMatchCount(acc.length);
-          setAiCost((c) => ({ ...c, candidates: acc.length }));
-          setPhase("hunting");
-        } else {
-          setAiTrace((t) => [...t, ch]);
-          if (ch.kind === "narration") {
-            const s = (ch.text.match(/\bsearch(ing|ed)?\b/gi) || []).length;
-            const f = (ch.text.match(/\bfetch(ing|ed)?\b/gi) || []).length;
-            if (s || f) setAiCost((c) => ({ ...c, searches: c.searches + s, fetches: c.fetches + f }));
-            setPhase((p) => (p === "casting" ? "hunting" : p));
-          }
-        }
-      }
-    };
-
-    try {
-      const r = await fetch("/api/explore/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: intent, cliId }),
-      });
-      if (r.status === 404) {
-        runningRef.current = false;
-        setPhase("blocked");
-        return;
-      }
-      if (r.status === 400) {
-        const d = await r.json().catch(() => ({}));
-        sawError = d.error || "AI 搜索暂时不可用。";
-      } else if (!r.body) {
-        sawError = "没有收到响应数据。";
-      } else {
-        const reader = r.body.getReader();
-        const dec = new TextDecoder();
-        for (;;) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          handle(parser.feed(dec.decode(value, { stream: true })));
-        }
-        handle(parser.flush());
-      }
-    } catch (e) {
-      sawError = e instanceof Error ? e.message : "响应流出错";
-    }
-
-    runningRef.current = false;
-    if (acc.length > 0) {
-      setMatchCount(acc.length);
-      setPhase("revealing");
-      setStatus(`${acc.length} candidate${acc.length === 1 ? "" : "s"} found.`);
-      window.setTimeout(() => setPhase("results"), 850);
-    } else if (sawError) {
-      setError(sawError);
-      setPhase("failed");
-    } else {
-      setPhase("empty-loose");
-    }
-  }, []);
-
-  // Switch surface but PRESERVE the current results + filters — toggling scan↔AI must
-  // not throw away a completed search (disc#5). A new search (discover/discoverAI)
-  // clears + repopulates; an explicit reset() clears. Just stop any half-run.
-  const setMode = useCallback((m: ExploreMode) => {
-    runningRef.current = false;
-    setModeState(m);
   }, []);
 
   // Rehydrate the last settled result set on mount (per-tab sessionStorage), unless a
@@ -455,7 +321,6 @@ export function ExploreProvider({ children }: { children: React.ReactNode }) {
       snap = null;
     }
     if (!snap || snap.v !== 1 || !Array.isArray(snap.offers)) return;
-    setModeState(snap.mode === "ai" ? "ai" : "scan");
     setOffers(snap.offers);
     setMatchCount(typeof snap.matchCount === "number" ? snap.matchCount : snap.offers.length);
     setCompaniesScanned(snap.companiesScanned ?? 0);
@@ -467,38 +332,34 @@ export function ExploreProvider({ children }: { children: React.ReactNode }) {
     setStatus(typeof snap.status === "string" ? snap.status : "");
     setError(typeof snap.error === "string" ? snap.error : "");
     setAdded(new Set(Array.isArray(snap.added) ? snap.added : []));
-    setAiTrace(Array.isArray(snap.aiTrace) ? snap.aiTrace : []);
-    setAiCost(snap.aiCost ?? { searches: 0, candidates: 0, fetches: 0 });
-    if (typeof snap.aiIntent === "string") setAiIntent(snap.aiIntent);
     // Never rehydrate INTO a running phase — no live stream backs it.
-    const RUNNING = new Set<Phase>(["casting", "scanning", "revealing", "hunting"]);
+    const RUNNING = new Set<Phase>(["casting", "scanning", "revealing"]);
     setPhase(RUNNING.has(snap.phase) ? (snap.offers.length ? "results" : "idle") : snap.phase);
   }, []);
 
   // Persist only SETTLED states (never mid-stream) so a reload restores a complete set.
   useEffect(() => {
-    const SETTLED = new Set<Phase>(["results", "empty-current", "empty-loose", "failed", "degraded", "blocked"]);
+    const SETTLED = new Set<Phase>(["results", "empty-current", "empty-loose", "failed", "degraded"]);
     if (!SETTLED.has(phase)) return;
     try {
       const snap: ResultSnapshot = {
-        v: 1, mode, phase, offers, matchCount, companiesScanned, companiesAvailable, capHit, droppedNoDate, sources,
-        partial, status, error, added: [...added], aiTrace, aiCost, aiIntent,
+        v: 1, phase, offers, matchCount, companiesScanned, companiesAvailable, capHit, droppedNoDate, sources,
+        partial, status, error, added: [...added],
       };
       sessionStorage.setItem(RESULTS_KEY, JSON.stringify(snap));
     } catch {
       /* sessionStorage full/unavailable — non-fatal */
     }
-  }, [phase, mode, offers, matchCount, companiesScanned, companiesAvailable, capHit, droppedNoDate, sources, partial, status, error, added, aiTrace, aiCost, aiIntent]);
+  }, [phase, offers, matchCount, companiesScanned, companiesAvailable, capHit, droppedNoDate, sources, partial, status, error, added]);
 
   const value = useMemo(
     () => ({
       filters, setFilters, initFilters, phase,
-      running: phase === "casting" || phase === "scanning" || phase === "revealing" || phase === "hunting",
+      running: phase === "casting" || phase === "scanning" || phase === "revealing",
       offers, sources, matchCount, companiesScanned, companiesAvailable, capHit, droppedNoDate, status, partial, error, added, adding,
       discover, addToPipeline, applyPatch, reset,
-      mode, setMode, aiIntent, setAiIntent, discoverAI, aiTrace, aiCost,
     }),
-    [filters, setFilters, initFilters, phase, offers, sources, matchCount, companiesScanned, companiesAvailable, capHit, droppedNoDate, status, partial, error, added, adding, discover, addToPipeline, applyPatch, reset, mode, setMode, aiIntent, discoverAI, aiTrace, aiCost],
+    [filters, setFilters, initFilters, phase, offers, sources, matchCount, companiesScanned, companiesAvailable, capHit, droppedNoDate, status, partial, error, added, adding, discover, addToPipeline, applyPatch, reset],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -15,6 +15,7 @@ type Props = {
   n: string;
   company: string;
   pdfReady: boolean;
+  reportNumber?: string;
 };
 
 export async function copyAgentInstruction(value: string): Promise<void> {
@@ -121,10 +122,10 @@ export function AgentTaskHandoffDialog({
           </span>
           <div className="min-w-0 flex-1">
             <h2 id={titleId} className="text-lg font-semibold text-foreground">
-              任务已加入 Agent 待办
+              {handoff.attachmentPaths?.length ? "截图和任务已保存" : "任务已加入 Agent 待办"}
             </h2>
             <p id={descriptionId} className="mt-2 text-sm leading-6 text-muted">
-              Web 已保存任务，但不会替你启动模型。请回到 Codex、WorkBuddy 或其他 Agent，
+              Web 已保存{handoff.attachmentPaths?.length ? "任务与本地附件" : "任务"}，但不会替你启动模型。请回到 Codex、WorkBuddy 或其他 Agent，
               粘贴下面的指令继续处理。
             </p>
           </div>
@@ -143,11 +144,22 @@ export function AgentTaskHandoffDialog({
           <p className="mt-2 break-words text-sm leading-6 text-foreground">{handoff.instruction}</p>
         </div>
 
+        {handoff.attachmentPaths && handoff.attachmentPaths.length > 0 && (
+          <div className="mt-3 rounded-xl border border-success-border bg-success-surface px-4 py-3">
+            <p className="text-xs font-semibold text-success">招聘截图已保存在当前工作区</p>
+            <ul className="mt-2 space-y-1 text-xs text-muted" aria-label="招聘截图本地保存位置">
+              {handoff.attachmentPaths.map((attachmentPath) => (
+                <li key={attachmentPath}><code className="break-all text-foreground">{attachmentPath}</code></li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Link
             href={`/jobs/${handoff.id}`}
             onClick={closeDialog}
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-outline-border bg-outline-bg px-4 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-border-hover"
+            className="inline-flex min-h-10 items-center justify-center rounded-button border border-outline-border bg-outline-bg px-4 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-border-hover"
           >
             查看 Agent 任务
           </Link>
@@ -155,7 +167,7 @@ export function AgentTaskHandoffDialog({
             ref={copyRef}
             type="button"
             onClick={copyInstruction}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-brand-foreground transition-colors hover:bg-brand-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-button bg-brand px-4 text-sm font-semibold text-brand-foreground transition-colors hover:bg-brand-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
           >
             {copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
             {copied ? "已复制" : "复制指令"}
@@ -167,7 +179,7 @@ export function AgentTaskHandoffDialog({
   );
 }
 
-export function GeneratePdfButton({ n, company, pdfReady }: Props) {
+export function GeneratePdfButton({ n, company, pdfReady, reportNumber }: Props) {
   const { jobs, queueAgentTask } = useJobs();
   const job = useMemo(
     () => jobs.filter((item) => item.kind === "pdf" && item.input === n).sort((a, b) => b.startedAt - a.startedAt)[0],
@@ -184,6 +196,9 @@ export function GeneratePdfButton({ n, company, pdfReady }: Props) {
     input: n,
     page: `/pipeline/${n}`,
   };
+  const pdfHref = reportNumber
+    ? `/api/cv-pdf?report=${encodeURIComponent(reportNumber)}`
+    : `/api/cv-pdf?company=${encodeURIComponent(company)}`;
 
   function showExistingHandoff() {
     if (!job) return;
@@ -252,7 +267,7 @@ export function GeneratePdfButton({ n, company, pdfReady }: Props) {
     trigger = (
       <span className="inline-flex items-center gap-1">
         <a
-          href={`/api/cv-pdf?company=${encodeURIComponent(company)}`}
+          href={pdfHref}
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-500/15 dark:text-emerald-400 max-sm:min-h-[44px]"

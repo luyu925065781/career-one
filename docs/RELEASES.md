@@ -74,6 +74,14 @@ npm run release:verify -- --channel stable
 
 `.release-please-manifest.json` 记录已经发布的版本，不跟随每次开发版编号变化。
 
+## 邀请内测发布
+
+1. 在 `develop` 或发布候选分支完成 P0 门禁，确认 `stable + beta` 功能范围与本轮测试目标一致。
+2. 执行 `release:prepare --channel beta --version 1.1.0-beta.1`，再执行 `release:verify --channel beta`。
+3. 从干净提交手动触发 `Release` workflow；先以 `publish=false` 验证完整根测试、Web、audit、分发测试和构建。
+4. 验证通过后对同一不可变提交以 `publish=true` 创建 prerelease，不从本地工作目录手工上传 ZIP。
+5. Release 必须同时包含 `career-one-codex.zip`、`career-one-workbuddy.zip` 和 `SHA256SUMS.txt`；测试用户按 checksum 核对附件，不使用稳定版 `npx` 安装路径。
+
 ## 发布检查单
 
 1. 在 `develop` 跑根目录测试、Web 测试、类型检查和生产构建。

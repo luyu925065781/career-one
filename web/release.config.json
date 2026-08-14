@@ -1,12 +1,13 @@
 {
-  "version": "1.1.0-dev.1",
-  "channel": "development",
+  "version": "1.1.0-beta.1",
+  "channel": "beta",
   "features": {
     "home": "stable",
-    "agentTasks": "development",
+    "agentTasks": "beta",
     "discoverJobs": "beta",
     "jobDiagnosis": "beta",
     "pipeline": "stable",
+    "profile": "beta",
     "interviewStories": "beta",
     "jobSources": "beta",
     "analytics": "development",

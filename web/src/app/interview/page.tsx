@@ -1,15 +1,17 @@
-import { BookOpenCheck, CircleAlert, CircleCheck, Database, Target } from "lucide-react";
-import { StoryActions } from "@/components/cv-editor";
-import { readStoryBank, type InterviewStory } from "@/lib/career-one";
+import { BookOpenCheck, CircleAlert, CircleCheck, CircleHelp, Database, Target } from "lucide-react";
+import { JourneyHandoffCard, StoryActions } from "@/components/cv-editor";
+import { doctorState, readStoryBank, type InterviewStory } from "@/lib/career-one";
 import { cn } from "@/lib/cn";
 import { PRIMARY_NAV_ITEMS } from "@/lib/nav-items";
+import { assessStoryReadiness } from "@/lib/story-bank.mjs";
 
 export const dynamic = "force-dynamic";
 const PageIcon = PRIMARY_NAV_ITEMS.interviewStories.icon;
 
 export default function InterviewStoryBankPage() {
   const { stories } = readStoryBank();
-  const ready = stories.filter((story) => story.status === "可使用").length;
+  const { profileReady } = doctorState();
+  const ready = stories.filter((story) => assessStoryReadiness(story).ready).length;
   const pending = stories.length - ready;
   const tags = [...new Set(stories.flatMap((story) => story.tags))];
 
@@ -19,7 +21,7 @@ export default function InterviewStoryBankPage() {
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
-            <h1 className="font-display text-2xl tracking-normal text-landing">面试故事库</h1>
+            <h1 className="page-title">面试故事库</h1>
           </div>
           <p className="mt-1.5 w-full pl-9 text-sm leading-6 text-muted">
             从已核验经历中沉淀的 STAR+Reflection 主故事，AI会按不同岗位和面试问题灵活调用。
@@ -30,13 +32,19 @@ export default function InterviewStoryBankPage() {
         </div>
       </header>
 
+      <JourneyHandoffCard
+        stage={!profileReady
+          ? "profile-current"
+          : stories.length > 0 ? "story-complete" : "story-current"}
+      />
+
       {stories.length === 0 ? (
-        <EmptyBank />
+        <EmptyBank profileReady={profileReady} />
       ) : (
         <>
           <section className="mt-8 grid grid-cols-2 border-y border-border sm:grid-cols-4" aria-label="故事库概览">
-            <Metric label="主故事" value={stories.length} />
-            <Metric label="可使用" value={ready} tone="success" />
+            <Metric label="已生成" value={stories.length} />
+            <Metric label="已完善" value={ready} tone="success" />
             <Metric label="待完善" value={pending} tone="warning" />
             <Metric label="能力标签" value={tags.length} />
           </section>
@@ -55,7 +63,7 @@ export default function InterviewStoryBankPage() {
             </div>
           </section>
 
-          <section className="mt-8 space-y-4" aria-label="STAR 面试故事">
+          <section id="story-list" className="mt-8 scroll-mt-6 space-y-4" aria-label="STAR 面试故事">
             {stories.map((story) => <StoryCard key={story.id} story={story} />)}
           </section>
         </>
@@ -80,9 +88,10 @@ function Metric({ label, value, tone }: { label: string; value: number; tone?: "
 }
 
 function StoryCard({ story }: { story: InterviewStory }) {
-  const usable = story.status === "可使用";
+  const assessment = assessStoryReadiness(story);
+  const completed = assessment.ready;
   return (
-    <article className="overflow-hidden rounded-xl border border-border bg-surface/55">
+    <article className="relative rounded-card border border-border bg-surface">
       <div className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
@@ -95,14 +104,15 @@ function StoryCard({ story }: { story: InterviewStory }) {
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             <StoryActions story={story} />
             <span className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-              usable
-                ? "border-emerald-500/25 bg-emerald-500/10 text-icon-success"
-                : "border-amber-500/25 bg-amber-500/10 text-icon-warning",
+              "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium",
+              completed
+                ? "border-success-border bg-success-surface text-success"
+                : "border-warning-border bg-warning-surface text-warning",
             )}>
-              {usable ? <CircleCheck className="size-3.5" /> : <CircleAlert className="size-3.5" />}
-              {story.status}
+              {completed ? <CircleCheck className="size-3.5" /> : <CircleAlert className="size-3.5" />}
+              {completed ? "已完善" : "待完善"}
             </span>
+            <StoryStatusHelp storyId={story.id} completed={completed} />
           </div>
         </div>
 
@@ -122,6 +132,8 @@ function StoryCard({ story }: { story: InterviewStory }) {
             </div>
           </div>
         )}
+
+        {!completed && <StoryMissingWork assessment={assessment} />}
       </div>
 
       <div className="grid border-t border-border sm:grid-cols-2">
@@ -152,6 +164,105 @@ function StoryCard({ story }: { story: InterviewStory }) {
   );
 }
 
+function StoryStatusHelp({ storyId, completed }: { storyId: string; completed: boolean }) {
+  const standards = [
+    ["01", "事实可追溯", "内容来自 cv.md 或其他允许的本地事实来源。"],
+    ["02", "STAR 具体", "情境、任务、行动和结果都能讲清本人做了什么。"],
+    ["03", "补齐待确认", "草稿中不再留下待确认或待补充信息。"],
+    ["04", "用户最终确认", "检查事实和表达后，由您确认最终内容。"],
+  ];
+
+  return (
+    <details className="group relative">
+      <summary
+        aria-label={`查看 ${storyId} 的完善标准`}
+        title="查看完善标准"
+        className="flex size-7 cursor-pointer list-none items-center justify-center rounded-button border border-outline-border bg-outline-bg text-muted transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface [&::-webkit-details-marker]:hidden"
+      >
+        <CircleHelp className="size-3.5" aria-hidden="true" />
+      </summary>
+
+      <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-[min(20rem,calc(100vw-3rem))] rounded-card border border-border bg-surface p-4 shadow-floating">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-muted">完善标准</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">怎样变成“已完善”</p>
+          </div>
+          <span className={cn(
+            "shrink-0 rounded-full px-2 py-1 text-[11px] font-medium",
+            completed ? "bg-success-surface text-success" : "bg-warning-surface text-warning",
+          )}>
+            {completed ? "已完善" : "待完善"}
+          </span>
+        </div>
+
+        <p className="mt-3 text-xs leading-5 text-muted">
+          Agent 会以“已完善”标准为目标优化故事；关键事实不足时，会先向您追问。完整草稿经您的审核确认后，故事才会进入“已完善”状态。
+        </p>
+
+        <ol className="mt-3 space-y-2" aria-label={`${storyId} 的面试故事完善标准`}>
+          {standards.map(([number, title, description]) => (
+            <li key={number} className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
+              <span className="flex size-6 items-center justify-center rounded-full border border-border bg-surface-hover text-[10px] font-semibold tabular-nums text-muted">
+                {number}
+              </span>
+              <p className="text-xs leading-5 text-muted">
+                <span className="font-semibold text-foreground">{title}</span> · {description}
+              </p>
+            </li>
+          ))}
+        </ol>
+
+        <p className="mt-3 border-t border-border pt-3 text-xs leading-5 text-faint">
+          这些标准只用于帮助您判断故事质量，不影响继续评估岗位；是否继续完善由您决定。
+        </p>
+      </div>
+    </details>
+  );
+}
+
+function StoryMissingWork({ assessment }: { assessment: ReturnType<typeof assessStoryReadiness> }) {
+  return (
+    <div className="mt-5 rounded-card border border-warning-border bg-warning-surface p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <CircleAlert className="size-4 shrink-0 text-warning" aria-hidden="true" />
+          <h3 className="text-sm font-semibold text-foreground">完成这些内容后即可标记为已完善</h3>
+        </div>
+        <span className="text-xs font-semibold tabular-nums text-warning">
+          还差 {assessment.missingChecks.length} 项
+        </span>
+      </div>
+
+      <ul className="mt-3 grid gap-2 text-sm text-muted sm:grid-cols-2">
+        {assessment.missingChecks.map((check) => (
+          <li key={check.id} className="flex gap-2">
+            <span className="mt-2 size-1.5 shrink-0 rounded-full bg-warning-solid" aria-hidden="true" />
+            <span>{check.label}</span>
+          </li>
+        ))}
+      </ul>
+
+      {assessment.pendingPrompts.length > 0 && (
+        <div className="mt-4 border-t border-warning-border pt-3">
+          <p className="text-xs font-semibold text-warning">Agent 正在等你补充</p>
+          <ul className="mt-2 space-y-1.5 text-sm leading-6 text-muted">
+            {assessment.pendingPrompts.slice(0, 3).map((prompt) => (
+              <li key={prompt} className="flex gap-2">
+                <span className="text-warning" aria-hidden="true">•</span>
+                <span>{prompt}</span>
+              </li>
+            ))}
+          </ul>
+          {assessment.pendingPrompts.length > 3 && (
+            <p className="mt-2 text-xs text-faint">另有 {assessment.pendingPrompts.length - 3} 项待确认。</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StarSection({ marker, label, lines }: { marker: string; label: string; lines: string[] }) {
   return (
     <div className="border-t border-border px-5 py-4 first:border-t-0 sm:border-l sm:border-t-0 sm:px-6 sm:odd:border-l-0 sm:[&:nth-child(n+3)]:border-t">
@@ -174,13 +285,18 @@ function StoryLines({ lines, className }: { lines: string[]; className?: string 
   );
 }
 
-function EmptyBank() {
+function EmptyBank({ profileReady }: { profileReady: boolean }) {
   return (
     <div className="mt-8 border-y border-dashed border-border py-14 text-center">
       <BookOpenCheck className="mx-auto size-8 text-icon-muted" />
       <h2 className="mt-4 text-lg font-semibold text-foreground">故事库还是空的</h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
-        完成岗位评估后，择程AI会从已核验经历中整理可复用的 STAR+R 故事。
+        {profileReady
+          ? "从简历中已核验的经历整理 1 个 STAR+R 主故事；岗位评估后还会继续补充更贴合目标岗位的素材。"
+          : "先完成上方求职画像，再根据目标岗位选择最有说服力的真实经历整理故事。"}
+      </p>
+      <p className="mx-auto mt-3 max-w-md text-xs leading-5 text-faint">
+        使用上方流程入口交给 Agent 处理。Agent 会先生成待确认提案，不会直接覆盖本地故事库。
       </p>
     </div>
   );

@@ -24,15 +24,15 @@ export async function POST(req: Request) {
   try {
     b = await req.json();
   } catch {
-    return NextResponse.json({ error: "bad json" }, { status: 400 });
+    return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
   }
-  if (!b.id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  if (!b.id) return NextResponse.json({ error: "缺少任务 ID" }, { status: 400 });
 
   const dir = path.join(careerOneRoot(), ".career-one-web", "runs");
   try {
     fs.mkdirSync(dir, { recursive: true });
   } catch {
-    return NextResponse.json({ error: "mkdir failed" }, { status: 500 });
+    return NextResponse.json({ error: "无法创建任务记录目录" }, { status: 500 });
   }
   const safeId = String(b.id).replace(/[^a-z0-9_-]/gi, "");
   const steps = (b.steps ?? []).map((s) => `- ${s.kind === "tool" ? `🔧 ${s.label}` : s.label}`).join("\n");
@@ -54,6 +54,6 @@ ${b.output || ""}
     fs.writeFileSync(path.join(dir, `${safeId}.md`), md);
     return NextResponse.json({ ok: true });
   } catch {
-    return NextResponse.json({ error: "write failed" }, { status: 500 });
+    return NextResponse.json({ error: "任务记录保存失败" }, { status: 500 });
   }
 }

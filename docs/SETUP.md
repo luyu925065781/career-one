@@ -8,18 +8,30 @@
 
 ## Quick Start
 
-### Recommended — one command
+### Invite beta — `v1.1.0-beta.1`
+
+During the invite beta, do not use `npx career-one init`: the npm installer has not been republished and does not select prereleases. Open the `v1.1.0-beta.1` GitHub Prerelease, download `SHA256SUMS.txt`, and choose the matching asset:
+
+- Codex: `career-one-codex.zip`
+- WorkBuddy: `career-one-workbuddy.zip`
+
+For any supported Agent CLI, clone the same immutable tag:
 
 ```bash
-npx career-one init
-```
-
-`npx` ships with Node.js — it runs the installer once without installing anything globally. This clones the latest release into `./career-one` and installs dependencies. Then move into the workspace and open your AI CLI:
-
-```bash
+git clone --branch v1.1.0-beta.1 --depth 1 https://github.com/luyu925065781/career-one.git
 cd career-one
-claude   # or gemini / codex / qwen / opencode / agy / grok
+npm ci --ignore-scripts
+(cd web && npm ci)
+codex   # or claude / gemini / qwen / opencode / agy / grok
 ```
+
+Verify downloaded Release assets from the directory containing the ZIP files and `SHA256SUMS.txt`:
+
+```bash
+shasum -a 256 -c SHA256SUMS.txt
+```
+
+On Linux, use `sha256sum -c SHA256SUMS.txt`. The stable npm installer can return after it is republished and its end-to-end install path is verified; until then, the tag and checksums above are authoritative.
 
 **On first launch, career-one walks you through setup by chatting** — it asks for your CV, your details (name, target roles, salary), and sets up the job scanner with pre-configured companies. Nothing to edit by hand: just answer its questions. Then paste a job offer URL or description and it evaluates it, writes a report, generates a tailored PDF, and tracks it.
 
@@ -45,15 +57,16 @@ codex exec "Run career-one email mode for the latest evaluated role. Draft only;
 codex exec "Run career-one tracker mode and summarize the current statuses."
 ```
 
-### Advanced — clone manually
+### Advanced — follow another branch
 
 <details>
 <summary>Prefer to clone the repo yourself?</summary>
 
 ```bash
-git clone https://github.com/luyu925065781/career-one.git
+git clone --branch develop https://github.com/luyu925065781/career-one.git
 cd career-one
-npm install
+npm install --ignore-scripts
+(cd web && npm ci)
 ```
 
 Then open your AI CLI in the folder — the same first-run onboarding applies. Use this path if you want to track a specific branch, contribute, or audit the code before installing dependencies.

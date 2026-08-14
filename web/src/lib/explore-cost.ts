@@ -1,8 +1,8 @@
 // The cost-honesty taxonomy — a single source for the FREE vs $ boundary that the
-// Explorer teaches by repetition. Discovery (finding roles) is structurally free:
-// it calls no LLM. Only evaluation (scoring a role against your CV) spends tokens,
-// and only when the user chooses it. The framing is always local-first: "your key,
-// your AI, your machine."
+// Explorer teaches by repetition. Deterministic website scanning is structurally
+// free and calls no LLM. Agent search and evaluation may spend the user's own
+// Agent tokens, but Web never starts either model workflow directly. The framing
+// is always local-first: "your key, your AI, your machine."
 
 export type CostClass = "free" | "free-network" | "spend" | "free-gemini";
 

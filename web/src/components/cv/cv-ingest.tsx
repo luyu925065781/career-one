@@ -7,8 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Upload, FileText, Loader2, Check, AlertTriangle, Lock, ArrowRight, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { cvReadiness, parseCvStream, type CvSeed } from "@/lib/cv/quality";
-import { DEFAULT_FILTERS, filtersToParams } from "@/lib/explore";
+import { cvReadiness, parseCvStream } from "@/lib/cv/quality";
 
 type Phase = "input" | "parsing" | "review" | "saving" | "error";
 
@@ -33,7 +32,6 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
   const [over, setOver] = useState(false);
   const [trace, setTrace] = useState("");
   const [md, setMd] = useState("");
-  const [seed, setSeed] = useState<CvSeed | null>(null);
   const [err, setErr] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -47,7 +45,7 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
     try {
       const r = await fetch("/api/cv/ingest", init);
       if (r.status === 404) {
-        setErr("Connect an AI CLI in Config first — it parses your CV locally.");
+        setErr("请先在设置中连接 Agent CLI，简历会在本机解析。");
         setPhase("error");
         return;
       }
@@ -65,25 +63,23 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
         buf += dec.decode(value, { stream: true });
         const parsed = parseCvStream(buf);
         if (parsed.error) {
-          setErr(parsed.error === "unreadable" ? "I couldn't read text from that file (it may be a scanned image). Paste the text instead." : "Couldn't parse the CV — paste the text instead.");
+          setErr(parsed.error === "unreadable" ? "无法读取该文件中的文字，文件可能是扫描图片。请改为粘贴简历文字。" : "无法解析这份简历，请改为粘贴简历文字。");
           setPhase("error");
           return;
         }
         if (parsed.trace) setTrace(parsed.trace.split("\n").filter(Boolean).slice(-1)[0] || "正在读取简历…");
         if (parsed.markdown) setMd(parsed.markdown);
-        if (parsed.seed) setSeed(parsed.seed);
       }
       const final = parseCvStream(buf);
       if (!final.markdown.trim()) {
-        setErr("Couldn't read a CV there — paste the text instead.");
+        setErr("没有读取到有效简历内容，请改为粘贴简历文字。");
         setPhase("error");
         return;
       }
       setMd(final.markdown);
-      setSeed(final.seed);
       setPhase("review");
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "stream error");
+      setErr(e instanceof Error ? e.message : "读取简历时响应流出错");
       setPhase("error");
     }
   }, []);
@@ -105,7 +101,7 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
         .text()
         .then((t) => {
           if (!t.trim()) {
-            setErr("That file looks empty — paste your CV instead.");
+            setErr("该文件内容为空，请改为粘贴简历文字。");
             setPhase("error");
             return;
           }
@@ -113,7 +109,7 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
           setPhase("review");
         })
         .catch(() => {
-          setErr("Couldn't read that file — paste your CV instead.");
+          setErr("无法读取该文件，请改为粘贴简历文字。");
           setPhase("error");
         });
       return;
@@ -134,7 +130,7 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
   const [saveErr, setSaveErr] = useState("");
   const save = async () => {
     if (!md.trim()) {
-      setSaveErr("Your CV looks empty — paste it again.");
+      setSaveErr("简历内容为空，请重新粘贴。");
       return;
     }
     setSaveErr("");
@@ -143,25 +139,19 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
       const r = await fetch("/api/cv", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: md }) });
       if (!r.ok) {
         const d = await r.json().catch(() => ({}));
-        setSaveErr(d.error || "Couldn't save your CV — try again.");
+        setSaveErr(d.error || "无法保存简历，请重试。");
         setPhase("review"); // keep the parsed CV so they don't lose it
         return;
       }
     } catch {
-      setSaveErr("Couldn't save your CV — check your connection and try again.");
+      setSaveErr("无法保存简历，请检查连接后重试。");
       setPhase("review");
       return;
     }
     onSaved?.();
-    // WOW #1 — land in the Explorer with the CV-derived filters in the URL + run=1,
-    // so the Explorer auto-fires the FREE scan itself (robust, no push/replaceState race).
-    // GENEROUS first scan so it never comes back empty (that would kill the wow): roles
-    // only + a wide 30-day window; location stays a refinement for the deepen step, NOT a
-    // hard exclude (allow=[] passes everything). Recall over precision for the first reveal.
-    const roles = seed?.roles?.length ? seed.roles : seed?.title ? [seed.title] : [];
-    const f = { ...DEFAULT_FILTERS, ats: [...DEFAULT_FILTERS.ats], positive: roles, sinceDays: 30 };
-    const qs = filtersToParams(f);
-    router.push(`/explore?${qs}${qs ? "&" : ""}run=1`);
+    // The profile is now the single place to review job-search direction and
+    // reusable search tags after the CV is saved.
+    router.push("/profile");
   };
 
   // ── INPUT ──
@@ -197,7 +187,7 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-outline-border bg-outline-bg px-3 py-1.5 text-xs font-medium text-outline-text transition hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px] max-sm:px-4"
+              className="inline-flex items-center gap-1.5 rounded-button border border-outline-border bg-outline-bg px-3 py-1.5 text-xs font-medium text-outline-text transition hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px] max-sm:px-4"
             >
               <Upload className="size-3.5" /> 上传 PDF / 文件
             </button>
@@ -209,7 +199,7 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
               type="button"
               disabled={!paste.trim()}
               onClick={() => ingestText(paste.trim())}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-sm transition hover:brightness-110 disabled:opacity-50 max-sm:min-h-[44px]"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-button bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-sm transition hover:brightness-110 disabled:opacity-50 max-sm:min-h-[44px]"
             >
               读取简历 <ArrowRight className="size-4" />
             </button>
@@ -220,7 +210,7 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-[13px] text-amber-700 dark:text-amber-300">
               <AlertTriangle className="size-3.5 shrink-0" />
               <span>读取 PDF 需要连接 Agent CLI，也可以直接在上方粘贴简历文字。</span>
-              <Link href="/config" className="ml-auto inline-flex items-center gap-1 rounded-md bg-amber-500/20 px-2.5 py-1 font-medium text-amber-700 transition hover:bg-amber-500/30 dark:text-amber-200">
+              <Link href="/config" className="ml-auto inline-flex items-center gap-1 rounded-button bg-amber-500/20 px-2.5 py-1 font-medium text-amber-700 transition hover:bg-amber-500/30 dark:text-amber-200">
                 连接 Agent CLI <ArrowRight className="size-3.5" />
               </Link>
             </div>
@@ -290,16 +280,15 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
           type="button"
           onClick={save}
           disabled={phase === "saving"}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:brightness-110 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-button bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:brightness-110 disabled:opacity-60"
         >
           {phase === "saving" ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-          保存并发现匹配岗位
+          保存并完善求职画像
         </button>
         <button
           type="button"
           onClick={() => {
             setMd("");
-            setSeed(null);
             setPhase("input");
           }}
           className="inline-flex items-center gap-1.5 text-[13px] text-muted transition hover:text-foreground"

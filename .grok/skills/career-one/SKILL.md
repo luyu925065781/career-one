@@ -48,12 +48,14 @@ Web 工作台不得直接启动 Agent CLI。用户在 Web 中发起生成简历�
    `node <skill-root>/scripts/career-one.mjs run start --intent <意图> --title <中文标题> --source agent [--input <简短输入>] [--page </页面>]`
 2. 长任务在关键阶段记录简短中文进度：
    `node <skill-root>/scripts/career-one.mjs run progress <id> --label <当前阶段>`
-3. 成功后记录摘要、分数、正式产物和 Web 页面：
+3. 需要用户补充事实时，先把任务暂停为“等待用户回复”，并记录一个具体问题；用户回答后再用同一个 ID 恢复进度：
+   `node <skill-root>/scripts/career-one.mjs run wait <id> --question <需要用户回答的问题> --label <等待阶段>`
+4. 成功后记录摘要、分数、正式产物和 Web 页面：
    `node <skill-root>/scripts/career-one.mjs run complete <id> --summary <摘要> [--score <0-5>] [--artifact 'reports/文件.md|岗位诊断报告|/pipeline/编号'] [--page </页面>]`
-4. 失败或被阻塞时记录真实原因：
+5. 失败或被阻塞时记录真实原因：
    `node <skill-root>/scripts/career-one.mjs run fail <id> --error <原因>`
 
-如果用户消息中带有“已有待办任务 ID”，不要再次运行 `run start` 创建重复任务。先运行 `run progress <id> --label "Agent 已接手任务"` 把 queued 任务更新为运行中；完成或失败时继续使用同一个 ID。任务完成后运行 `node agent-inbox.mjs resolve --task <id> --result <结果摘要>`，让 Web 与 Agent 待办同步结单。
+如果用户消息中带有“已有待办任务 ID”，不要再次运行 `run start` 创建重复任务。先运行 `run progress <id> --label "Agent 已接手任务"` 把 queued 或 waiting_input 任务更新为运行中；需要用户回答时必须在结束当前对话回合前运行 `run wait`，不能让 Web 继续显示“思考中”；完成或失败时继续使用同一个 ID。任务完成后运行 `node agent-inbox.mjs resolve --task <id> --result <结果摘要>`，让 Web 与 Agent 待办同步结单。
 
 不得把完整 JD、简历正文或秘密写入任务摘要；任务记录只保存短输入、进度和正式产物的相对路径。
 
@@ -62,6 +64,16 @@ Web 工作台不得直接启动 Agent CLI。用户在 Web 中发起生成简历�
 `node <skill-root>/scripts/career-one.mjs run propose <id> --target <用户层文件> --draft <临时草稿> --summary <修改摘要>`
 
 创建后停止落盘并请用户确认。用户明确同意后才运行 `run approve <proposal-id>`；拒绝时运行 `run reject <proposal-id>`。确认脚本会校验文件版本，目标文件在提案后发生变化时必须重新生成提案，不得覆盖较新的用户修改。
+
+### 单个面试故事优化
+
+用户要求“优化”某个面试故事时，默认目标是交付一份达到“已完善”标准的候选稿，而不是生成更多待完善项：
+
+1. 只处理用户指定的故事编号，其他故事必须逐字保留。
+2. 先充分利用允许来源中已经确认的事实，完成清晰、具体且可追溯的 STAR+Reflection。可以排序、归纳和结构化已有事实，但不得增加新的经历、指标或个人贡献；Reflection 可以总结现有事实呈现出的工程方法，不得伪造用户未表达过的主观感受。
+3. 不主动扩展非必要的“待确认”问题。只有缺少关键事实会导致完善标准无法满足时，才先用最少的问题向用户追问；在用户回答前不要把问题清单包装成“优化完成”的提案。
+4. 当故事各部分均有事实支撑且没有必要待确认项时，候选稿状态写为“已完善”。该状态只会随提案在用户确认后落盘，因此不与“用户最终确认”冲突。
+5. 只有用户明确选择跳过关键问题，或允许来源确实不足以支持完整故事时，才提交状态为“待完善”的候选稿，并说明仍缺少什么。故事状态不影响用户继续发现岗位。
 
 最终回复始终先给结果，再列出：修改或生成了什么、相对文件路径、是否有待确认提案、建议的下一步，以及可在 Web 工作台打开的页面。不得为了显示进度而要求用户启动 Web。
 
@@ -72,7 +84,7 @@ Web 工作台不得直接启动 Agent CLI。用户在 Web 中发起生成简历�
 - 岗位诊断完成后：`[查看诊断报告](http://localhost:3301/pipeline/{报告编号})`
 - 简历创建、优化或待确认修改：`[打开简历页面](http://localhost:3301/cv)`
 - 单个面试故事修改：`[打开面试故事库](http://localhost:3301/interview)`
-- 求职画像或规则修改：`[打开设置](http://localhost:3301/config)`
+- 求职画像或规则修改：`[打开求职画像](http://localhost:3301/profile)`
 - 岗位渠道设置：`[打开岗位来源](http://localhost:3301/portals)`
 
 任务仍在执行时立即给出“查看当前任务”链接，用户可在 Web 中实时查看进度。任务完成后，再给最具体的结果页链接。工作台尚未运行时，先运行 `node <skill-root>/scripts/career-one.mjs web --page <任务页面>`；正在运行时该命令会安全复用现有服务，不关闭端口上的其他进程。除非用户明确要求，不要在每个后台步骤重复弹出浏览器。
@@ -116,13 +128,15 @@ node doctor.mjs --json
 
 ### 创建个人配置
 
-从 `config/profile.example.yml` 复制结构，再通过对话补充：
+从 `config/profile.example.yml` 复制结构，并在一次回复中列出完整确认清单：
 
 - 姓名、联系方式、所在城市与时区
-- 目标岗位与职级
-- 目标薪资、最低接受值和地点偏好
-- 优势、红线、理想工作方式
+- 目标岗位与职级、地点偏好、工作方式与迁居意愿
+- 目标薪资范围与最低接受值
+- 优势、代表成果、动力来源、红线与理想工作方式
 - 最有说服力的成果与公开作品
+
+先读取允许的用户层事实文件，已有且明确的内容直接预填；所有仍需确认的项目必须在同一条消息中一次性列出，不得拆成多轮逐项追问。用户未回答的项目标为“待确认”，不要因此继续追问或阻塞完整候选稿与待确认提案。
 
 个人画像只写入 `config/profile.yml` 或 `modes/_profile.md`。
 

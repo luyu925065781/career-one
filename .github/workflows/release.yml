@@ -32,24 +32,34 @@ jobs:
         with:
           node-version: 24
       - name: Install root dependencies
-        run: npm install --ignore-scripts
+        run: npm ci --ignore-scripts
+      - name: Audit root production dependencies
+        run: npm audit --omit=dev --audit-level=high
       - name: Verify release channel and synchronized versions
         run: npm run release:verify -- --channel "${{ inputs.channel }}"
       - name: Verify system contracts
-        run: node test-all.mjs --quick
+        run: node test-all.mjs
       - name: Verify web application
         working-directory: web
         run: |
           npm ci
+          npm audit --omit=dev --audit-level=high
           npm test
           npx tsc --noEmit
           npm run build
+      - name: Verify distributions
+        run: npm run test:distributions
       - name: Build Codex and WorkBuddy packages
         run: npm run build:distributions
       - name: Package Codex plugin
         run: |
           cd dist/marketplaces/codex
           zip -qr ../career-one-codex.zip career-one
+      - name: Generate release checksums
+        run: |
+          cp dist/marketplaces/workbuddy/career-one-workbuddy.zip dist/marketplaces/career-one-workbuddy.zip
+          cd dist/marketplaces
+          sha256sum career-one-codex.zip career-one-workbuddy.zip > SHA256SUMS.txt
       - name: Upload marketplace packages
         uses: actions/upload-artifact@v4
         with:
@@ -74,16 +84,18 @@ jobs:
           fi
           if [ "$CHANNEL" = "stable" ]; then
             gh release create "$TAG" \
-              dist/marketplaces/workbuddy/career-one-workbuddy.zip \
+              dist/marketplaces/career-one-workbuddy.zip \
               dist/marketplaces/career-one-codex.zip \
+              dist/marketplaces/SHA256SUMS.txt \
               --target "$GITHUB_SHA" \
               --generate-notes \
               --latest \
               --title "择程AI ${VERSION}"
           else
             gh release create "$TAG" \
-              dist/marketplaces/workbuddy/career-one-workbuddy.zip \
+              dist/marketplaces/career-one-workbuddy.zip \
               dist/marketplaces/career-one-codex.zip \
+              dist/marketplaces/SHA256SUMS.txt \
               --target "$GITHUB_SHA" \
               --generate-notes \
               --prerelease \

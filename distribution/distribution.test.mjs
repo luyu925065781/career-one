@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -42,7 +42,7 @@ test("Node.js runtime requirement matches Next.js 16 across every public entrypo
 
 test("runtime manifest includes system essentials and excludes user data", async () => {
   const { RUNTIME_PATHS, USER_DATA_PATHS } = await import(pathToFileURL(MANIFEST_MODULE).href);
-  for (const required of ["AGENTS.md", "doctor.mjs", "package.json", "release.config.json", "release.mjs", "modes/", "templates/", "start-web.mjs", "web/src/", "web/package.json"]) {
+  for (const required of ["AGENTS.md", "doctor.mjs", "package.json", "package-lock.json", "release.config.json", "release.mjs", "modes/", "templates/", "start-web.mjs", "启动择程AI.command", "web/src/", "web/package.json"]) {
     assert.ok(RUNTIME_PATHS.includes(required), `runtime must include ${required}`);
   }
   for (const forbidden of USER_DATA_PATHS) {
@@ -69,6 +69,9 @@ test("Codex and WorkBuddy builds share one Skill and initialize a clean workspac
       assert.ok(existsSync(join(skillRoot, "assets", "runtime", "doctor.mjs")));
       assert.ok(existsSync(join(skillRoot, "assets", "runtime", "agent-runs.mjs")));
       assert.ok(existsSync(join(skillRoot, "assets", "runtime", "start-web.mjs")));
+      assert.ok(existsSync(join(skillRoot, "assets", "runtime", "启动择程AI.command")));
+      assert.ok((statSync(join(skillRoot, "assets", "runtime", "启动择程AI.command")).mode & 0o111) !== 0);
+      assert.ok(existsSync(join(skillRoot, "assets", "runtime", "package-lock.json")));
       assert.ok(existsSync(join(skillRoot, "assets", "runtime", "web", "package.json")));
       assert.ok(existsSync(join(skillRoot, "assets", "runtime", "web", "src", "app", "jobs", "page.tsx")));
       assert.ok(!existsSync(join(skillRoot, "assets", "runtime", "cv.md")));
@@ -84,6 +87,8 @@ test("Codex and WorkBuddy builds share one Skill and initialize a clean workspac
     assert.ok(existsSync(join(workspace, "doctor.mjs")));
     assert.ok(existsSync(join(workspace, "agent-runs.mjs")));
     assert.ok(existsSync(join(workspace, "start-web.mjs")));
+    assert.ok(existsSync(join(workspace, "启动择程AI.command")));
+    assert.ok((statSync(join(workspace, "启动择程AI.command")).mode & 0o111) !== 0);
     assert.ok(existsSync(join(workspace, "web", "package.json")));
     assert.ok(existsSync(join(workspace, "web", "src", "app", "jobs", "page.tsx")));
     assert.ok(existsSync(join(workspace, ".agents", "skills", "career-one", "SKILL.md")));

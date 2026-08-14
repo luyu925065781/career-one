@@ -20,6 +20,7 @@
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
+  --radius-button: 9999px;
   --radius-control: 0.5rem;
   --radius-card: 1rem;
   --radius-panel: 1.5rem;
@@ -221,6 +222,17 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Action controls have one product-wide silhouette. Disclosure rows and tabs
+   own their container/selection geometry, so neither inherits the action-button
+   pill. !important prevents other page-local radius utilities from drifting
+   ordinary action buttons away from the semantic token. */
+button:not([data-button-shape="container"]):not([role="tab"]),
+input[type="submit"],
+input[type="button"],
+input[type="reset"] {
+  border-radius: var(--radius-button) !important;
+}
+
 /* Form controls use a border-only focus treatment. This deliberately removes
    yellow rings/glows while preserving the visible focus border each component
    already declares. Button and link keyboard focus indicators stay intact. */
@@ -229,6 +241,42 @@ textarea:focus,
 select:focus,
 [contenteditable="true"]:focus {
   box-shadow: none !important;
+}
+
+/* Native scrollbar thumbs derive their length from each engine and OS. Hide
+   only the browser-owned chrome; the list remains the real scroll container,
+   while the shared overlay below gives Chrome, Edge, and Safari one shape. */
+.agent-task-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.agent-task-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.agent-task-scroll-thumb {
+  width: 3px;
+  background-color: color-mix(in srgb, var(--faint) 18%, transparent);
+  border-radius: var(--radius-button);
+  transition: background-color 150ms ease;
+  will-change: transform;
+}
+
+.agent-task-scroll-shell:hover .agent-task-scroll-thumb {
+  background-color: color-mix(in srgb, var(--faint) 34%, transparent);
+}
+
+/* One typography contract for every top-level workbench destination. Keep this
+   semantic class unlayered so it is emitted immediately during CSS hot reload. */
+.page-title {
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  letter-spacing: -0.025em;
+  color: var(--landing);
 }
 
 @layer utilities {

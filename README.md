@@ -51,43 +51,47 @@
 | **谈薪脚本** | 薪资谈判框架、地域折扣反驳话术、竞品 offer 杠杆策略 |
 | **ATS PDF 生成** | 注入关键词的简历，采用 Space Grotesk + DM Sans 设计 |
 | **岗位搜索辅助** | 根据本地个人画像生成目标岗位和排除岗位标签，可一键复制到国内招聘平台；仅把无需登录即可访问的公开招聘页面作为补充来源 |
-| **批量处理** | 使用 `codex exec --sandbox workspace-write`、`claude -p` 或其他 headless worker 并行评估 |
-| **Dashboard TUI** | 在终端 UI 中浏览、筛选和排序你的求职管道 |
+| **批量处理** | 使用 `codex exec --sandbox workspace-write`、`claude -p` 或其他无头工作进程并行评估 |
+| **终端仪表盘** | 在终端界面中浏览、筛选和排序你的求职管道 |
 | **人类在环** | AI 负责评估和建议，你负责决定和行动。系统绝不会自动提交申请，最终决定始终在你手上 |
 | **管道完整性** | 自动合并、去重、状态标准化和健康检查 |
 
 ## 快速开始
 
-**最快的方式 —— 一条命令：**
+### 邀请内测版 `v1.1.0-beta.1`
+
+内测用户从 GitHub Prerelease 获取固定版本。内测期间不要使用 `npx career-one init`；当前 npm installer 尚未重新发布，也不会自动选择 prerelease。
+
+在 `v1.1.0-beta.1` Release 页面下载 `SHA256SUMS.txt`，并按使用环境选择：
+
+- Codex：`career-one-codex.zip`
+- WorkBuddy：`career-one-workbuddy.zip`
+
+使用通用 Agent CLI 的测试用户可以检出同一个不可变 tag：
 
 ```bash
-npx career-one init
+git clone --branch v1.1.0-beta.1 --depth 1 https://github.com/luyu925065781/career-one.git
+cd career-one
+npm ci --ignore-scripts
+(cd web && npm ci)
+codex    # 或 claude / opencode / gemini / qwen
 ```
 
-> 💡 `npx` 随 [Node.js](https://nodejs.org) 一起提供 —— 它只运行一次安装程序，
-> 不会全局安装任何东西。还没有 Node？请先安装它。
-> （已经在用 Claude Code / Gemini / Codex CLI？那你已经有它了。）
-
-择程AI安装器默认创建 `./career-one` 并安装依赖。然后：
+在下载附件的目录校验完整性：
 
 ```bash
-cd career-one
-codex    # 或 claude / opencode / gemini / qwen —— 在这里打开你的 AI CLI
+shasum -a 256 -c SHA256SUMS.txt
+```
+
+Linux 用户可将 `shasum -a 256` 替换为 `sha256sum`。PDF 生成功能需要另行安装 Chromium：
+
+```bash
+npx playwright install chromium
 ```
 
 **首次启动择程AI时，用户自己的 Agent 会通过中文对话完成设置，包括 `cv.md`、个人画像和目标岗位。所有文件保存在当前电脑中。**
 
-<details>
-<summary><b>更喜欢手动设置？（git clone）</b></summary>
-
-```bash
-git clone https://github.com/luyu925065781/career-one.git
-cd career-one && npm install
-npx playwright install chromium   # 仅生成 PDF 时需要
-codex    # 打开你的 AI CLI —— 它会在首次启动时引导你完成设置
-```
-
-</details>
+稳定版 npm 一键安装器恢复发布后，README 会重新启用对应命令；在此之前，以 Release tag、附件和 `SHA256SUMS.txt` 为准。
 
 > **这个系统本来就是设计给 Codex 或你选择的 AI 编码 CLI 直接定制的。** modes、职业原型、评分权重、谈判脚本，直接告诉 Codex 要改什么就行。它读取的正是自己会使用的那些文件，所以知道该改哪里。
 
@@ -95,7 +99,7 @@ codex    # 打开你的 AI CLI —— 它会在首次启动时引导你完成设
 
 ## Codex 集成
 
-<!-- Codex compatibility: slash commands are not guaranteed; use plain language prompts or codex exec. -->
+<!-- Codex 兼容性：不保证提供斜杠命令；请使用自然语言提示或 codex exec。 -->
 
 择程AI支持 Codex 作为默认使用路径。Codex 会读取仓库根目录的 `AGENTS.md`，并加载 `.agents/skills/career-one/SKILL.md`。
 
@@ -121,6 +125,8 @@ npm run build:distributions
 ```bash
 npm run dev:web
 ```
+
+macOS 用户也可以直接双击项目根目录的 `启动择程AI.command`。它会自动进入当前项目目录，启动或复用 `3301` 端口的工作台，并打开“Agent 任务”页面。
 
 也可以直接对 Agent 说“打开择程AI工作台”，或使用便携入口启动并打开任务中心：
 
@@ -148,9 +154,9 @@ Codex 不一定暴露 `/career-one` 斜杠命令；如果不可用，直接用�
 查看并总结当前求职进度。
 ```
 
-### 一次性 Codex worker
+### 一次性 Codex 工作进程
 
-只读任务可以直接用 `codex exec`；会写入报告、tracker 或 PDF 的任务需要显式打开 workspace 写权限：
+只读任务可以直接使用 `codex exec`；会写入报告、追踪记录或 PDF 的任务需要显式开放工作区写权限：
 
 ```bash
 codex exec --sandbox workspace-write --search "使用择程AI评估这个岗位：https://company.com/jobs/123"
@@ -255,13 +261,13 @@ npm run gemini:eval -- "职位描述文本"
 - 对无需登录即可访问的目标公司招聘官网和公开页面进行补充检查。
 - 用户主动提供岗位链接、JD 或截图后，再由 Agent 完成评估和跟进。
 
-## Dashboard TUI
+## 终端仪表盘
 
 内置终端仪表盘可以让你更直观地浏览整个求职管道：
 
 ```bash
-npm run serve:dashboard   # launch the TUI
-npm run build:dashboard   # optional: build the standalone binary
+npm run serve:dashboard   # 启动终端界面
+npm run build:dashboard   # 可选：构建独立可执行文件
 ```
 
 功能包括：6 个筛选标签、4 种排序模式、分组/平铺视图、懒加载预览、行内状态修改。
@@ -270,13 +276,15 @@ npm run build:dashboard   # optional: build the standalone binary
 
 ```
 career-one/
-├── CLAUDE.md                    # 代理说明
+├── AGENTS.md                    # Agent 项目规则
+├── CLAUDE.md                    # Claude Code 入口说明
 ├── cv.md                        # 你的简历（需要自行创建）
 ├── article-digest.md            # 你的成果证明（可选）
 ├── config/
 │   └── profile.example.yml      # 个人档案模板
-├── modes/                       # 14 个技能模式
-│   ├── _shared.md               # 共享上下文（在这里自定义）
+├── modes/                       # 工作流模式
+│   ├── _shared.md               # 系统共享上下文（不要写入个人事实）
+│   ├── _profile.md              # 用户职业画像与自定义规则
 │   ├── oferta.md                # 单个职位评估
 │   ├── pdf.md                   # PDF 生成
 │   ├── scan.md                  # 平台扫描器
@@ -287,12 +295,12 @@ career-one/
 │   ├── portals.example.yml      # 扫描器配置模板
 │   └── states.yml               # 规范状态列表
 ├── batch/
-│   ├── batch-prompt.md          # 自包含 worker 提示词
+│   ├── batch-prompt.md          # 自包含工作进程提示词
 │   └── batch-runner.sh          # 编排脚本
 ├── dashboard/                   # Go TUI 管道查看器
-├── data/                        # 你的追踪数据（已 gitignore）
-├── reports/                     # 评估报告（已 gitignore）
-├── output/                      # 生成的 PDF（已 gitignore）
+├── data/                        # 你的追踪数据（已被 Git 忽略）
+├── reports/                     # 评估报告（已被 Git 忽略）
+├── output/                      # 生成的 PDF（已被 Git 忽略）
 ├── fonts/                       # Space Grotesk + DM Sans
 ├── docs/                        # 配置、定制、架构说明
 └── examples/                    # 示例简历、报告、成果证明
@@ -312,13 +320,13 @@ career-one/
 - **Dashboard**：Go + Bubble Tea + Lipgloss（Catppuccin Mocha 主题）
 - **数据**：Markdown 表格 + YAML 配置 + TSV 批处理文件
 
-## Star 历史
+## Star 趋势
 
 <a href="https://www.star-history.com/?repos=luyu925065781%2Fcareer-one&type=timeline&legend=top-left">
  <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=luyu925065781/career-one&type=timeline&theme=dark&legend=top-left" />
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=luyu925065781/career-one&type=timeline&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=luyu925065781/career-one&type=timeline&legend=top-left" />
+   <img alt="GitHub Star 趋势图" src="https://api.star-history.com/chart?repos=luyu925065781/career-one&type=timeline&legend=top-left" />
  </picture>
 </a>
 
@@ -341,6 +349,6 @@ career-one/
 
 通过择程AI改善了求职结果？欢迎在[择程AI Issues](https://github.com/luyu925065781/career-one/issues)反馈。
 
-## 许可证与商标
+## 许可证
 
 代码以 [MIT](LICENSE) 许可证授权。各源码包、安装器和 Agent 分发包均必须携带完整许可证文本。

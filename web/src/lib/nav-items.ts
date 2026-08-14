@@ -1,4 +1,4 @@
-import { LayoutDashboard, Compass, ListChecks, Radar, FileText, BookOpenCheck, ScanSearch } from "lucide-react";
+import { LayoutDashboard, ListChecks, Radar, FileText, BookOpenCheck, ScanSearch, UserRound } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 import {
   isFeatureEnabled,
@@ -16,10 +16,10 @@ export type NavItem = {
 
 export const PRIMARY_NAV_ITEMS = {
   home: { href: "/", label: "看板", icon: LayoutDashboard, feature: "home" },
-  discoverJobs: { href: "/explore", label: "发现岗位", icon: Compass, feature: "discoverJobs" },
   jobDiagnosis: { href: "/cn-diagnose", label: "岗位评估", icon: ScanSearch, feature: "jobDiagnosis" },
   pipeline: { href: "/pipeline", label: "求职进度", icon: ListChecks, feature: "pipeline" },
   interviewStories: { href: "/interview", label: "面试故事库", icon: BookOpenCheck, feature: "interviewStories" },
+  profile: { href: "/profile", label: "求职画像", icon: UserRound, feature: "profile" },
   cv: { href: "/cv", label: "我的简历", icon: FileText, feature: "cv" },
 } satisfies Record<string, NavItem>;
 

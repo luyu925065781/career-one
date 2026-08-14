@@ -47,8 +47,8 @@ export function CopyableCommand({
       <button
         type="button"
         onClick={handleCopy}
-        aria-label={copied ? "Copied to clipboard" : "Copy command"}
-        title={copied ? "Copied" : "Copy"}
+        aria-label={copied ? "已复制到剪贴板" : "复制指令"}
+        title={copied ? "已复制" : "复制"}
         className="inline-flex shrink-0 items-center justify-center rounded-md p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
         {copied ? (

@@ -13,7 +13,9 @@ try {
   mkdirSync(join(fixture, "data"), { recursive: true });
   mkdirSync(join(fixture, "output"), { recursive: true });
   mkdirSync(join(fixture, "modes"), { recursive: true });
+  mkdirSync(join(fixture, "config"), { recursive: true });
   writeFileSync(join(fixture, "cv.md"), "# CV\n\nold resume\n");
+  writeFileSync(join(fixture, "config", "profile.yml"), "target_role: old role\n");
   writeFileSync(join(fixture, "modes", "_profile.md"), "# Profile\n\nold value\n");
 
   const runs = await import(pathToFileURL(join(ROOT, "agent-runs.mjs")).href);
@@ -58,6 +60,41 @@ try {
   assert.equal(claimed.status, "running");
   assert.equal(claimed.instruction, queued.instruction);
   pass("Web can queue a durable task that the user's Agent later claims");
+
+  const waitingForInput = runs.updateRun({
+    root: fixture,
+    id: queued.id,
+    status: "waiting_input",
+    progress: "等待用户确认目标职级",
+    question: "请确认您的主要目标职级。",
+  });
+  assert.equal(waitingForInput.status, "waiting_input");
+  assert.equal(waitingForInput.question, "请确认您的主要目标职级。");
+  assert.equal(waitingForInput.completedAt, undefined);
+  mkdirSync(join(fixture, "data", "task-attachments", queued.id), { recursive: true });
+  const screenshotPath = `data/task-attachments/${queued.id}/01-123456789abc.png`;
+  writeFileSync(join(fixture, screenshotPath), "local screenshot fixture");
+  const attachedWhileWaiting = runs.updateRun({
+    root: fixture,
+    id: queued.id,
+    progress: "招聘截图已保存到本地附件目录",
+    artifacts: [{ path: screenshotPath, label: "招聘截图 1 · image.png" }],
+    instruction: `已有待办任务 ID：${queued.id}。请读取 ${screenshotPath}。`,
+  });
+  assert.equal(attachedWhileWaiting.status, "waiting_input");
+  assert.equal(attachedWhileWaiting.question, waitingForInput.question);
+  assert.equal(attachedWhileWaiting.artifacts[0].path, screenshotPath);
+  assert.match(attachedWhileWaiting.instruction, /data\/task-attachments/);
+  pass("Task attachments persist without replacing a waiting task or its question");
+  const resumedAfterInput = runs.updateRun({
+    root: fixture,
+    id: queued.id,
+    status: "running",
+    progress: "已收到用户回答，继续处理",
+  });
+  assert.equal(resumedAfterInput.status, "running");
+  assert.equal(resumedAfterInput.question, undefined);
+  pass("Agent runs can pause for a concrete user answer and resume with the same task ID");
 
   runs.updateRun({ root: fixture, id: created.id, status: "running", progress: "正在读取岗位与简历" });
   const completed = runs.updateRun({
@@ -107,6 +144,64 @@ try {
   assert.equal(runs.getRun(fixture, proposalRun.id).status, "completed");
   pass("Agent changes remain proposals until an explicit approval applies them");
 
+  const profileConfigDraft = join(fixture, "draft-profile-config.yml");
+  const profileNarrativeDraft = join(fixture, "draft-profile-narrative.md");
+  writeFileSync(profileConfigDraft, "target_role: confirmed role\n");
+  writeFileSync(profileNarrativeDraft, "# Profile\n\nconfirmed narrative\n");
+  const bundledProfileRun = runs.createRun({
+    root: fixture,
+    id: "run-profile-bundle-1",
+    intent: "update-profile",
+    title: "一次确认完整画像",
+    source: "agent",
+  });
+  const configProposal = runs.createProposal({
+    root: fixture,
+    runId: bundledProfileRun.id,
+    target: "config/profile.yml",
+    draftPath: profileConfigDraft,
+    summary: "更新结构化画像",
+  });
+  const narrativeProposal = runs.createProposal({
+    root: fixture,
+    runId: bundledProfileRun.id,
+    target: "modes/_profile.md",
+    draftPath: profileNarrativeDraft,
+    summary: "更新画像叙事",
+  });
+  runs.decideProposal({ root: fixture, proposalId: configProposal.id, decision: "approve" });
+  const profileStillWaiting = runs.getRun(fixture, bundledProfileRun.id);
+  assert.equal(profileStillWaiting.status, "waiting_approval");
+  assert.equal(profileStillWaiting.completedAt, undefined);
+  assert.equal(readFileSync(join(fixture, "config", "profile.yml"), "utf8"), "target_role: confirmed role\n");
+  assert.equal(readFileSync(join(fixture, "modes", "_profile.md"), "utf8"), "# Profile\n\nnew confirmed value\n");
+  runs.decideProposal({ root: fixture, proposalId: narrativeProposal.id, decision: "approve" });
+  assert.equal(runs.getRun(fixture, bundledProfileRun.id).status, "completed");
+  assert.equal(readFileSync(join(fixture, "modes", "_profile.md"), "utf8"), "# Profile\n\nconfirmed narrative\n");
+  pass("A bundled profile update stays pending until every user-layer proposal is settled");
+
+  const resumedProposalRun = runs.updateRun({
+    root: fixture,
+    id: proposalRun.id,
+    status: "running",
+    progress: "继续优化同一任务",
+  });
+  assert.equal(resumedProposalRun.completedAt, undefined);
+  runs.updateRun({ root: fixture, id: proposalRun.id, status: "completed" });
+  const revisedDraft = join(fixture, "draft-profile-revised.md");
+  writeFileSync(revisedDraft, "# Profile\n\nrevised confirmed value\n");
+  runs.createProposal({
+    root: fixture,
+    runId: proposalRun.id,
+    target: "modes/_profile.md",
+    draftPath: revisedDraft,
+    summary: "继续优化同一文件",
+  });
+  const waitingAgain = runs.getRun(fixture, proposalRun.id);
+  assert.equal(waitingAgain.status, "waiting_approval");
+  assert.equal(waitingAgain.completedAt, undefined);
+  pass("Reusing a completed task clears stale completion state while new work is active");
+
   const cvDraft = join(fixture, "draft-cv.md");
   writeFileSync(cvDraft, "# CV\n\nnew confirmed resume\n");
   const cvRun = runs.createRun({ root: fixture, id: "run-cv-1", intent: "update-cv", title: "修改简历", source: "agent" });
@@ -148,7 +243,7 @@ try {
   symlinkSync(outside, join(fixture, "writing-samples"), "dir");
   assert.throws(
     () => runs.createProposal({ root: fixture, runId: staleRun.id, target: "writing-samples/private.md", draftPath: staleDraft, summary: "unsafe symlink" }),
-    /escapes the workspace through a symlink/i,
+    /escapes the workspace through a symlink|符号链接.*超出了当前工作区/i,
   );
   pass("Proposal writes cannot escape through a symlinked user-layer directory");
 
@@ -156,6 +251,25 @@ try {
   assert.equal(runs.listRuns(fixture).some((run) => run.id === created.id), false);
   assert.equal(runs.listRuns(fixture, { includeArchived: true }).some((run) => run.id === created.id), true);
   pass("Finished runs can be archived without deleting their artifacts");
+
+  const queuedForArchive = runs.createRun({
+    root: fixture,
+    id: "run-queued-archive-1",
+    intent: "discover",
+    title: "搜索公开岗位",
+    source: "web",
+    status: "queued",
+    instruction: "继续这项待确认任务。",
+  });
+  const archivedQueued = runs.archiveRun({ root: fixture, id: queuedForArchive.id });
+  assert.equal(typeof archivedQueued.archivedAt, "string");
+  assert.equal(runs.listRuns(fixture).some((run) => run.id === queuedForArchive.id), false);
+  assert.equal(runs.getRun(fixture, queuedForArchive.id)?.id, queuedForArchive.id);
+  assert.equal(
+    runs.listRuns(fixture, { includeArchived: true }).some((run) => run.id === queuedForArchive.id),
+    true,
+  );
+  pass("Queued runs can be soft-deleted while preserving their durable task record");
 } catch (error) {
   fail(`agent run contract crashed: ${error instanceof Error ? error.message : String(error)}`);
 } finally {

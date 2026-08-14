@@ -6,6 +6,10 @@
  */
 
 const DEFAULT_TITLE = "面试故事库";
+const COMPLETED_STATUS = "已完善";
+const LEGACY_COMPLETED_STATUS = "可使用";
+const UNRESOLVED_MARKER = /(?:待确认|待完善|待补充|需要补充|TODO)/i;
+const PENDING_PROMPT = /^待确认\s*[：:]\s*/i;
 const SECTION_KEY = {
   S: "situation",
   T: "task",
@@ -20,6 +24,11 @@ function splitTags(value) {
 
 function splitQuestions(value) {
   return value.split(/[；;]/).map((item) => item.trim()).filter(Boolean);
+}
+
+function normalizeStoryStatus(value) {
+  const status = String(value ?? "").trim();
+  return status === LEGACY_COMPLETED_STATUS ? COMPLETED_STATUS : status;
 }
 
 /**
@@ -45,6 +54,73 @@ function emptyStory(id, title) {
     action: [],
     result: [],
     reflection: [],
+  };
+}
+
+function hasSubstantiveLines(lines) {
+  return Array.isArray(lines)
+    && lines.some((line) => {
+      const value = String(line ?? "").trim();
+      return value.length > 0 && !UNRESOLVED_MARKER.test(value);
+    });
+}
+
+/**
+ * A generated story is only a draft. It becomes interview-ready after every
+ * STAR+Reflection section contains confirmed facts, the source is traceable,
+ * no unresolved markers remain, and the user explicitly marks the final draft
+ * as 已完善. Historical 可使用 values remain readable for compatibility.
+ *
+ * @param {ReturnType<typeof emptyStory>} story
+ * @returns {{
+ *   ready: boolean,
+ *   checks: Array<{id: string, label: string, passed: boolean}>,
+ *   missingChecks: Array<{id: string, label: string, passed: boolean}>,
+ *   pendingPrompts: string[],
+ *   hasUnresolved: boolean,
+ * }}
+ */
+export function assessStoryReadiness(story) {
+  const sectionLines = [
+    ...(story?.situation ?? []),
+    ...(story?.task ?? []),
+    ...(story?.action ?? []),
+    ...(story?.result ?? []),
+    ...(story?.reflection ?? []),
+  ];
+  const pendingPrompts = sectionLines
+    .map((line) => String(line ?? "").trim())
+    .filter((line) => PENDING_PROMPT.test(line))
+    .map((line) => line.replace(PENDING_PROMPT, "").trim())
+    .filter(Boolean);
+  const hasUnresolved = [...sectionLines, story?.source ?? ""]
+    .some((value) => UNRESOLVED_MARKER.test(String(value)));
+  const checks = [
+    { id: "situation", label: "补充清晰的情境", passed: hasSubstantiveLines(story?.situation) },
+    { id: "task", label: "明确目标与本人责任", passed: hasSubstantiveLines(story?.task) },
+    { id: "action", label: "补充具体行动与取舍", passed: hasSubstantiveLines(story?.action) },
+    { id: "result", label: "确认结果与统计口径", passed: hasSubstantiveLines(story?.result) },
+    { id: "reflection", label: "补充真实复盘", passed: hasSubstantiveLines(story?.reflection) },
+    {
+      id: "source",
+      label: "补充可追溯的事实来源",
+      passed: Boolean(String(story?.source ?? "").trim()) && !UNRESOLVED_MARKER.test(String(story?.source ?? "")),
+    },
+    { id: "unresolved", label: "补齐所有待确认事实", passed: !hasUnresolved },
+    {
+      id: "confirmed",
+      label: "确认最终故事草稿",
+      passed: normalizeStoryStatus(story?.status) === COMPLETED_STATUS,
+    },
+  ];
+  const missingChecks = checks.filter((check) => !check.passed);
+
+  return {
+    ready: missingChecks.length === 0,
+    checks,
+    missingChecks,
+    pendingPrompts,
+    hasUnresolved,
   };
 }
 
@@ -103,7 +179,7 @@ export function parseStoryBank(markdown) {
     const metadata = line.match(/^-\s+\*\*(状态|能力标签|适用问题|事实来源|更新日期)：\*\*\s*(.+)$/);
     if (metadata) {
       const [, key, value] = metadata;
-      if (key === "状态") current.status = value.trim();
+      if (key === "状态") current.status = normalizeStoryStatus(value);
       if (key === "能力标签") current.tags = splitTags(value);
       if (key === "适用问题") current.questions = splitQuestions(value);
       if (key === "事实来源") current.source = value.trim();
@@ -178,7 +254,7 @@ export function serializeStoryMarkdown(story) {
   const id = cleanInline(story?.id).toUpperCase();
   const title = cleanInline(story?.title);
   const metadata = [
-    ["状态", cleanInline(story?.status) || "待完善"],
+    ["状态", normalizeStoryStatus(cleanInline(story?.status)) || "待完善"],
     ["能力标签", cleanLines(story?.tags).join("、")],
     ["适用问题", cleanLines(story?.questions).join("；")],
     ["事实来源", cleanInline(story?.source)],

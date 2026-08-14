@@ -41,7 +41,7 @@ async function gotoResilient(page: Page, url: string): Promise<Response | null> 
       await page.waitForTimeout(800 * (attempt + 1));
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error("could not open the page");
+  throw lastErr instanceof Error ? lastErr : new Error("无法打开页面");
 }
 
 /** Distinguish a real APPLICATION form from a careers-listing / job-search form
@@ -138,7 +138,7 @@ async function headedBrowser(): Promise<Browser> {
     try {
       nb = await chromium.launch({ headless: false, args: ["--window-position=-3200,-3200", "--window-size=1280,940"] });
     } catch {
-      throw new Error("The apply feature needs Google Chrome. Install Chrome (or run: npx playwright install chromium) and try again.");
+      throw new Error("申请辅助需要 Google Chrome。请安装 Chrome，或运行 npx playwright install chromium 后重试。");
     }
   }
   globalThis.__coHeadedBrowser = nb;
@@ -274,8 +274,8 @@ export async function openSession(url: string, cliId?: string, forceAgent?: bool
   const issues: ApplyIssue[] = [...consentIssues];
   if (cap) issues.push(cap);
   if (multi) issues.push(multi);
-  if (aiInterpreted) issues.push({ level: "info", code: "ai-interpreted", message: "This form had an uncommon layout, so AI read its fields live — give them an extra check before submitting." });
-  if (unlabeled > 0) issues.push({ level: "warn", code: "unlabeled-fields", message: `${unlabeled} field${unlabeled > 1 ? "s" : ""} couldn't be labelled cleanly — double-check ${unlabeled > 1 ? "them" : "it"} before submitting.` });
+  if (aiInterpreted) issues.push({ level: "info", code: "ai-interpreted", message: "该表单布局较特殊，AI 已实时识别字段；提交前请额外核对这些内容。" });
+  if (unlabeled > 0) issues.push({ level: "warn", code: "unlabeled-fields", message: `有 ${unlabeled} 个字段无法准确识别标签，请在提交前仔细核对。` });
 
   const id = `apply-${crypto.randomUUID()}`;
   SESSIONS.set(id, { id, url, title: form.title, fields: form.fields, context, page, frame, createdAt: Date.now(), formShot: shots[shots.length - 1] });
@@ -333,8 +333,8 @@ export async function finalizeDrivenSession(id: string, cliId?: string): Promise
   s.frame = frame;
   s.fields = form.fields;
   if (form.title) s.title = form.title;
-  const issues: ApplyIssue[] = [{ level: "info", code: "ai-navigated", message: "AI navigated to reach this application form on your machine — review the fields before submitting." }];
-  if (aiInterpreted) issues.push({ level: "info", code: "ai-interpreted", message: "AI also read the fields live (uncommon layout) — give them an extra check." });
+  const issues: ApplyIssue[] = [{ level: "info", code: "ai-navigated", message: "AI 已在你的电脑上导航到该申请表，请在提交前核对所有字段。" }];
+  if (aiInterpreted) issues.push({ level: "info", code: "ai-interpreted", message: "该表单布局较特殊，AI 还实时识别了字段，请额外核对。" });
   const cap = await captchaWarning(s.page);
   if (cap) issues.push(cap);
   return { title: s.title, fields: s.fields, issues };
@@ -365,7 +365,7 @@ export async function fillSession(
   cvPath?: string,
 ): Promise<{ steps: FillStep[]; navigated: boolean; issues: ApplyIssue[] }> {
   const s = SESSIONS.get(id);
-  if (!s) throw new Error("apply session not found (it may have expired)");
+  if (!s) throw new Error("未找到申请会话，它可能已经过期");
   const byId = new Map(fieldsMeta.map((f) => [f.id, f]));
   const steps: FillStep[] = [];
   // Belt-and-suspenders: if filling ever navigates the page (i.e. something got
@@ -408,7 +408,7 @@ export async function fillSession(
           ok = false;
         }
       }
-      steps.push({ fieldId: meta.id, label: `${meta.label || "Resume"} (CV attached)`, ok, thumb: await shoot() });
+          steps.push({ fieldId: meta.id, label: `${meta.label || "简历"}（已附加简历）`, ok, thumb: await shoot() });
     }
   }
 
@@ -421,7 +421,7 @@ export async function fillSession(
     // human must affirmatively accept. (The planner already flags these
     // needs_confirmation; this guarantees it even if it slips.)
     if (meta.type === "checkbox" && /\b(i (have )?read|i agree|i consent|i accept|consent to|privacy notice|terms|gdpr|data protection)\b/i.test(meta.label || "")) {
-      steps.push({ fieldId: fid, label: `${meta.label} — you confirm`, ok: false, thumb: undefined });
+          steps.push({ fieldId: fid, label: `${meta.label} — 需要你本人确认`, ok: false, thumb: undefined });
       continue;
     }
     let ok = false;
@@ -521,7 +521,7 @@ export async function fillSession(
  *  visible — we reposition it on-screen via CDP first. We never submit. */
 export async function handoffSession(id: string): Promise<void> {
   const s = SESSIONS.get(id);
-  if (!s) throw new Error("apply session not found");
+  if (!s) throw new Error("未找到申请会话");
   try {
     const cdp = await s.context.newCDPSession(s.page);
     const { windowId } = (await cdp.send("Browser.getWindowForTarget")) as { windowId: number };

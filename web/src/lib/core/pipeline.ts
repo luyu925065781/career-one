@@ -36,7 +36,7 @@ export function addOffersToPipeline(offers: DiscoveredOffer[]): Promise<AddResul
   // Data-only / pre-scan-ats checkout has no scan.mjs writers → fail with an
   // actionable message instead of a silent added:0.
   if (!fs.existsSync(rootScript("scan"))) {
-    return Promise.resolve({ added: 0, error: "This checkout is data-only — the pipeline writer (scan.mjs) isn't available." });
+    return Promise.resolve({ added: 0, error: "当前工作区仅包含数据，缺少求职流程写入脚本（scan.mjs）。请更新择程AI后重试。" });
   }
 
   const scanUrl = pathToFileURL(rootScript("scan")).href;
@@ -49,9 +49,9 @@ process.stdin.on("end", () => {
   try {
     const offers = JSON.parse(input);
     const date = new Date().toISOString().slice(0, 10);
-    appendToPipeline(offers);
-    appendToScanHistory(offers, date, "added");
-    process.stdout.write(JSON.stringify({ added: offers.length }));
+    const addedOffers = appendToPipeline(offers);
+    appendToScanHistory(addedOffers, date, "added");
+    process.stdout.write(JSON.stringify({ added: addedOffers.length }));
   } catch (e) {
     process.stdout.write(JSON.stringify({ added: 0, error: String((e && e.message) || e) }));
   }
@@ -67,13 +67,13 @@ process.stdin.on("end", () => {
     let err = "";
     child.stdout.on("data", (d: Buffer) => (out += d.toString()));
     child.stderr.on("data", (d: Buffer) => (err += d.toString()));
-    child.on("error", (e) => resolve({ added: 0, error: e instanceof Error ? e.message : "spawn failed" }));
+    child.on("error", (e) => resolve({ added: 0, error: e instanceof Error ? e.message : "求职流程写入脚本启动失败" }));
     child.on("close", () => {
       try {
         const parsed = JSON.parse(out.trim() || "{}") as AddResult;
         resolve({ added: parsed.added ?? 0, error: parsed.error });
       } catch {
-        resolve({ added: 0, error: err.trim().slice(0, 200) || "writer returned no result" });
+        resolve({ added: 0, error: err.trim().slice(0, 200) || "求职流程写入脚本没有返回结果" });
       }
     });
     child.stdin.write(JSON.stringify(clean));

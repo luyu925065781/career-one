@@ -68,18 +68,18 @@ export async function POST(req: Request) {
       const body = (await req.json()) as { text?: string; cliId?: string };
       cliId = body.cliId || "";
       const text = (body.text || "").trim();
-      if (!text) return Response.json({ error: "empty cv text" }, { status: 400 });
+      if (!text) return Response.json({ error: "简历文字为空" }, { status: 400 });
       promptSource = TEXT_SRC(text);
     } else if (ctype.includes("multipart/form-data")) {
       const form = await req.formData();
       cliId = String(form.get("cliId") || "");
       const file = form.get("file");
-      if (!(file instanceof File)) return Response.json({ error: "no file" }, { status: 400 });
+      if (!(file instanceof File)) return Response.json({ error: "没有选择简历文件" }, { status: 400 });
       // Reading a PDF/DOCX from a temp path needs file-ingest support in the
       // selected CLI. Keep text paste universally supported instead of failing
       // opaquely for CLIs that cannot read binary documents headlessly.
       if (cliId !== "claude" && /\.(pdf|docx)$/i.test(file.name)) {
-        return Response.json({ error: "PDF/DOCX upload needs a CLI with headless file-reading support — paste your CV text instead." }, { status: 400 });
+        return Response.json({ error: "上传 PDF/DOCX 需要支持无头文件读取的 Agent CLI，请改为粘贴简历文字。" }, { status: 400 });
       }
       const ext = (file.name.match(/\.[a-z0-9]+$/i)?.[0] || ".pdf").toLowerCase();
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "career-one-cv-"));
@@ -87,16 +87,16 @@ export async function POST(req: Request) {
       fs.writeFileSync(tempFile, Buffer.from(await file.arrayBuffer()), { mode: 0o600 }); // PII → owner-only
       promptSource = FILE_SRC(tempFile);
     } else {
-      return Response.json({ error: "unsupported content-type" }, { status: 400 });
+      return Response.json({ error: "不支持的简历内容类型" }, { status: 400 });
     }
   } catch {
-    return Response.json({ error: "bad request" }, { status: 400 });
+    return Response.json({ error: "请求内容不正确" }, { status: 400 });
   }
 
   const resolved = resolveCli(cliId);
   if (!resolved) {
     if (tempFile) cleanupTemp(tempFile);
-    return Response.json({ error: `CLI '${cliId}' not found on this machine` }, { status: 404 });
+    return Response.json({ error: `未找到 Agent CLI“${cliId}”，请先安装或在设置中选择其他 CLI` }, { status: 404 });
   }
   const { spec, binPath } = resolved;
   const prompt = ingestPrompt(promptSource);
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
     child = spawn(binPath, args, { cwd: careerOneRoot(), env: process.env });
   } catch (e) {
     if (tempFile) cleanupTemp(tempFile); // never leak the CV temp if spawn throws sync
-    return Response.json({ error: e instanceof Error ? e.message : "failed to start the CLI" }, { status: 500 });
+    return Response.json({ error: e instanceof Error ? e.message : "Agent CLI 启动失败" }, { status: 500 });
   }
 
   const encoder = new TextEncoder();

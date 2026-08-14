@@ -44,7 +44,6 @@ export type ActionCtx = {
   writeStatus: (n: string, status: string) => void; // UPDATE-only writeback via /api/status
   setApplyField: (idOrLabel: string, value: string) => void; // edit an apply-proxy answer
   startApply: (url: string) => void; // open the apply form-proxy for a posting URL
-  applyExplore?: (patch: Record<string, unknown>, opts?: { merge?: boolean; run?: boolean }) => void; // build a FREE discovery search
   writeProfile?: (patch: Record<string, unknown>) => void; // merge-safe config/profile.yml write
   writePortals?: (roles: string[], location?: string[]) => void; // merge-safe portals.yml title_filter write
 };
@@ -95,7 +94,7 @@ function isAllowedPath(p: string): boolean {
   if (/^(https?:)?\/\//i.test(p)) return false;
   const path = p.split(/[?#]/)[0];
   if (path === "/") return true;
-  if (!/^\/(explore|cn-diagnose|pipeline|portals|analytics|cv|config|apply|jobs|interview)(\/[^/]+)?$/.test(path)) {
+  if (!/^\/(cn-diagnose|pipeline|portals|analytics|cv|profile|config|apply|jobs|interview)(\/[^/]+)?$/.test(path)) {
     return false;
   }
   return isPathEnabled(path);
@@ -213,20 +212,6 @@ const ACTIONS: Record<string, ActionDef> = {
         summary: `评估 ${company} 的 ${pending.length} 个岗位？（约 ${pending.length} 个 Agent 任务）`,
         run: fire,
       };
-    },
-  },
-
-  explore: {
-    // FREE: opens the Explorer and builds a discovery search. Zero tokens — it
-    // never spends, so it bypasses the confirm gate. The provider clamps/validates.
-    sideEffect: "none",
-    run: (raw, ctx) => {
-      if (!ctx.applyExplore) return { status: "ignored", note: "当前页面无法使用岗位发现" };
-      const run = raw.run === true;
-      const merge = raw.merge === true;
-      ctx.push("/explore");
-      ctx.applyExplore(raw, { merge, run });
-      return { status: "done", note: run ? "正在进行 ATS 算法扫描…" : "已按筛选条件打开岗位发现。" };
     },
   },
 

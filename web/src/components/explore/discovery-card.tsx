@@ -1,10 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ExternalLink, Plus, Check, Loader2, ShieldQuestion, Sparkles, Coins } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { ExternalLink, Plus, Check, Loader2, ShieldQuestion, Sparkles, Bot } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ATS_LABEL, type AtsSource, type DiscoveredOffer } from "@/lib/explore";
-import { useJobs } from "@/components/jobs/job-store";
+import { AgentTaskHandoffDialog } from "@/components/generate-pdf-button";
+import {
+  buildQueuedTaskInstruction,
+  isInvalidJob,
+  type AgentTaskHandoff,
+  useJobs,
+} from "@/components/jobs/job-store";
 import { Card } from "@/components/ui/card";
 import { useExplore } from "./explore-provider";
 
@@ -40,7 +46,18 @@ const WORKER_LABEL: Record<string, string> = { evaluate: "评估中…", pdf: "�
 
 export function DiscoveryCard({ offer, inPipeline, evaluatedN }: { offer: DiscoveredOffer; inPipeline: boolean; evaluatedN?: string }) {
   const { added, adding, addToPipeline } = useExplore();
-  const { jobs, startJob } = useJobs();
+  const { jobs, queueAgentTask } = useJobs();
+  const [handoff, setHandoff] = useState<AgentTaskHandoff | null>(null);
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const queuingRef = useRef(false);
+  const taskOpts = useMemo(() => ({
+    title: `评估 · ${offer.company}`,
+    subtitle: offer.title,
+    kind: "evaluate",
+    input: offer.url,
+    page: "/cn-diagnose",
+  }), [offer.company, offer.title, offer.url]);
 
   // GLOBAL worker awareness: any worker acting on this URL drives the CTA, here
   // and on every other surface that renders this offer (the jobs store is global).
@@ -50,16 +67,30 @@ export function DiscoveryCard({ offer, inPipeline, evaluatedN }: { offer: Discov
   );
   const working = job?.status === "running";
   const doneEval = job?.status === "done" && job.kind === "evaluate";
+  const retrying = Boolean(job && isInvalidJob(job));
   const statusLabel = WORKER_LABEL[job?.kind ?? ""] ?? "执行中…";
 
-  const isAdded = added.has(offer.url) || inPipeline || working || doneEval;
+  const isAdded = added.has(offer.url) || inPipeline;
   const isAdding = adding.has(offer.url);
   const unverified = offer.verification === "unconfirmed";
   const fresh = freshness(offer.postedAt) || offer.postedHint || "";
 
   const evaluate = () => {
-    addToPipeline([offer]); // evaluating implies it's in the pipeline — record it
-    startJob({ title: `评估 · ${offer.company}`, subtitle: offer.title, kind: "evaluate", input: offer.url, page: "/explore" });
+    if (queuingRef.current) return;
+    if (job) {
+      setHandoff({
+        id: job.id,
+        instruction: buildQueuedTaskInstruction(taskOpts, job.id),
+      });
+      setHandoffOpen(true);
+      return;
+    }
+    queuingRef.current = true;
+    setHandoff(queueAgentTask(taskOpts));
+    setHandoffOpen(true);
+    window.setTimeout(() => {
+      queuingRef.current = false;
+    }, 500);
   };
 
   return (
@@ -114,7 +145,7 @@ export function DiscoveryCard({ offer, inPipeline, evaluatedN }: { offer: Discov
         {evaluatedN || doneEval ? (
           <a
             href={evaluatedN ? `/pipeline/${evaluatedN}` : job ? `/jobs/${job.id}` : "/pipeline"}
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-brand-soft px-2.5 py-2 text-xs font-medium text-brand max-sm:min-h-[44px]"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-button bg-brand-soft px-2.5 py-2 text-xs font-medium text-brand max-sm:min-h-[44px]"
           >
             <Check className="size-3.5" /> 已评估 · 查看报告
           </a>
@@ -122,7 +153,6 @@ export function DiscoveryCard({ offer, inPipeline, evaluatedN }: { offer: Discov
           <div className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-brand/30 bg-brand-soft/60 px-2.5 py-2 text-xs font-medium text-brand">
             <Loader2 className="size-3.5 animate-spin" />
             {statusLabel}
-            <span className="text-brand/60">· 已进入求职进度</span>
           </div>
         ) : (
           <div className="flex items-center gap-2">
@@ -139,16 +169,26 @@ export function DiscoveryCard({ offer, inPipeline, evaluatedN }: { offer: Discov
               {isAdded ? "已加入" : "加入求职进度"}
             </button>
             <button
+              ref={triggerRef}
               type="button"
               onClick={evaluate}
-              title={unverified ? "执行真实评估并验证岗位有效性，会消耗 tokens" : "执行真实 A–F 评估，会消耗 tokens"}
-              className="inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-outline-border bg-outline-bg px-2.5 py-2 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px]"
+              aria-haspopup="dialog"
+              aria-expanded={handoffOpen}
+              title={retrying ? "继续原任务并重新评估" : unverified ? "交给 Agent 验证岗位有效性并完成评估" : "交给 Agent 完成岗位评估"}
+              className="inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-button border border-outline-border bg-outline-bg px-2.5 py-2 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px]"
             >
-              评估 <Coins className="size-3.5 opacity-80" />
+              <Bot className="size-3.5 text-icon-brand" aria-hidden="true" />
+              {job?.runStatus === "queued" ? "等待 Agent 评估" : retrying ? "重新交给 Agent 评估" : "交给 Agent 评估"}
             </button>
           </div>
         )}
       </div>
+      <AgentTaskHandoffDialog
+        handoff={handoff}
+        open={handoffOpen}
+        onClose={() => setHandoffOpen(false)}
+        returnFocusRef={triggerRef}
+      />
     </Card>
   );
 }

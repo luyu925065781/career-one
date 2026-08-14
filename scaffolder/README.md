@@ -1,33 +1,33 @@
-# career-one
+# career-one 安装器
 
-One-command installer for [**择程AI（career-one）**](https://github.com/luyu925065781/career-one), a local-first AI job-search workspace for China mainland users.
+[**择程AI（career-one）**](https://github.com/luyu925065781/career-one) 的一键安装器。择程AI是面向中国大陆用户的本地优先 AI 求职工作台。
 
 ```bash
 npx career-one init
 ```
 
-This sets up a ready-to-use workspace:
+该命令会建立一个可直接使用的工作区：
 
-1. Clones career-one at the latest stable release
-2. Installs dependencies
+1. 检出 career-one 的最新稳定版本。
+2. 安装依赖。
 
-Then open your AI coding tool in the folder. **On first launch the agent walks you through setup — your CV, profile and target roles — just by chatting.** Nothing to configure by hand. career-one is AI-agnostic — Claude Code, Gemini, Codex, Qwen, OpenCode, GitHub Copilot CLI, Antigravity CLI, and Grok Build CLI all work.
+然后在该目录中打开你使用的 AI 编码工具。**首次启动时，Agent 会通过对话引导你设置简历、个人画像和目标岗位。** 无需手动编辑配置。career-one 不绑定模型，支持 Claude Code、Gemini、Codex、Qwen、OpenCode、GitHub Copilot CLI、Antigravity CLI 和 Grok Build CLI。
 
-The installer bootstraps CLI skill entrypoints after clone, so new CLIs (e.g. Grok) work even when `npx` pulled an older release tag.
+检出代码后，安装器会初始化 CLI Skill 入口，因此即使 `npx` 拉取的是较旧发布标签，新加入的 CLI（例如 Grok）也能正常使用。
 
-## Usage
+## 用法
 
 ```bash
-npx career-one init [folder]   # default folder: ./career-one
+npx career-one init [folder]   # 默认目录：./career-one
 ```
 
-Prefer the manual route? `git clone` still works exactly as before — see the [setup guide](https://github.com/luyu925065781/career-one/blob/main/docs/SETUP.md).
+如需手动安装，仍可使用 `git clone`；具体步骤见[设置指南](https://github.com/luyu925065781/career-one/blob/main/docs/SETUP.md)。
 
-## Requirements
+## 环境要求
 
-- Node.js 20.9+ (Node.js 22 LTS or a newer LTS release recommended)
+- Node.js 20.9+（推荐 Node.js 22 LTS 或更新的 LTS 版本）
 - git
 
-## License
+## 许可证
 
 MIT © [NumberX](https://luyu925065781.io)

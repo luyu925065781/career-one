@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { scoreNum, scoreTone } from "@/lib/format";
+import { resolveCompanyIdentity } from "@/lib/company";
 import type { Application } from "@/lib/career-one";
 
 // Awaiting-decision row: a scored role with no terminal status. One-tap Apply /
@@ -19,6 +20,7 @@ export function DecisionCard({ app }: { app: Application }) {
   const [done, setDone] = useState<string | null>(null);
   const score = scoreNum(app.score);
   const tone = scoreTone(app.score);
+  const companyIdentity = resolveCompanyIdentity(app.company, app.via);
 
   const setStatus = async (status: "Applied" | "Discarded") => {
     setBusy(status);
@@ -40,7 +42,7 @@ export function DecisionCard({ app }: { app: Application }) {
       <div className="flex items-start gap-2.5">
         <CompanyLogo name={app.company} size={24} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-foreground">{app.company}</p>
+          <p className="truncate text-sm font-medium text-foreground">{companyIdentity.label}</p>
           <p className="truncate text-[13px] text-muted">{app.role}</p>
         </div>
         {Number.isFinite(score) && score > 0 && (

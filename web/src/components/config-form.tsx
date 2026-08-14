@@ -94,7 +94,7 @@ export function ConfigForm() {
 
   return (
     <div className="page-shell py-10">
-      <h1 className="font-display text-2xl tracking-tight text-landing">设置</h1>
+      <h1 className="page-title">设置</h1>
       <p className="mt-1 w-full text-sm text-muted">
         择程AI使用你自己的 Agent，在当前电脑上处理简历和求职数据。
       </p>
@@ -275,6 +275,7 @@ export function ConfigForm() {
       </label>
       <button
         type="button"
+        data-button-shape="container"
         onClick={() => setLogos((v) => !v)}
         className="flex w-full items-center justify-between gap-4 rounded-xl border border-border bg-surface/50 px-4 py-3 text-left transition-colors hover:bg-surface-hover"
       >

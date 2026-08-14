@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "bad json" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "请求格式不正确" }), { status: 400 });
   }
   const { kind = "evaluate", input, cliId } = body;
   if (kind === "pdf") {
@@ -73,11 +73,11 @@ export async function POST(req: Request) {
     );
   }
   if (!input || !cliId) {
-    return new Response(JSON.stringify({ error: "input and cliId required" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "缺少任务内容或 Agent CLI 配置" }), { status: 400 });
   }
   const resolved = resolveCli(cliId);
   if (!resolved) {
-    return new Response(JSON.stringify({ error: `CLI '${cliId}' not found` }), {
+    return new Response(JSON.stringify({ error: `未找到 Agent CLI“${cliId}”，请先安装或在设置中选择其他 CLI` }), {
       status: 404,
       headers: { "Content-Type": "application/json" },
     });
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
   if (required && !fs.existsSync(path.join(careerOneRoot(), required))) {
     return new Response(
       JSON.stringify({
-        error: `This needs a complete career-one checkout (${required}). CAREER_ONE_ROOT has data only — point it at a full checkout.`,
+        error: `当前工作区缺少完整的择程AI系统文件（${required}）。请将 CAREER_ONE_ROOT 指向完整项目目录。`,
       }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     );
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
   // hallucinate a fit narrative and still emit a VERDICT. Require cv.md first.
   if (kind === "evaluate" && !fs.existsSync(path.join(careerOneRoot(), "cv.md"))) {
     return new Response(
-      JSON.stringify({ error: "Add your CV first so I can score this against you — drop it on the home page." }),
+      JSON.stringify({ error: "请先添加简历，再进行岗位评估。你可以在看板首页上传或粘贴简历内容。" }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     );
   }
@@ -203,7 +203,7 @@ export async function POST(req: Request) {
                 send({ type: "text", text: e.delta.text });
               }
             } else if (ev.type === "system" && ev.subtype === "init") {
-              send({ type: "status", label: "Agent ready" });
+              send({ type: "status", label: "Agent 已就绪" });
             } else if (ev.type === "result") {
               // Capture the per-run cost; the authoritative "done" is sent on close
               // (so the honesty gate decides done-vs-error first). Tokens include
@@ -235,24 +235,24 @@ export async function POST(req: Request) {
         // real output, AND (for evaluations) a report actually written. Anything else
         // is surfaced — an errored run must never be banked as a confident score.
         if (!emittedText && !sawError && !cleanExit) {
-          send({ type: "error", msg: "The CLI exited with an error — is it installed and authenticated?" });
+          send({ type: "error", msg: "Agent CLI 异常退出。请确认所选 CLI 已安装并完成登录，然后重试。" });
         } else if (!emittedText && !sawError) {
-          send({ type: "error", msg: "The CLI produced no output — is it installed and authenticated?" });
+          send({ type: "error", msg: "Agent CLI 没有返回任何内容。请确认所选 CLI 已安装并完成登录，然后重试。" });
         } else if (persists && !wroteReport) {
           // The worker ran but never wrote the report/tracker row (e.g. a CLI
           // without file-write authorization) — surface it instead of a fake score.
-          send({ type: "error", msg: "This evaluation didn't save a report, so it's not in your tracker. Check that the selected CLI can write to the workspace." });
+          send({ type: "error", msg: "本次岗位评估未保存报告，因此没有加入求职进度。请确认所选 CLI 拥有当前工作区的写入权限，然后重试。" });
         } else if (!cleanExit || sawError) {
           // Produced output (maybe even a report) but did NOT finish cleanly — flag it
           // instead of recording a confident score off a half-finished run.
-          send({ type: "error", msg: "This run hit an error before finishing, so it isn't recorded as a confident result — re-run it to verify." });
+          send({ type: "error", msg: "本次任务在完成前发生错误，结果未被记录。请重试以确认结果。" });
         } else {
           const artifacts = newReports.map((file) => {
             const reportId = String(parseInt(file, 10));
             return {
               path: `reports/${file}`,
               label: "岗位评估报告",
-              page: /^\d+$/.test(reportId) ? `/pipeline/${reportId}` : "/pipeline",
+              page: /^\d+$/.test(reportId) ? `/pipeline/${reportId}?view=report` : "/pipeline",
             };
           });
           send({ type: "done", tokens: lastTokens, costUsd: lastCostUsd, artifacts });

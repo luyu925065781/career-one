@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import * as yaml from "js-yaml";
 import { atomicWrite } from "@/lib/core/safe-write";
 import type { DiscoveredOffer } from "@/lib/explore";
 import { parseApplications } from "@/lib/tracker-table.mjs";
@@ -20,13 +21,28 @@ export function careerOneRoot(): string {
 }
 
 /**
+ * Resolve the system layer that belongs to the currently running Web build.
+ * `CAREER_ONE_ROOT` may intentionally point at an isolated user-data workspace;
+ * it must not silently downgrade the scripts executed by a newer Web process.
+ */
+export function careerOneSystemRoot(): string {
+  const env = process.env.CAREER_ONE_SYSTEM_ROOT?.trim();
+  if (env) return path.resolve(env);
+
+  const cwd = path.resolve(process.cwd());
+  const localRoot = path.basename(cwd) === "web" ? path.resolve(cwd, "..") : cwd;
+  if (fs.existsSync(path.join(localRoot, "agent-runs.mjs"))) return localRoot;
+  return careerOneRoot();
+}
+
+/**
  * Absolute path to a core root script (e.g. doctor, verify-portals). The `.mjs`
  * is assembled here from the bare name so the literal never appears as a direct
  * `execFile`/`spawn` argument — Next's bundler statically traces such literals
  * as module imports and fails the production build otherwise.
  */
 export function rootScript(nameNoExt: string): string {
-  return path.join(careerOneRoot(), `${nameNoExt}.mjs`);
+  return path.join(careerOneSystemRoot(), `${nameNoExt}.mjs`);
 }
 
 // Feature-detect the core's `tracker.mjs delete --num` row-delete (#1200) by probing
@@ -136,6 +152,49 @@ export function readStoryBank(): StoryBank {
   return parseStoryBank(read("interview-prep/story-bank.md") ?? "");
 }
 
+export type CareerProfileSnapshot = {
+  config: Record<string, unknown>;
+  strategyMarkdown: string;
+  sources: {
+    config: "ready" | "missing" | "invalid";
+    strategy: "ready" | "missing";
+  };
+};
+
+/**
+ * Read the two user-owned profile sources for a persistent, read-only Web view.
+ * The page deliberately receives raw user-layer data rather than a second Web
+ * profile schema, so Agent and Web can never drift into competing profiles.
+ */
+export function readCareerProfileSnapshot(): CareerProfileSnapshot {
+  const configRaw = read("config/profile.yml");
+  const strategyRaw = read("modes/_profile.md");
+  let config: Record<string, unknown> = {};
+  let configState: CareerProfileSnapshot["sources"]["config"] = configRaw == null ? "missing" : "invalid";
+
+  if (configRaw != null) {
+    try {
+      const parsed = yaml.load(configRaw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        config = parsed as Record<string, unknown>;
+        configState = "ready";
+      }
+    } catch {
+      // Keep the view read-only and surface an invalid state instead of hiding
+      // the problem or attempting to rewrite a user-owned YAML file.
+    }
+  }
+
+  return {
+    config,
+    strategyMarkdown: strategyRaw ?? "",
+    sources: {
+      config: configState,
+      strategy: strategyRaw == null ? "missing" : "ready",
+    },
+  };
+}
+
 /**
  * Server-side lifecycle of the user's setup — mirrors the prerequisite list that
  * doctor.mjs uses (cv.md, config/profile.yml, modes/_profile.md, portals.yml), by
@@ -161,6 +220,7 @@ export function doctorState(): {
   missing: string[];
   hasCv: boolean;
   hasData: boolean;
+  profileReady: boolean;
 } {
   const has = (rel: string) => {
     try {
@@ -178,9 +238,12 @@ export function doctorState(): {
   const missing = prereqs.filter(([rel]) => !has(rel)).map(([, label]) => label);
   const hasCv = has("cv.md");
   const hasData = readApplications().length > 0 || readInbox().some((j) => !j.done);
+  const profileReady = !missing.some((file) =>
+    ["config/profile.yml", "modes/_profile.md"].includes(file),
+  );
   const onboardingNeeded = missing.length > 0;
   const phase: LifecyclePhase = !hasCv && !hasData ? "first-run" : onboardingNeeded ? "in-between" : "established";
-  return { phase, onboardingNeeded, missing, hasCv, hasData };
+  return { phase, onboardingNeeded, missing, hasCv, hasData, profileReady };
 }
 
 export type PipelineSummary = {

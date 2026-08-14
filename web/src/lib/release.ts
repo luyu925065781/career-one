@@ -8,6 +8,7 @@ export type FeatureId =
   | "discoverJobs"
   | "jobDiagnosis"
   | "pipeline"
+  | "profile"
   | "interviewStories"
   | "jobSources"
   | "analytics"
@@ -63,6 +64,7 @@ const ROUTE_FEATURES: Array<[prefix: string, feature: FeatureId]> = [
   ["/api/run", "assistant"],
   ["/design-system", "designSystem"],
   ["/cn-diagnose", "jobDiagnosis"],
+  ["/profile", "profile"],
   ["/interview", "interviewStories"],
   ["/analytics", "analytics"],
   ["/pipeline", "pipeline"],

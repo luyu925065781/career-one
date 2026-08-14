@@ -448,7 +448,7 @@ function FieldRow({
         </select>
       ) : f.type === "checkbox" ? (
         <label className="flex items-center gap-2 text-sm text-muted">
-          <input type="checkbox" checked={value === "true" || value === "yes"} onChange={(e) => onChange(e.target.checked ? "true" : "")} className="size-4 accent-brand" /> {f.label || "Yes"}
+          <input type="checkbox" checked={value === "true" || value === "yes"} onChange={(e) => onChange(e.target.checked ? "true" : "")} className="size-4 accent-brand" /> {f.label || "是"}
         </label>
       ) : f.type === "file" ? (
         /resume|résumé|\bcv\b|curriculum|currículum|lebenslauf/i.test(f.label || "") ? (

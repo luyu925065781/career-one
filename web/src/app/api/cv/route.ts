@@ -49,14 +49,14 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "bad json" }, { status: 400 });
+    return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
   }
   const target = targetOf(body.target);
   const spec = DOCUMENTS[target];
   const incoming = target === "story-bank" ? body.storyMarkdown : body.content;
   if (typeof incoming !== "string") {
     return NextResponse.json(
-      { error: target === "story-bank" ? "storyMarkdown required" : "content required" },
+      { error: target === "story-bank" ? "缺少面试故事内容" : "缺少简历内容" },
       { status: 400 },
     );
   }
@@ -64,10 +64,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `${spec.label}内容过大。` }, { status: 413 });
   }
   if (target === "story-bank" && (typeof body.storyId !== "string" || !/^S\d+$/i.test(body.storyId))) {
-    return NextResponse.json({ error: "storyId invalid" }, { status: 400 });
+    return NextResponse.json({ error: "面试故事 ID 格式不正确" }, { status: 400 });
   }
   if ((target === "story-bank" || body.baseHash !== undefined) && !/^[a-f0-9]{64}$/.test(body.baseHash ?? "")) {
-    return NextResponse.json({ error: "baseHash invalid" }, { status: 400 });
+    return NextResponse.json({ error: "文档版本标识格式不正确" }, { status: 400 });
   }
   const current = readDocument(target);
   if (body.baseHash && body.baseHash !== current.hash) {
@@ -98,6 +98,6 @@ export async function POST(req: Request) {
     const bak = atomicWriteWithBackup(documentPath(target), content);
     return NextResponse.json({ ok: true, backedUp: !!bak, hash: digest(content) });
   } catch {
-    return NextResponse.json({ error: "write failed" }, { status: 500 });
+    return NextResponse.json({ error: "保存失败，请稍后重试" }, { status: 500 });
   }
 }

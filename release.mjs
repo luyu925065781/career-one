@@ -21,9 +21,11 @@ export const VERSION_RE =
 
 const PACKAGE_FILES = [
   "package.json",
+  "package-lock.json",
   "web/package.json",
   "web/package-lock.json",
   "scaffolder/package.json",
+  "packages/codex-plugin/career-one/.codex-plugin/plugin.json",
 ];
 const WEB_CONFIG_MIRROR = "web/release.config.json";
 
