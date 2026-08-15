@@ -76,6 +76,8 @@ const requiredSystemPaths = [
   'CHANGELOG.md',
   'CODE_OF_CONDUCT.md',
   'SECURITY.md',
+  'PRIVACY.md',
+  'TERMS.md',
   'LICENSE',
 ];
 

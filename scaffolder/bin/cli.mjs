@@ -7,13 +7,21 @@
 // being absent. Pre-creating them from the examples would suppress that
 // onboarding and leave the user with placeholder data.
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, delimiter } from "node:path";
+import { pathToFileURL } from "node:url";
 import { ensureSkillEntrypoints } from "./skill-entrypoints.mjs";
+import {
+  dependencyInstallCommands,
+  parseInstallArgs,
+  REPOSITORY_URL,
+  resolveReleaseTag,
+} from "./installer-core.mjs";
 
-const REPO = "https://github.com/luyu925065781/career-one.git";
-const LATEST_RELEASE = "https://api.github.com/repos/luyu925065781/career-one/releases/latest";
 const NPM = process.platform === "win32" ? "npm.cmd" : "npm";
+const PACKAGE_VERSION = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 
 // career-one is AI-agnostic: every one of these CLIs reads AGENTS.md and works
 // out of the box. We only detect them to tailor the final message — we never
@@ -34,7 +42,10 @@ const SUPPORTED_CLIS = [
 const USAGE = `择程AI（career-one）— 创建本地优先的 AI 求职工作区。
 
 用法：
-  career-one init [目录]          创建新工作区（默认：./career-one）
+  career-one [目录]                         创建新工作区（默认：./career-one）
+  career-one init [目录]                    兼容入口
+  career-one [目录] --channel stable|beta  选择稳定版或测试版
+  career-one [目录] --skip-install         只检出代码，不安装依赖
 
 完成后，在该目录中打开你的 Agent。首次使用时，Agent 会通过对话生成 cv.md 和个人配置。
 项目仓库：https://github.com/luyu925065781/career-one`;
@@ -72,29 +83,19 @@ function detectClis() {
   return SUPPORTED_CLIS.filter((c) => onPath(c.cmd));
 }
 
-async function latestTag() {
+async function main(argv = process.argv.slice(2)) {
+  let options;
   try {
-    const res = await fetch(LATEST_RELEASE, {
-      headers: { "User-Agent": "career-one-cli", Accept: "application/vnd.github+json" },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.tag_name || null;
-  } catch {
-    return null;
+    options = parseInstallArgs(argv, PACKAGE_VERSION);
+  } catch (error) {
+    die(error.message);
   }
-}
-
-async function main() {
-  const [cmd, dirArg] = process.argv.slice(2);
-
-  if (!cmd || cmd === "-h" || cmd === "--help") {
+  if (options.help) {
     console.log(USAGE);
-    process.exit(cmd ? 0 : 1);
+    return;
   }
-  if (cmd !== "init") die(`Unknown command "${cmd}".\n${USAGE}`);
 
-  const target = dirArg || "career-one";
+  const target = options.target;
   if (existsSync(target) && readdirSync(target).length > 0) {
     die(`Target folder "${target}" already exists and is not empty. Pick another name.`);
   }
@@ -104,33 +105,42 @@ async function main() {
   const isAbsolute = target.startsWith("/") || /^[A-Za-z]:/.test(target);
   const display = isAbsolute ? target : `./${target}`;
 
-  // 1. Clone at the latest stable release (fall back to the default branch).
-  const tag = await latestTag();
-  console.log(`\n→ 正在安装择程AI（career-one）${tag ? ` @ ${tag}` : ""} 到 ${display} ...`);
-  const cloneArgs = ["clone", "--depth=1"];
-  if (tag) cloneArgs.push("--branch", tag);
-  cloneArgs.push(REPO, target);
+  // 1. Resolve an immutable Release tag. Never fall back to a moving branch.
+  let tag;
+  try {
+    tag = await resolveReleaseTag(fetch, options.channel);
+  } catch (error) {
+    die(`${error.message}。请检查网络，或从 GitHub Release 手动安装。`);
+  }
+  console.log(`\n→ 正在安装择程AI（career-one）@ ${tag} 到 ${display} ...`);
+  const cloneArgs = ["clone", "--depth=1", "--branch", tag, REPOSITORY_URL, target];
   try {
     execFileSync("git", cloneArgs, { stdio: "inherit" });
   } catch {
     die("git clone failed. Check your network connection and try again.");
   }
 
-  // 2. Install dependencies.
-  console.log("\n→ Installing dependencies (npm install) ...");
-  try {
-    execFileSync(NPM, ["install"], { cwd: target, stdio: "inherit" });
-  } catch {
-    console.warn('\n! npm install failed — you can re-run it manually later with "npm install".');
-  }
-
-  // 2b. Bootstrap CLI skill entrypoints (covers CLIs added after the cloned release).
+  // 2. Bootstrap CLI skill entrypoints (covers CLIs added after the cloned release).
   const bootstrapped = ensureSkillEntrypoints(target);
   if (bootstrapped.length > 0) {
     console.log(`\n→ Bootstrapped ${bootstrapped.length} CLI skill entrypoint(s) for this workspace`);
   }
 
-  // 3. Next steps. We do NOT scaffold cv.md / profile.yml / portals.yml here:
+  // 3. Install reproducibly from both lockfiles without running lifecycle scripts.
+  if (!options.skipInstall) {
+    const hasWeb = existsSync(join(target, "web", "package-lock.json"));
+    for (const command of dependencyInstallCommands(hasWeb)) {
+      const cwd = command.location === "." ? target : join(target, command.location);
+      console.log(`\n→ 正在安装${command.location === "." ? "基础" : " Web"}依赖（npm ci --ignore-scripts）...`);
+      try {
+        execFileSync(NPM, command.args, { cwd, stdio: "inherit" });
+      } catch {
+        die(`依赖安装失败。请进入 ${cwd} 后运行 npm ci --ignore-scripts。`);
+      }
+    }
+  }
+
+  // 4. Next steps. We do NOT scaffold cv.md / profile.yml / portals.yml here:
   // their absence is what triggers the agent's conversational onboarding on
   // first launch, which sets them up far better than copying placeholders.
   console.log(`\n✓ 择程AI已安装到 ${display}\n`);
@@ -154,4 +164,6 @@ async function main() {
   console.log("  npx playwright install chromium\n");
 }
 
-main().catch((err) => die(err?.message || String(err)));
+if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
+  main().catch((err) => die(err?.message || String(err)));
+}

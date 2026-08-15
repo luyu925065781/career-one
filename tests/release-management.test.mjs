@@ -93,13 +93,13 @@ test("Release workflow 执行完整门禁并发布校验和", () => {
   );
 });
 
-test("正式版 README 保留快速开始、用法与岗位发现边界", () => {
+test("公开 README 保留核心入口并展示当前真实 npm 通道", () => {
   const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
   assert.match(readme, /^## 快速开始$/m);
   assert.match(readme, /^## 用法$/m);
   assert.match(readme, /^## 岗位发现边界$/m);
   assert.doesNotMatch(readme, /^## 获取与使用$/m);
-  assert.doesNotMatch(readme, /内测|beta|prerelease/i);
+  assert.match(readme, /npx career-one@next/);
   assert.match(readme, /git clone https:\/\/github\.com\/luyu925065781\/career-one\.git/);
   assert.match(readme, /npm ci --ignore-scripts/);
   assert.match(readme, /国内多数招聘平台需要登录并有严格的访问控制/);
@@ -116,6 +116,67 @@ test("测试用户帮助入口不指向缺失的支持或商标政策", () => {
   assert.doesNotMatch(welcome, /SUPPORT\.md/);
   assert.doesNotMatch(labeler, /SUPPORT\.md/);
   assert.doesNotMatch(disclaimer, /TRADEMARK\.md/);
+});
+
+test("公开 Codex 插件声明稳定的身份、政策页面和 starter prompts", () => {
+  const manifest = JSON.parse(
+    readFileSync(new URL("../packages/codex-plugin/career-one/.codex-plugin/plugin.json", import.meta.url), "utf8"),
+  );
+  assert.equal(manifest.author.name, "NumberX");
+  assert.equal(manifest.homepage, "https://github.com/luyu925065781/career-one");
+  assert.equal(manifest.repository, "https://github.com/luyu925065781/career-one");
+  assert.equal(manifest.license, "MIT");
+  assert.equal(
+    manifest.interface.privacyPolicyURL,
+    "https://github.com/luyu925065781/career-one/blob/develop/PRIVACY.md",
+  );
+  assert.equal(
+    manifest.interface.termsOfServiceURL,
+    "https://github.com/luyu925065781/career-one/blob/develop/TERMS.md",
+  );
+  assert.ok(Array.isArray(manifest.interface.defaultPrompt));
+  assert.ok(manifest.interface.defaultPrompt.length >= 1 && manifest.interface.defaultPrompt.length <= 3);
+  for (const prompt of manifest.interface.defaultPrompt) assert.ok(prompt.length <= 128);
+  assert.match(readFileSync(new URL("../PRIVACY.md", import.meta.url), "utf8"), /本地|local/i);
+  assert.match(readFileSync(new URL("../TERMS.md", import.meta.url), "utf8"), /用户|user/i);
+});
+
+test("npm 发布工作流使用 OIDC，并严格区分 next 与 latest", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/npm-publish.yml", import.meta.url),
+    "utf8",
+  );
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /id-token:\s*write/);
+  assert.match(workflow, /actions\/setup-node@v6/);
+  assert.match(workflow, /node-version:\s*24/);
+  assert.match(workflow, /working-directory:\s*scaffolder/);
+  assert.match(workflow, /npm publish --access public --tag next/);
+  assert.match(workflow, /npm publish --access public --tag latest/);
+  assert.match(workflow, /npm pack --dry-run/);
+});
+
+test("公开插件提交材料包含正反测试并且不会打入插件源码目录", () => {
+  const cases = JSON.parse(
+    readFileSync(new URL("../packages/codex-plugin/submission/test-cases.json", import.meta.url), "utf8"),
+  );
+  assert.equal(cases.positive.length, 5);
+  assert.equal(cases.negative.length, 3);
+  for (const item of cases.positive) {
+    assert.ok(item.prompt);
+    assert.ok(item.expected_behavior);
+    assert.ok(item.expected_result_shape);
+    assert.ok(item.fixture_data);
+  }
+  for (const item of cases.negative) {
+    assert.ok(item.prompt);
+    assert.ok(item.expected_behavior);
+    assert.ok(item.rationale);
+  }
+  assert.doesNotMatch(
+    readFileSync(new URL("../distribution/build-packages.mjs", import.meta.url), "utf8"),
+    /submission\/test-cases\.json/,
+  );
 });
 
 test("面向中国大陆用户的项目级 README 以中文为主", () => {
