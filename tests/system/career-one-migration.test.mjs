@@ -95,10 +95,14 @@ for (const required of [
   "AI 由你掌控",
   "遵守第三方服务条款",
   "不提供任何保证",
-  "[LEGAL_DISCLAIMER.md](LEGAL_DISCLAIMER.md)",
 ]) {
   assert.ok(disclaimer.includes(required), `中文 README 免责声明缺少关键条款：${required}`);
 }
+assert.match(
+  disclaimer,
+  /\[[^\]]+\]\(LEGAL_DISCLAIMER\.md\)/,
+  "中文 README 免责声明必须链接到 LEGAL_DISCLAIMER.md",
+);
 
 const license = read("LICENSE");
 const originalCopyrightHolder = ["Santi", "ago Fernández de Valderrama"].join("");
@@ -729,7 +733,17 @@ assert.match(updater, /RAW_VERSION_URL\('develop'\)/, "开发通道更新检查�
 assert.match(updater, /RELEASES_LATEST_API/, "正式通道更新检查必须读取最新稳定 Release");
 
 const scaffolderCli = read("scaffolder/bin/cli.mjs");
-assert.match(scaffolderCli, /github\.com\/luyu925065781\/career-one\.git/, "安装器必须克隆择程AI仓库");
+const scaffolderInstallerCore = read("scaffolder/bin/installer-core.mjs");
+assert.match(
+  scaffolderInstallerCore,
+  /REPOSITORY_URL\s*=\s*["']https:\/\/github\.com\/luyu925065781\/career-one\.git["']/,
+  "安装器仓库常量必须指向择程AI仓库",
+);
+assert.match(
+  scaffolderCli,
+  /const cloneArgs = \[[^\n]*REPOSITORY_URL[^\n]*\]/,
+  "安装器必须使用统一仓库常量克隆择程AI仓库",
+);
 assert.match(
   readme,
   /git clone https:\/\/github\.com\/luyu925065781\/career-one\.git/,
