@@ -1,12 +1,8 @@
 # 择程AI
 
 <p align="center">
-  <strong>面向中国大陆用户的本地优先 AI 求职工作台</strong><br>
-  让用户自己的 Agent 在本地完成简历建档、岗位判断、定制简历、面试准备与求职进度管理。
-</p>
-
-<p align="center">
-  <a href="https://developers.openai.com/codex"><img src="https://img.shields.io/badge/Codex_first-OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" alt="Codex first"></a>
+  <strong>面向中国大陆用户的 AI 求职顾问</strong><br>
+  让你的 Agent 帮你完成简历建档、求职画像、故事库、岗位评估、定制简历、面试准备与求职进度管理。
 </p>
 
 <p align="center">
