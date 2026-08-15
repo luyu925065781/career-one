@@ -4,7 +4,6 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
-  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -44,25 +43,10 @@ function copyRuntimePath(relativePath, runtimeRoot) {
   cpSync(source, target, { recursive: true, filter: includeSource });
 }
 
-function isRuntimeScript(name) {
-  if (!name.endsWith(".mjs")) return false;
-  return !(
-    name === "test-all.mjs" ||
-    name.startsWith("test-") ||
-    name.endsWith(".test.mjs") ||
-    name.endsWith("-tests.mjs") ||
-    name.endsWith("migration-tests.mjs")
-  );
-}
-
 export function buildRuntime(runtimeRoot) {
   mkdirSync(runtimeRoot, { recursive: true });
   for (const path of RUNTIME_PATHS) copyRuntimePath(path, runtimeRoot);
-
-  for (const entry of readdirSync(ROOT, { withFileTypes: true })) {
-    if (entry.isFile() && isRuntimeScript(entry.name)) copyRuntimePath(entry.name, runtimeRoot);
-  }
-  for (const optional of ["tracker-aliases.json", "plugins-registry.json"]) {
+  for (const optional of ["plugins-registry.json"]) {
     copyRuntimePath(optional, runtimeRoot);
   }
 

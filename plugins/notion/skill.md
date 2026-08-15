@@ -12,10 +12,10 @@ truth — Notion is an additive mirror.
 
 ## Commands
 
-- `node plugins.mjs run notion export` — push each tracker row (company / role /
+- `node career-one.mjs plugins run notion export` — push each tracker row (company / role /
   status / score) to the "Applications" database under your Career Ops page.
   Add `--dry-run` to preview without writing.
-- `node plugins.mjs run notion search "<query>"` — return Notion records that
+- `node career-one.mjs plugins run notion search "<query>"` — return Notion records that
   carry a job URL, matching the query, and append them to the pipeline.
 
 ## Setup

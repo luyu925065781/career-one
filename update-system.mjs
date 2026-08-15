@@ -116,7 +116,8 @@ const SYSTEM_PATHS = [
   'DESIGN.md',
   'GEMINI.md',
   'KIMI.md',
-  'build-dashboard.mjs',
+  'career-one.mjs',
+  'scripts/',
   'start-web.mjs',
   '启动择程AI.command',
   'web/src/',
@@ -127,77 +128,13 @@ const SYSTEM_PATHS = [
   'web/next.config.mjs',
   'web/postcss.config.mjs',
   'web/tsconfig.json',
-  'generate-pdf.mjs',
-  'generate-latex.mjs',
-  'archive-posting.mjs',
-  'application-answers.mjs',
-  'generate-cover-letter.mjs',
-  'merge-tracker.mjs',
-  'tracker-links.mjs',
-  'tracker.mjs',
-  'find.mjs',
-  'verify-pipeline.mjs',
-  'reconcile-pipeline.mjs',
-  'dedup-tracker.mjs',
-  'add-entry.mjs',
-  'role-matcher.mjs',
-  'tracker-utils.mjs',
-  'tracker-parse.mjs',
-  'tracker-aliases.json',
-  'set-status.mjs',
-  'set-status-tests.mjs',
-  'normalize-statuses.mjs',
-  'cv-sync-check.mjs',
+  'config/tracker-aliases.json',
   'update-system.mjs',
-  'reserve-report-num.mjs',
-  'scan.mjs',
-  'market-cn.mjs',
-  'classify-tier.mjs',
-  'scan-ats-full.mjs',
-  'match-star.mjs',
-  'prepare-application.mjs',
   'providers/',
   'seeds/',
   'tests/',
   'doctor.mjs',
-  'check-liveness.mjs',
-  'liveness-core.mjs',
-  'liveness-api.mjs',
-  'liveness-browser.mjs',
-  'browser-extract.mjs',
-  'analyze-patterns.mjs',
-  'stats.mjs',
-  'detect-reposts.mjs',
-  'fingerprint-core.mjs',
-  'process-quality.mjs',
-  'process-quality.test.mjs',
-  'salary-gap.mjs',
-  'followup-cadence.mjs',
-  'followup-cadence.test.mjs',
-  'invite-match.mjs',
-  'invite-match.test.mjs',
-  'agent-inbox.mjs',
-  'agent-runs.mjs',
-  'followup-seed.mjs',
-  'followup-seed-tests.mjs',
-  'gemini-eval.mjs',
-  'ollama-eval.mjs',
-  'openai-eval.mjs',
-  'openrouter-runner.mjs',
   'test-all.mjs',
-  'career-one-migration-tests.mjs',
-  'detect-reposts.test.mjs',
-  'test-salary-filter.mjs',
-  'test-trust-validator.mjs',
-  'tracker-columns-tests.mjs',
-  'agent-inbox-tests.mjs',
-  'validate-portals.mjs',
-  'verify-portals.mjs',
-  'updater-migration-tests.mjs',
-  'validate-system-paths-coverage.mjs',
-  'reply-matcher.mjs',
-  'reply-matcher.test.mjs',
-  'reply-watch.mjs',
   'batch/batch-prompt.md',
   'batch/batch-runner.sh',
   'batch/README.md',
@@ -223,7 +160,6 @@ const SYSTEM_PATHS = [
   'docs/',
   'writing-samples/README.md',
   'release.config.json',
-  'release.mjs',
   'VERSION',
   'DATA_CONTRACT.md',
   'CONTRIBUTING.md',
@@ -240,7 +176,6 @@ const SYSTEM_PATHS = [
   '.github/',
   'package.json',
   'package-lock.json',
-  'build-cv-latex.mjs',
   'scaffolder/',
   'Dockerfile',
   'docker-compose.yml',
@@ -248,17 +183,16 @@ const SYSTEM_PATHS = [
   'career-one-docker',
   'DOCKER.md',
   'plugins/',
-  'plugins.mjs',
   'plugins-registry/',
   'plugins-registry.json',
-  'plugin-install.mjs',
-  'plugin-audit.mjs',
-  'validate-plugin-registry.mjs',
   'config/plugins.example.yml',
 ];
 
 const BOOTSTRAP_PATHS = [
   '.agents/',
+  'career-one.mjs',
+  'scripts/',
+  'tests/',
   'distribution/',
   'packages/codex-plugin/',
   '.opencode/skills/',
@@ -267,30 +201,91 @@ const BOOTSTRAP_PATHS = [
   '.kimi/skills/',
   '.trae/skills/',
   'providers/',
-  'liveness-browser.mjs',
-  'tracker-links.mjs',
-  'role-matcher.mjs',
-  'tracker-utils.mjs',
-  'tracker-parse.mjs',
-  'tracker-aliases.json',
+  'config/tracker-aliases.json',
   'scaffolder/',
-  'reserve-report-num.mjs',
-  'updater-migration-tests.mjs',
-  'validate-portals.mjs',
-  'tracker-columns-tests.mjs',
   'plugins/',
-  'plugins.mjs',
   'plugins-registry/',
   'plugins-registry.json',
-  'plugin-install.mjs',
-  'plugin-audit.mjs',
-  'validate-plugin-registry.mjs',
   'config/plugins.example.yml',
-  'agent-inbox.mjs',
-  'agent-inbox-tests.mjs',
-  'agent-runs.mjs',
   'release.config.json',
+];
+
+// Explicitly system-owned legacy files removed by the grouped scripts/tests
+// layout. The updater may delete only these tracked paths, and only when the
+// fetched target no longer contains them.
+const OBSOLETE_SYSTEM_PATHS = [
+  'add-entry.mjs',
+  'agent-inbox-tests.mjs',
+  'agent-inbox.mjs',
+  'agent-runs.mjs',
+  'analyze-patterns.mjs',
+  'application-answers.mjs',
+  'archive-posting.mjs',
+  'browser-extract.mjs',
+  'build-cv-latex.mjs',
+  'build-dashboard.mjs',
+  'career-one-migration-tests.mjs',
+  'check-liveness.mjs',
+  'classify-tier.mjs',
+  'cv-sync-check.mjs',
+  'dedup-tracker.mjs',
+  'detect-reposts.mjs',
+  'detect-reposts.test.mjs',
+  'find.mjs',
+  'fingerprint-core.mjs',
+  'followup-cadence.mjs',
+  'followup-cadence.test.mjs',
+  'followup-seed-tests.mjs',
+  'followup-seed.mjs',
+  'gemini-eval.mjs',
+  'generate-cover-letter.mjs',
+  'generate-latex.mjs',
+  'generate-pdf.mjs',
+  'invite-match.mjs',
+  'invite-match.test.mjs',
+  'liveness-api.mjs',
+  'liveness-browser.mjs',
+  'liveness-core.mjs',
+  'market-cn.mjs',
+  'match-star.mjs',
+  'merge-tracker.mjs',
+  'normalize-statuses.mjs',
+  'ollama-eval.mjs',
+  'openai-eval.mjs',
+  'openrouter-runner.mjs',
+  'plugin-audit.mjs',
+  'plugin-install.mjs',
+  'plugins.mjs',
+  'prepare-application.mjs',
+  'process-quality.mjs',
+  'process-quality.test.mjs',
+  'reconcile-pipeline.mjs',
   'release.mjs',
+  'reply-matcher.mjs',
+  'reply-matcher.test.mjs',
+  'reply-watch.mjs',
+  'reserve-report-num.mjs',
+  'role-matcher.mjs',
+  'salary-gap.mjs',
+  'scan-ats-full.mjs',
+  'scan.mjs',
+  'set-status-tests.mjs',
+  'set-status.mjs',
+  'stats.mjs',
+  'test-salary-filter.mjs',
+  'test-trust-validator.mjs',
+  'tracker-columns-tests.mjs',
+  'tracker-aliases.json',
+  'tracker-links.mjs',
+  'tracker-parse.mjs',
+  'tracker-utils.mjs',
+  'tracker.mjs',
+  'updater-migration-tests.mjs',
+  'validate-plugin-registry.mjs',
+  'validate-portals.mjs',
+  'validate-system-paths-coverage.mjs',
+  'verify-pipeline.mjs',
+  'verify-portals.mjs',
 ];
 
 // User layer paths — NEVER touch these (safety check)
@@ -551,6 +546,30 @@ function resolveReexecCheckout(ref, entry) {
 
 function repoPath(root, path) {
   return join(root, ...path.split('/'));
+}
+
+function pruneObsoleteSystemPaths(ref, updated) {
+  const remoteFiles = new Set(
+    git('ls-tree', '-r', '--name-only', ref)
+      .split('\n')
+      .filter(Boolean)
+      .map((path) => path.replace(/\\/g, '/')),
+  );
+
+  for (const legacyPath of OBSOLETE_SYSTEM_PATHS) {
+    if (remoteFiles.has(legacyPath)) continue;
+    const trackedFiles = git('ls-files', '--', legacyPath).split('\n').filter(Boolean);
+    for (const file of trackedFiles) {
+      const absolute = repoPath(ROOT, file);
+      try {
+        if (existsSync(absolute)) unlinkSync(absolute);
+        if (!updated.includes(file)) updated.push(file);
+        console.log(`Pruned obsolete system file: ${file}`);
+      } catch (error) {
+        console.error(`Failed to prune obsolete system file ${file}: ${error.message}`);
+      }
+    }
+  }
 }
 
 export function prepareMaterializedSkillEntrypointsForStage(paths, root = ROOT) {
@@ -845,6 +864,8 @@ async function apply() {
         // File may not exist in remote (new additions), skip
       }
     }
+
+    pruneObsoleteSystemPaths('FETCH_HEAD', updated);
 
     // tests/ is auto-discovered and EXECUTED (tests/**/*.test.mjs), so stale
     // files left behind by upstream renames would run twice or crash the

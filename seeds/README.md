@@ -25,13 +25,13 @@ data/pipeline.md
 
 ```bash
 # 从 Y Combinator 被投企业中查找最近 7 天的岗位
-node scan-ats-full.mjs --seeds yc --since 7
+node career-one.mjs scan-full --seeds yc --since 7
 
 # 同时使用 YC 和 a16z 种子，并执行试运行预览
-node scan-ats-full.mjs --seeds yc,a16z --dry-run
+node career-one.mjs scan-full --seeds yc,a16z --dry-run
 
 # 组合种子来源与常规 ATS 来源
-node scan-ats-full.mjs --seeds yc --ats greenhouse,lever --since 5
+node career-one.mjs scan-full --seeds yc --ats greenhouse,lever --since 5
 
 # npm 快捷命令
 npm run scan:seeds   # yc + a16z

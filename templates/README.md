@@ -41,10 +41,10 @@
 **用法：**
 ```bash
 # 验证并编译 .tex → .pdf（要求 pdflatex 已加入 PATH）
-node generate-latex.mjs output/cv-name-company-date.tex
+node career-one.mjs latex output/cv-name-company-date.tex
 
 # 也可以指定自定义输出路径
-node generate-latex.mjs output/cv-name-company-date.tex output/custom-name.pdf
+node career-one.mjs latex output/cv-name-company-date.tex output/custom-name.pdf
 ```
 
 **前置条件：** Windows 可通过 [MiKTeX](https://miktex.org/) 安装 `pdflatex`，Linux/macOS 可使用 TeX Live。首次编译可能会自动安装缺失的 LaTeX 包；也可以直接把 `.tex` 文件上传到 [Overleaf](https://www.overleaf.com)，无需本地安装。

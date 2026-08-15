@@ -55,7 +55,7 @@ Web 工作台不得直接启动 Agent CLI。用户在 Web 中发起生成简历�
 5. 失败或被阻塞时记录真实原因：
    `node <skill-root>/scripts/career-one.mjs run fail <id> --error <原因>`
 
-如果用户消息中带有“已有待办任务 ID”，不要再次运行 `run start` 创建重复任务。先运行 `run progress <id> --label "Agent 已接手任务"` 把 queued 或 waiting_input 任务更新为运行中；需要用户回答时必须在结束当前对话回合前运行 `run wait`，不能让 Web 继续显示“思考中”；完成或失败时继续使用同一个 ID。任务完成后运行 `node agent-inbox.mjs resolve --task <id> --result <结果摘要>`，让 Web 与 Agent 待办同步结单。
+如果用户消息中带有“已有待办任务 ID”，不要再次运行 `run start` 创建重复任务。先运行 `run progress <id> --label "Agent 已接手任务"` 把 queued 或 waiting_input 任务更新为运行中；需要用户回答时必须在结束当前对话回合前运行 `run wait`，不能让 Web 继续显示“思考中”；完成或失败时继续使用同一个 ID。任务完成后运行 `node career-one.mjs agent-inbox resolve --task <id> --result <结果摘要>`，让 Web 与 Agent 待办同步结单。
 
 不得把完整 JD、简历正文或秘密写入任务摘要；任务记录只保存短输入、进度和正式产物的相对路径。
 

@@ -12,7 +12,7 @@ license: MIT
 
 ## How to run it
 
-- `node plugins.mjs run {{NAME}}` — runs the plugin's hook.
+- `node career-one.mjs plugins run {{NAME}}` — runs the plugin's hook.
 
 ## What it produces
 

@@ -97,8 +97,8 @@ npx playwright install chromium
 ## Verify Setup
 
 ```bash
-node cv-sync-check.mjs      # Check configuration
-node verify-pipeline.mjs     # Check pipeline integrity
+node career-one.mjs sync-check      # Check configuration
+node career-one.mjs verify     # Check pipeline integrity
 ```
 
 ## Build Dashboard (Optional)

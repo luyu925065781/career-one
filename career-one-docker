@@ -6,7 +6,7 @@
 #   ./career-one-docker verify
 #   ./career-one-docker pdf cv.html output/cv.pdf
 #   ./career-one-docker scan
-#   ./career-one-docker node generate-pdf.mjs cv.html output/cv.pdf
+#   ./career-one-docker node career-one.mjs pdf cv.html output/cv.pdf
 #   ./career-one-docker shell                     # interactive bash
 #   ./career-one-docker up | down | rebuild | logs
 #

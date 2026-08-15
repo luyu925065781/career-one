@@ -8,13 +8,13 @@ on:
     paths:
       - 'web/**'
       - 'release.config.json'
-      - 'release.mjs'
+      - 'scripts/system/release.mjs'
   push:
     branches: [main, develop]
     paths:
       - 'web/**'
       - 'release.config.json'
-      - 'release.mjs'
+      - 'scripts/system/release.mjs'
 
 permissions:
   contents: read

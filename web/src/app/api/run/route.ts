@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { resolveCli } from "@/lib/clis";
-import { careerOneRoot, readMemory } from "@/lib/career-one";
+import { careerOneRoot, careerOneSystemRoot, readMemory, rootScript } from "@/lib/career-one";
 import { acquireTrackerWrite, releaseTrackerWrite } from "@/lib/core/run-registry";
 
 export const runtime = "nodejs";
@@ -31,9 +31,9 @@ Target: ${input}`;
   }
   if (kind === "fix-portal") {
     return `A company's job-portal ATS slug is BROKEN — career-one can no longer scan it, so it silently disappears from every future scan. Repair it (headless, on the user's machine):
-1. Run \`node verify-portals.mjs --add "${input}"\` — it probes Greenhouse/Ashby/Lever for the company's correct ATS slug and prints the suggested ats + slug.
+1. Run \`node career-one.mjs verify-portals --add "${input}"\` — it probes Greenhouse/Ashby/Lever for the company's correct ATS slug and prints the suggested ats + slug.
 2. Open portals.yml, find the "${input}" entry under tracked_companies, and update its careers_url (and any api/slug field) to the suggested WORKING ATS URL. Change ONLY this one company; preserve all other YAML structure, comments and formatting exactly.
-3. Re-run \`node verify-portals.mjs\` and confirm "${input}" now shows ✅ live (not ❌).
+3. Re-run \`node career-one.mjs verify-portals\` and confirm "${input}" now shows ✅ live (not ❌).
 If NO slug variant resolves, say so clearly and leave portals.yml unchanged. Never touch any other company.
 
 End with EXACTLY one final line: VERDICT: {5 if now live, else 1}/5 — {what you changed, ≤12 words}`;
@@ -44,11 +44,11 @@ End with EXACTLY one final line: VERDICT: {5 if now live, else 1}/5 — {what yo
 1. 读取 modes/zh/_shared.md 和 modes/zh/oferta.md，并严格遵循其中 A-F、岗位真实性 G 和 Machine Summary 规则。读取 cv.md、article-digest.md、config/profile.yml 和 modes/_profile.md，只依据该用户的真实事实判断匹配度。使用 WebFetch 读取岗位，并在报告头标记 \`Verification: unconfirmed (batch mode)\`。所有分析与报告正文使用简体中文。
 
 2. Persist the result CANONICALLY so the web and the CLI share ONE source of truth:
-   a. Reserve a report number: run \`node reserve-report-num.mjs\` — its stdout is a 3-digit number (e.g. 035).
+   a. Reserve a report number: run \`node career-one.mjs reserve-report-num\` — its stdout is a 3-digit number (e.g. 035).
    b. Write the full report to reports/{num}-{company-slug}-${today}.md  (company-slug = company lowercased, non-alphanumerics → hyphens).
    c. Append ONE row of 9 TAB-separated columns to batch/tracker-additions/{num}-{company-slug}.tsv, in THIS exact order (real \\t tabs, status BEFORE score):
       {num}\t${today}\t{Company}\t{Role}\t{CanonicalStatus e.g. Evaluated}\t{score}/5\t❌\t[{num}](reports/{num}-{company-slug}-${today}.md)\t{one-line note}
-   d. Merge into the tracker: run \`node merge-tracker.mjs\` (it dedupes by company+role+report-num, validates the status, and writes data/applications.md — NEVER edit applications.md by hand).
+   d. Merge into the tracker: run \`node career-one.mjs merge\` (it dedupes by company+role+report-num, validates the status, and writes data/applications.md — NEVER edit applications.md by hand).
 
 3. NEVER submit an application, fill no forms, contact no one. This is evaluation + persistence ONLY.${mem}
 
@@ -86,12 +86,15 @@ export async function POST(req: Request) {
 
   // These run the REAL core (modes/scripts), not just data — fail clearly if the
   // root is incomplete instead of faking it.
-  const needsScript: Record<string, string> = { evaluate: "modes/oferta.md", "fix-portal": "verify-portals.mjs" };
-  const required = needsScript[kind];
-  if (required && !fs.existsSync(path.join(careerOneRoot(), required))) {
+  const required = kind === "evaluate"
+    ? path.join(careerOneSystemRoot(), "modes", "oferta.md")
+    : kind === "fix-portal"
+      ? rootScript("verify-portals")
+      : null;
+  if (required && !fs.existsSync(required)) {
     return new Response(
       JSON.stringify({
-        error: `当前工作区缺少完整的择程AI系统文件（${required}）。请将 CAREER_ONE_ROOT 指向完整项目目录。`,
+        error: `当前工作区缺少完整的择程AI系统文件（${path.relative(careerOneSystemRoot(), required)}）。请将 CAREER_ONE_SYSTEM_ROOT 指向完整项目目录。`,
       }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     );

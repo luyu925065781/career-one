@@ -6,7 +6,7 @@ Verarbeitet URLs von Stellenanzeigen, die in `data/pipeline.md` gesammelt wurden
 
 1. **Lesen** von `data/pipeline.md` → alle Items mit `- [ ]` im Abschnitt "Pendientes" / "Pending" / "Offen" finden
 2. **Für jede offene URL**:
-   a. Die nächste fortlaufende `REPORT_NUM` atomar reservieren, indem `node reserve-report-num.mjs` ausgeführt wird (und den Sentinel mit `node reserve-report-num.mjs --release <num>` freigeben, sobald der Report geschrieben ist)
+   a. Die nächste fortlaufende `REPORT_NUM` atomar reservieren, indem `node career-one.mjs reserve-report-num` ausgeführt wird (und den Sentinel mit `node career-one.mjs reserve-report-num --release <num>` freigeben, sobald der Report geschrieben ist)
    b. **Stellenanzeige extrahieren** mit Playwright (`browser_navigate` + `browser_snapshot`) → WebFetch → WebSearch
    c. Wenn die URL nicht erreichbar ist → als `- [!]` mit Notiz markieren und weitermachen
    d. **Vollständige Auto-Pipeline ausführen**: A-F-Bewertung → Report .md → PDF (wenn Score >= 3.0) → Tracker
@@ -48,16 +48,16 @@ Verarbeitet URLs von Stellenanzeigen, die in `data/pipeline.md` gesammelt wurden
 
 ## Automatische Nummerierung
 
-1. Führen Sie `node reserve-report-num.mjs` aus, um die nächste fortlaufende Nummer atomar zu reservieren (die Ausgabe gibt `{###}` zurück).
+1. Führen Sie `node career-one.mjs reserve-report-num` aus, um die nächste fortlaufende Nummer atomar zu reservieren (die Ausgabe gibt `{###}` zurück).
 2. Schreiben Sie den Report mit dieser Nummer.
-3. Geben Sie den Sentinel mit `node reserve-report-num.mjs --release {###}` frei, sobald der Report geschrieben ist.
+3. Geben Sie den Sentinel mit `node career-one.mjs reserve-report-num --release {###}` frei, sobald der Report geschrieben ist.
 
 ## Synchronisierung der Quellen
 
 Vor dem Verarbeiten irgendeiner URL die Sync prüfen:
 
 ```bash
-node cv-sync-check.mjs
+node career-one.mjs sync-check
 ```
 
 Bei Abweichungen den Kandidaten warnen, bevor weitergearbeitet wird.

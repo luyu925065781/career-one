@@ -1,34 +1,34 @@
 # Scripts Reference
 
-All scripts live in the project root as `.mjs` modules and are exposed via `npm run <name>`.
+Public commands use the stable root entry `career-one.mjs` or `npm run <name>`. Implementations are grouped under `scripts/<domain>/`; callers should not depend on those internal paths.
 
 ## Quick Reference
 
 | Command | Script | Purpose |
 |---------|--------|---------|
 | `npm run doctor` | `doctor.mjs` | Validate setup prerequisites |
-| `npm run verify` | `verify-pipeline.mjs` | Check pipeline data integrity |
-| `npm run normalize` | `normalize-statuses.mjs` | Fix non-canonical statuses |
-| `npm run dedup` | `dedup-tracker.mjs` | Remove duplicate tracker entries |
-| `npm run merge` | `merge-tracker.mjs` | Merge batch TSVs into applications.md |
-| `npm run pdf` | `generate-pdf.mjs` | Convert HTML to ATS-optimized PDF |
-| `npm run build:latex` | `build-cv-latex.mjs` | Build .tex from structured JSON payload |
-| `npm run sync-check` | `cv-sync-check.mjs` | Validate CV/profile consistency |
-| `npm run patterns` | `analyze-patterns.mjs` | Analyze tracker outcomes and report patterns |
-| `npm run add` | `add-entry.mjs` | Dedup + insert a `/career-one add` entry into cv.md / article-digest.md |
+| `npm run verify` | `scripts/system/verify-pipeline.mjs` | Check pipeline data integrity |
+| `npm run normalize` | `scripts/tracker/normalize-statuses.mjs` | Fix non-canonical statuses |
+| `npm run dedup` | `scripts/tracker/dedup-tracker.mjs` | Remove duplicate tracker entries |
+| `npm run merge` | `scripts/tracker/merge-tracker.mjs` | Merge batch TSVs into applications.md |
+| `npm run pdf` | `scripts/generate/generate-pdf.mjs` | Convert HTML to ATS-optimized PDF |
+| `node career-one.mjs build-cv-latex` | `scripts/generate/build-cv-latex.mjs` | Build .tex from structured JSON payload |
+| `npm run sync-check` | `scripts/system/cv-sync-check.mjs` | Validate CV/profile consistency |
+| `npm run patterns` | `scripts/analysis/analyze-patterns.mjs` | Analyze tracker outcomes and report patterns |
+| `npm run add` | `scripts/application/add-entry.mjs` | Dedup + insert a `/career-one add` entry into cv.md / article-digest.md |
 | `npm run update:check` | `update-system.mjs check` | Check for upstream updates |
 | `npm run update` | `update-system.mjs apply` | Apply upstream update |
 | `npm run rollback` | `update-system.mjs rollback` | Rollback last update |
-| `npm run liveness` | `check-liveness.mjs` | Test if job URLs are still active |
-| `npm run extract` | `browser-extract.mjs` | Headless read-only page extractor (opt-in `scan.extractor: cli`) — compact JSON for scan/JD |
-| `npm run scan` | `scan.mjs` | Zero-token portal scanner |
-| `npm run scan:full` | `scan-ats-full.mjs` | Reverse ATS discovery scanner |
-| `npm run validate:portals` | `validate-portals.mjs` | Validate portals.yml shape before scanning |
-| `npm run tracker` | `tracker.mjs` | SQLite derived index over applications.md — sync/query/history/export |
-| `npm run find` | `find.mjs` | Resolve a report#/tracker#/company query to its full pipeline identity |
-| `npm run invite-match` | `invite-match.mjs` | Fuzzy-match a pasted interview-invite email against `data/applications.md` |
-| `node agent-inbox.mjs` | `agent-inbox.mjs` | Queue and resolve durable Agent requests |
-| `node agent-runs.mjs` | `agent-runs.mjs` | Share task status and artifacts between Agent and Web |
+| `npm run liveness` | `scripts/liveness/check-liveness.mjs` | Test if job URLs are still active |
+| `npm run extract` | `scripts/liveness/browser-extract.mjs` | Headless read-only page extractor (opt-in `scan.extractor: cli`) — compact JSON for scan/JD |
+| `npm run scan` | `scripts/scan/scan.mjs` | Zero-token portal scanner |
+| `npm run scan:full` | `scripts/scan/scan-ats-full.mjs` | Reverse ATS discovery scanner |
+| `npm run validate:portals` | `scripts/system/validate-portals.mjs` | Validate portals.yml shape before scanning |
+| `npm run tracker` | `scripts/tracker/tracker.mjs` | SQLite derived index over applications.md — sync/query/history/export |
+| `npm run find` | `scripts/tracker/find.mjs` | Resolve a report#/tracker#/company query to its full pipeline identity |
+| `npm run invite-match` | `scripts/tracker/invite-match.mjs` | Fuzzy-match a pasted interview-invite email against `data/applications.md` |
+| `node career-one.mjs agent-inbox` | `scripts/agent/agent-inbox.mjs` | Queue and resolve durable Agent requests |
+| `node career-one.mjs run` | `scripts/agent/agent-runs.mjs` | Share task status and artifacts between Agent and Web |
 
 ---
 
@@ -111,7 +111,7 @@ It reports errors for invalid YAML shape, unknown explicit providers, malformed 
 ```bash
 npm run validate:portals
 npm run validate:portals -- --file templates/portals.example.yml
-node validate-portals.mjs --self-test
+node career-one.mjs validate-portals --self-test
 ```
 
 **Exit codes:** `0` no errors (warnings allowed), `1` one or more errors found.
@@ -141,11 +141,11 @@ task ID. Web then reads the shared registry to display queued, running,
 completed, failed, approval, and artifact states.
 
 ```bash
-node agent-inbox.mjs list
-node agent-runs.mjs progress <task-id> --label "Agent 已接手任务"
-node agent-runs.mjs complete <task-id> --summary "已生成定制简历" \
+node career-one.mjs agent-inbox list
+node career-one.mjs run progress <task-id> --label "Agent 已接手任务"
+node career-one.mjs run complete <task-id> --summary "已生成定制简历" \
   --artifact "output/example.pdf|定制简历|application/pdf"
-node agent-inbox.mjs resolve --task <task-id> --result "已生成定制简历"
+node career-one.mjs agent-inbox resolve --task <task-id> --result "已生成定制简历"
 ```
 
 Items with `[task:<id>]` must resume the existing shared task instead of
@@ -159,8 +159,8 @@ modification; Web owns viewing, confirmation, management, and replay.
 Builds a `.tex` file from a structured JSON payload, handling template merge and LaTeX escaping automatically. The JSON is produced by the agent during evaluation — this script replaces the manual LaTeX generation step in `modes/latex.md`.
 
 ```bash
-node build-cv-latex.mjs input.json output.tex
-node build-cv-latex.mjs --test
+node career-one.mjs build-cv-latex input.json output.tex
+node career-one.mjs build-cv-latex --test
 ```
 
 **Exit codes:** `0` file generated, `1` missing inputs, invalid JSON, unresolved placeholders, or template not found.
@@ -187,7 +187,7 @@ Analyzes application outcomes, scores, archetypes, blockers, remote policy, and 
 npm run patterns
 npm run patterns -- --summary
 npm run patterns -- --min-threshold 3
-node analyze-patterns.mjs --self-test
+node career-one.mjs patterns --self-test
 ```
 
 **Exit codes:** `0` analysis succeeded, `1` insufficient data or parser self-test failure.
@@ -199,9 +199,9 @@ node analyze-patterns.mjs --self-test
 Folds compensation observations into per-application desired/advertised/actual values and gap aggregates. Sources: `reports/*.md` Machine Summary `advertised_comp` (advertised, source `jd` — historical reports backfill automatically), `data/salary-observations.tsv` (desired/actual, append-only), and `config/profile.yml` `compensation.target_range` (desired default). Fold precedence: highest trust tier wins, then latest date (`actual`: contract > offer-letter > recruiter-verbal > user). Aggregates group by (company, role) and per currency — no FX conversion. Unparseable amounts, orphaned tracker numbers, sample sizes, and staleness are always reported.
 
 ```bash
-node salary-gap.mjs             # JSON
-node salary-gap.mjs --summary   # table + data-quality section
-node salary-gap.mjs --self-test
+node career-one.mjs salary-gap             # JSON
+node career-one.mjs salary-gap --summary   # table + data-quality section
+node career-one.mjs salary-gap --self-test
 ```
 
 Observation line format (TSV, one per line, `#`-prefixed lines are comments):
@@ -312,12 +312,12 @@ Postings without a usable publish date are skipped — a reverse scan is only us
 
 ```bash
 npm run scan:full                              # all ATS directories, last 3 days
-node scan-ats-full.mjs --since 7               # postings from the last 7 days
-node scan-ats-full.mjs --ats greenhouse,workday # subset of sources
-node scan-ats-full.mjs --limit 200             # max companies per ATS
-node scan-ats-full.mjs --dry-run               # preview without writing
-node scan-ats-full.mjs --liveness              # Playwright-verify matches first
-node scan-ats-full.mjs --md-out notes/scans    # also write a dated markdown digest
+node career-one.mjs scan-full --since 7               # postings from the last 7 days
+node career-one.mjs scan-full --ats greenhouse,workday # subset of sources
+node career-one.mjs scan-full --limit 200             # max companies per ATS
+node career-one.mjs scan-full --dry-run               # preview without writing
+node career-one.mjs scan-full --liveness              # Playwright-verify matches first
+node career-one.mjs scan-full --md-out notes/scans    # also write a dated markdown digest
 ```
 
 **Exit codes:** `0` scan completed, `1` configuration error (no portals.yml, unknown `--ats` source) or fatal scan error.
@@ -333,13 +333,13 @@ Why: at hundreds of rows a markdown table degrades structurally (encoding corrup
 Zero new dependencies — uses `node:sqlite`, built into Node ≥ 22.5.
 
 ```bash
-node tracker.mjs sync                     # (re)build applications.db from applications.md
-node tracker.mjs sync --check             # diagnose corruption only, no write (exit 1 if issues found)
-node tracker.mjs query --status Applied --since 2026-05-01
-node tracker.mjs query --company acme --json
-node tracker.mjs history --id 42          # status transitions observed across syncs (Applied → Interview → ...)
-node tracker.mjs export                   # inverse: index → canonical markdown table on stdout
-node tracker.mjs export --out repaired.md # write to a file (existing file backed up to .bak first)
+node career-one.mjs tracker sync                     # (re)build applications.db from applications.md
+node career-one.mjs tracker sync --check             # diagnose corruption only, no write (exit 1 if issues found)
+node career-one.mjs tracker query --status Applied --since 2026-05-01
+node career-one.mjs tracker query --company acme --json
+node career-one.mjs tracker history --id 42          # status transitions observed across syncs (Applied → Interview → ...)
+node career-one.mjs tracker export                   # inverse: index → canonical markdown table on stdout
+node career-one.mjs tracker export --out repaired.md # write to a file (existing file backed up to .bak first)
 ```
 
 `query` and `history` auto-resync when the markdown changed since the last sync, so the index can never serve stale reads.
@@ -359,10 +359,10 @@ Resolves a report number, tracker number, or company/role fragment to its full p
 Zero dependencies, strictly read-only. Numeric queries match **both** the tracker # column and the report number from the Report link (`012` and `12` are the same number), so collisions between the two numbering schemes surface as multiple rows instead of a silent wrong pick. Text queries match company/role by case-insensitive substring, with the shared fuzzy matcher (`role-matcher.mjs`) as fallback for multi-word phrases.
 
 ```bash
-node find.mjs 13                # report# OR tracker# 13 — shows both if they differ
-node find.mjs acme              # company fragment
-node find.mjs "data engineer"   # role phrase (fuzzy via role-matcher)
-node find.mjs acme --json       # machine-readable output
+node career-one.mjs find 13                # report# OR tracker# 13 — shows both if they differ
+node career-one.mjs find acme              # company fragment
+node career-one.mjs find "data engineer"   # role phrase (fuzzy via role-matcher)
+node career-one.mjs find acme --json       # machine-readable output
 ```
 
 Multiple matches print as a table; zero matches print a clean message.
@@ -376,8 +376,8 @@ Multiple matches print as a table; zero matches print a clean message.
 Aggregates lifetime pipeline stats into one JSON report. Stats include tracker, scanner, portals, follow-ups and runs. Reads from data/applications.md, data/scan-history.tsv, portals.yml, data/follow-ups.md and data/scan-runs.tsv. If a file doesn't exist yet, the section turns into null.
 
 ```bash
-node stats.mjs --summary             # returns human-readable table
-node stats.mjs                       # returns json
+node career-one.mjs stats --summary             # returns human-readable table
+node career-one.mjs stats                       # returns json
 ```
 On a fresh clone, with no data yet, the JSON format is as follows:
 

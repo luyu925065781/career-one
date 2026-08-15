@@ -43,7 +43,7 @@ The `./career-one-docker` wrapper forwards any command into the container.
 | Apply update | `./career-one-docker update` |
 | Rollback | `./career-one-docker rollback` |
 | Interactive shell | `./career-one-docker shell` |
-| Raw node script | `./career-one-docker node check-liveness.mjs <url>` |
+| Raw node script | `./career-one-docker node career-one.mjs liveness <url>` |
 | Build dashboard | `./career-one-docker bash -c 'cd dashboard && go build -buildvcs=false -o career-dashboard . && ./career-dashboard --path ..'` |
 
 Unknown subcommands fall through to `docker compose exec` so anything works:

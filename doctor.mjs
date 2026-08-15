@@ -10,7 +10,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as yaml from 'js-yaml';
 import { discoverPlugins, pluginRoots, pluginStatus } from './plugins/_engine.mjs';
-import { resolveExtractorMode } from './browser-extract.mjs';
+import { resolveExtractorMode } from './scripts/liveness/browser-extract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -128,13 +128,15 @@ function playwrightMcpConfigured(root) {
 function checkScanExtractor(root) {
   const mode = resolveExtractorMode(join(root, 'config', 'profile.yml'));
   if (mode === 'cli') {
-    if (existsSync(join(root, 'browser-extract.mjs'))) {
+    const groupedExtractor = join(root, 'scripts', 'liveness', 'browser-extract.mjs');
+    const legacyExtractor = join(root, 'browser-extract.mjs');
+    if (existsSync(groupedExtractor) || existsSync(legacyExtractor)) {
       return { pass: true, label: 'Scan extractor: cli (browser-extract.mjs)' };
     }
     return {
       warn: true,
       label: 'Scan extractor: cli set, but browser-extract.mjs is missing — falls back to MCP',
-      fix: ['Restore browser-extract.mjs, or set `scan.extractor: mcp` in config/profile.yml.'],
+      fix: ['Restore scripts/liveness/browser-extract.mjs, or set `scan.extractor: mcp` in config/profile.yml.'],
     };
   }
   return { pass: true, label: 'Scan extractor: mcp (default)' };
@@ -257,7 +259,7 @@ async function checkPortalSlugs(root) {
     return { pass: true, label: 'ATS slugs: no portals.yml yet (skipped)' };
   }
   try {
-    const { verifyPortalsFile } = await import('./verify-portals.mjs');
+    const { verifyPortalsFile } = await import('./scripts/system/verify-portals.mjs');
     const { results } = await verifyPortalsFile(portalsPath);
     const unresolved = results.filter((r) => r.status === 'missing');
     if (unresolved.length === 0) {
@@ -272,7 +274,7 @@ async function checkPortalSlugs(root) {
           if (r.suggested) line += ` → try ${r.suggested.ats}/${r.suggested.slug}`;
           return line;
         }),
-        'Probe variants with: node verify-portals.mjs --add "<company>"',
+        'Probe variants with: node career-one.mjs verify-portals --add "<company>"',
       ],
     };
   } catch (err) {

@@ -9,7 +9,7 @@
  * Design invariants (every one is asserted by test-all.mjs section 49):
  *  - ZERO module-level side effects. Importing this file reads no config, loads
  *    no dotenv, and mutates no process.env. scan.mjs imports `mergeProviderPlugins`
- *    on every run, and that import must be free — so a plain `node scan.mjs` with
+ *    on every run, and that import must be free — so a plain `node career-one.mjs scan` with
  *    no config/plugins.yml behaves byte-identically to before this feature.
  *  - Fail-open everywhere. A malformed manifest, a throwing import, a missing
  *    key, or a hung hook logs a `⚠️` and is SKIPPED — never crashes the core.
@@ -563,10 +563,10 @@ export function lockGate(manifest, root) {
     case 'legit-update': repin(); return { load: true };        // version bumped → honest update, re-pin quietly
     case 'drift-nobump':
       if (source === 'bundled') { repin(); return { load: true }; } // reviewed-by-construction (branch-protected checkout) → re-pin
-      warnSkip(manifest.id, `files changed since you trusted it without a version bump — possible tampering (${d.changedFiles.slice(0, 5).join(', ')}). Review, then \`node plugins.mjs trust ${manifest.id}\``);
+      warnSkip(manifest.id, `files changed since you trusted it without a version bump — possible tampering (${d.changedFiles.slice(0, 5).join(', ')}). Review, then \`node career-one.mjs plugins trust ${manifest.id}\``);
       return { load: false };
     case 'surface-widened':
-      warnSkip(manifest.id, `capability surface expanded since you consented (${[...d.addedHosts, ...d.addedEnv].join(', ')}${manifest.allowsLocalhost ? ', localhost' : ''}) — re-consent: \`node plugins.mjs enable ${manifest.id}\``);
+      warnSkip(manifest.id, `capability surface expanded since you consented (${[...d.addedHosts, ...d.addedEnv].join(', ')}${manifest.allowsLocalhost ? ', localhost' : ''}) — re-consent: \`node career-one.mjs plugins enable ${manifest.id}\``);
       return { load: false };
     default: return { load: true };
   }
@@ -698,7 +698,7 @@ export async function mergeProviderPlugins(providersMap, { root }) {
         continue;
       }
       if (!lockGate(manifest, root).load) {
-        providersMap.set(manifest.id, inactiveProviderStub(manifest.id, 'integrity/consent check failed — see ⚠️ above; run `node plugins.mjs trust ' + manifest.id + '` or `enable ' + manifest.id + '`'));
+        providersMap.set(manifest.id, inactiveProviderStub(manifest.id, 'integrity/consent check failed — see ⚠️ above; run `node career-one.mjs plugins trust ' + manifest.id + '` or `enable ' + manifest.id + '`'));
         continue;
       }
       const hook = await importHook(manifest, 'provider');

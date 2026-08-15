@@ -319,7 +319,7 @@ advertised_comp: {verbatim JD salary/range as a quoted string (e.g. "80-90k EUR"
 12. Escribe HTML a `output/cv-candidate-{company-slug}.html` (NO en /tmp — el HTML registrado es la fuente de regeneración del dashboard)
 13. Ejecuta:
 ```bash
-node generate-pdf.mjs \
+node career-one.mjs pdf \
   output/cv-candidate-{company-slug}.html \
   output/cv-candidate-{company-slug}-{{DATE}}.pdf \
   --format={letter|a4} \

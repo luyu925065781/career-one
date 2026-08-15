@@ -10,17 +10,17 @@ TODO：用一段话说明插件功能。
 
 ```bash
 # 插件进入 career-one 注册表后：
-node plugins.mjs add {{NAME}}
+node career-one.mjs plugins add {{NAME}}
 
 # 进入注册表前，可从仓库的固定提交直接安装：
-node plugins.mjs add <your-github-user>/career-one-plugin-{{NAME}} --sha <40-hex-commit>
+node career-one.mjs plugins add <your-github-user>/career-one-plugin-{{NAME}} --sha <40-hex-commit>
 ```
 
 随后启用插件并明确授权：
 
 ```bash
-node plugins.mjs enable {{NAME}}            # 显示能力卡片
-node plugins.mjs enable {{NAME}} --confirm  # 授予权限
+node career-one.mjs plugins enable {{NAME}}            # 显示能力卡片
+node career-one.mjs plugins enable {{NAME}} --confirm  # 授予权限
 ```
 
 ## 配置

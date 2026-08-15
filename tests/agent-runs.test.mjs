@@ -18,7 +18,7 @@ try {
   writeFileSync(join(fixture, "config", "profile.yml"), "target_role: old role\n");
   writeFileSync(join(fixture, "modes", "_profile.md"), "# Profile\n\nold value\n");
 
-  const runs = await import(pathToFileURL(join(ROOT, "agent-runs.mjs")).href);
+  const runs = await import(pathToFileURL(join(ROOT, "scripts/agent/agent-runs.mjs")).href);
 
   const created = runs.createRun({
     root: fixture,

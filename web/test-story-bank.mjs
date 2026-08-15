@@ -9,7 +9,7 @@ import {
   validateStoryBankMarkdown,
   validateStoryMarkdown,
 } from "./src/lib/story-bank.mjs";
-import { formatAts, parseStories as parseCliStories, score, tokenize } from "../match-star.mjs";
+import { formatAts, parseStories as parseCliStories, score, tokenize } from "../scripts/application/match-star.mjs";
 
 const readWeb = (relative) => fs.readFileSync(new URL(relative, import.meta.url), "utf8");
 

@@ -84,6 +84,22 @@ codex exec --sandbox workspace-write --search "使用择程AI评估这个岗位�
 
 完整用法见 [Codex 使用指南](docs/CODEX.md)。
 
+## 项目结构
+
+仓库根目录只保留 README、项目规则和少量稳定入口，具体实现按职责归类：
+
+| 路径 | 内容 |
+| --- | --- |
+| `career-one.mjs` | 统一命令入口；常用命令例如 `node career-one.mjs scan`、`node career-one.mjs tracker` |
+| `scripts/` | 按 `agent`、`analysis`、`application`、`generate`、`liveness`、`plugins`、`scan`、`system`、`tracker` 分类的运行脚本 |
+| `tests/` | 与功能域对应的自动化测试 |
+| `modes/` | Agent 工作流、评分规则和多语言模式 |
+| `web/` | 可选的本地 Web 工作台 |
+| `templates/`、`providers/`、`plugins/` | 模板、公开岗位来源和可选集成 |
+| `data/`、`reports/`、`output/` | 用户本地求职数据、评估报告和生成结果；默认不会进入 Git |
+
+内部脚本路径可能随架构调整；用户和集成应优先调用 `career-one.mjs` 或 `npm run` 中的稳定命令。
+
 ## 岗位发现边界
 
 国内多数招聘平台需要登录并有严格的访问控制，择程AI不承诺通过算法覆盖这些平台的全部岗位，也不会绕过平台权限或反爬机制。当前岗位发现能力以搜索辅助为主：

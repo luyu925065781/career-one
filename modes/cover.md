@@ -305,7 +305,7 @@ Write payload to `/tmp/cover-payload-{company-slug}.json`.
 
 Run:
 ```bash
-node generate-cover-letter.mjs --payload /tmp/cover-payload-{company-slug}.json
+node career-one.mjs cover-letter --payload /tmp/cover-payload-{company-slug}.json
 ```
 
 Report the output path and file size.

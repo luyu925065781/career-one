@@ -13,18 +13,18 @@ Queued items are *intents* for the agent to action and the user to review.
 ## Queue a request
 
 ```bash
-node agent-inbox.mjs add "evaluate https://acme.com/jobs/42"
-node agent-inbox.mjs add "draft a follow-up for application #7"
-node agent-inbox.mjs add "run a scan and triage anything new"
+node career-one.mjs agent-inbox add "evaluate https://acme.com/jobs/42"
+node career-one.mjs agent-inbox add "draft a follow-up for application #7"
+node career-one.mjs agent-inbox add "run a scan and triage anything new"
 ```
 
 ## Inspect / resolve
 
 ```bash
-node agent-inbox.mjs list            # pending items
-node agent-inbox.mjs list --all      # include resolved items
-node agent-inbox.mjs resolve 1 --result "scored 4.3 — report 012"
-node agent-inbox.mjs resolve --task run-pdf-012 --result "PDF generated"
+node career-one.mjs agent-inbox list            # pending items
+node career-one.mjs agent-inbox list --all      # include resolved items
+node career-one.mjs agent-inbox resolve 1 --result "scored 4.3 — report 012"
+node career-one.mjs agent-inbox resolve --task run-pdf-012 --result "PDF generated"
 ```
 
 `data/agent-inbox.md` is user-layer (gitignored). Items look like:
@@ -45,8 +45,8 @@ node agent-inbox.mjs resolve --task run-pdf-012 --result "PDF generated"
    Resume that exact ID with `agent-runs.mjs progress`; do not create a second
    run. Complete or fail the same ID so Web can show the live state and result.
 4. After each, mark it `[x]` and append `→ result: <one line>` — either by hand,
-   with `node agent-inbox.mjs resolve <n> --result "..."`, or for a shared run
-   with `node agent-inbox.mjs resolve --task <id> --result "..."`.
+   with `node career-one.mjs agent-inbox resolve <n> --result "..."`, or for a shared run
+   with `node career-one.mjs agent-inbox resolve --task <id> --result "..."`.
 5. Items that need **live user input** (a mock interview, a pasted transcript, a
    decision, anything that would submit an application) → do **not** run them;
    ask the user to start them instead. The inbox never bypasses human review.

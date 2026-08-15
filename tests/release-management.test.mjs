@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -10,7 +10,15 @@ import {
   stageEnabled,
   validateReleaseState,
   verifyRelease,
-} from "../release.mjs";
+} from "../scripts/system/release.mjs";
+
+test("仓库根目录只保留稳定的系统入口脚本", () => {
+  const allowed = ["career-one.mjs", "doctor.mjs", "start-web.mjs", "test-all.mjs", "update-system.mjs"];
+  const actual = readdirSync(new URL("../", import.meta.url))
+    .filter((name) => name.endsWith(".mjs"))
+    .sort();
+  assert.deepEqual(actual, allowed, `根目录脚本必须迁移到 scripts/，仅保留：${allowed.join(", ")}`);
+});
 
 test("功能阶段按正式、内测、开发通道逐级开放", () => {
   assert.equal(stageEnabled("stable", "stable"), true);

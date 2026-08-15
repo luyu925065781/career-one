@@ -10,7 +10,7 @@
 
 1. 在 `config/plugins.yml` 中启用插件，可从 `config/plugins.example.yml` 复制。
 2. 在你自己的 `.env` 中提供插件所需密钥；每个插件会声明自己的要求。
-   可运行 `node doctor.mjs` 或 `node plugins.mjs list` 查看缺失项。
+   可运行 `node doctor.mjs` 或 `node career-one.mjs plugins list` 查看缺失项。
 
 ## 插件结构
 
@@ -50,10 +50,10 @@ plugins/<id>/
 生产型钩子（`provider`、`ingest`、`search`）只**返回** `Job[]`，格式为 `{title, url, company, location}`。始终由引擎而不是插件通过规范写入器将结果写入 `data/pipeline.md`，因此插件无法破坏 Web 读取的数据格式。非 `provider` 钩子需要显式运行：
 
 ```bash
-node plugins.mjs list
-node plugins.mjs run gmail                       # ingest
-node plugins.mjs run notion search "platform"    # search
-node plugins.mjs run notion export [--dry-run]   # export
+node career-one.mjs plugins list
+node career-one.mjs plugins run gmail                       # ingest
+node career-one.mjs plugins run notion search "platform"    # search
+node career-one.mjs plugins run notion export [--dry-run]   # export
 ```
 
 ### `ctx` 对象

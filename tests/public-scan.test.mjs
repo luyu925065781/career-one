@@ -5,7 +5,7 @@ import { pathToFileURL } from 'url';
 console.log('\nPublic target-company scan contract');
 
 try {
-  const scan = await import(pathToFileURL(join(ROOT, 'scan.mjs')).href);
+  const scan = await import(pathToFileURL(join(ROOT, 'scripts/scan/scan.mjs')).href);
   const now = Date.parse('2026-07-10T12:00:00Z');
   const recent = scan.buildPostedAfterFilter(7, now);
 

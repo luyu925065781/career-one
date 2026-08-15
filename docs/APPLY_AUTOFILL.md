@@ -53,4 +53,4 @@ This saves you from spending time tailoring responses for a job that the ATS wil
 
 - **Agent hangs or crashes mid-form:** This usually happens when an ATS updates its React DOM unexpectedly or pops a hidden captcha. When this happens, look at the agent's output—it always prints a complete list of generated answers. You can easily copy and paste the remaining answers manually.
 - **Form changes:** If you notice the form on screen is for a different role than the one evaluated in your report, the agent will detect it and ask if you want to adapt the responses to the new title or stop and re-evaluate.
-- **Multiple roles in one session:** Running batch applies? Always run a **Liveness sweep** (`node check-liveness.mjs --file data/pipeline.md`) first to drop dead postings from your pipeline so you never waste time opening an expired role tab.
+- **Multiple roles in one session:** Running batch applies? Always run a **Liveness sweep** (`node career-one.mjs liveness --file data/pipeline.md`) first to drop dead postings from your pipeline so you never waste time opening an expired role tab.

@@ -31,9 +31,22 @@ export function careerOneSystemRoot(): string {
 
   const cwd = path.resolve(process.cwd());
   const localRoot = path.basename(cwd) === "web" ? path.resolve(cwd, "..") : cwd;
-  if (fs.existsSync(path.join(localRoot, "agent-runs.mjs"))) return localRoot;
+  if (
+    fs.existsSync(path.join(localRoot, "career-one.mjs")) ||
+    fs.existsSync(path.join(localRoot, "scripts", "agent", "agent-runs.mjs")) ||
+    fs.existsSync(path.join(localRoot, "agent-runs.mjs"))
+  ) return localRoot;
   return careerOneRoot();
 }
+
+const GROUPED_SCRIPT_PATHS: Record<string, string> = {
+  "agent-inbox": "scripts/agent/agent-inbox.mjs",
+  "agent-runs": "scripts/agent/agent-runs.mjs",
+  "followup-cadence": "scripts/analysis/followup-cadence.mjs",
+  scan: "scripts/scan/scan.mjs",
+  tracker: "scripts/tracker/tracker.mjs",
+  "verify-portals": "scripts/system/verify-portals.mjs",
+};
 
 /**
  * Absolute path to a core root script (e.g. doctor, verify-portals). The `.mjs`
@@ -42,7 +55,13 @@ export function careerOneSystemRoot(): string {
  * as module imports and fails the production build otherwise.
  */
 export function rootScript(nameNoExt: string): string {
-  return path.join(careerOneSystemRoot(), `${nameNoExt}.mjs`);
+  const root = careerOneSystemRoot();
+  const grouped = GROUPED_SCRIPT_PATHS[nameNoExt];
+  if (grouped) {
+    const groupedPath = path.join(root, ...grouped.split("/"));
+    if (fs.existsSync(groupedPath)) return groupedPath;
+  }
+  return path.join(root, `${nameNoExt}.mjs`);
 }
 
 // Feature-detect the core's `tracker.mjs delete --num` row-delete (#1200) by probing
@@ -134,7 +153,7 @@ export type Application = {
 /**
  * Parse data/applications.md — the tracker table (source of truth).
  * The header-aware parsing lives in tracker-table.mjs, which resolves headers
- * through the SAME alias table the Node tooling uses (tracker-aliases.json,
+ * through the SAME alias table the Node tooling uses (config/tracker-aliases.json,
  * exported by tracker-parse.mjs as HEADER_ALIASES) — one shared source, no
  * web-side mirror to drift (#954, PR #1598 review).
  */

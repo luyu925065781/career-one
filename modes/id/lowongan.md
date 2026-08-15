@@ -103,7 +103,7 @@ Sertakan juga:
 
 Simpan evaluasi lengkap ke `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
 
-- `{###}` = nomor urut berikutnya (3 digit, zero-padded). Untuk mengalokasikannya secara atomik dan menghindari race condition, kamu harus menjalankan `node reserve-report-num.mjs` untuk memesan nomor (stdout mengembalikan `{###}`), menulis report, lalu menjalankan `node reserve-report-num.mjs --release {###}` untuk melepas sentinel.
+- `{###}` = nomor urut berikutnya (3 digit, zero-padded). Untuk mengalokasikannya secara atomik dan menghindari race condition, kamu harus menjalankan `node career-one.mjs reserve-report-num` untuk memesan nomor (stdout mengembalikan `{###}`), menulis report, lalu menjalankan `node career-one.mjs reserve-report-num --release {###}` untuk melepas sentinel.
 - `{company-slug}` = nama perusahaan huruf kecil, tanpa spasi (gunakan tanda hubung)
 - `{YYYY-MM-DD}` = tanggal hari ini
 
