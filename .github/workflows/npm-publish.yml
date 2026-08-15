@@ -1,0 +1,52 @@
+name: Publish npm installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: npm 发布通道
+        required: true
+        type: choice
+        options:
+          - beta
+          - stable
+      publish:
+        description: 验证通过后发布到 npm
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.channel == 'stable' && 'production' || 'preview' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Install root dependencies
+        run: npm ci --ignore-scripts
+      - name: Verify synchronized release state
+        run: npm run release:verify -- --channel "${{ inputs.channel }}"
+      - name: Verify installer contracts
+        run: node --test tests/scaffolder.test.mjs
+      - name: Inspect npm package contents
+        working-directory: scaffolder
+        run: npm pack --dry-run
+      - name: Publish prerelease to next
+        if: ${{ inputs.publish && inputs.channel == 'beta' }}
+        working-directory: scaffolder
+        run: npm publish --access public --tag next
+      - name: Publish stable release to latest
+        if: ${{ inputs.publish && inputs.channel == 'stable' }}
+        working-directory: scaffolder
+        run: npm publish --access public --tag latest

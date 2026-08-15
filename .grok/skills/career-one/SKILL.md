@@ -1,7 +1,8 @@
 ---
 name: career-one
 description: 择程AI（career-one）是面向中国大陆用户的本地优先 AI 求职工作台。用于首次建立或完善 cv.md、评估中文或英文岗位、分析 BOSS直聘等招聘截图与链接、生成可视化报告和定制简历、准备面试、跟进投递并管理求职进度。用户提到择程AI、career-one、求职、简历、岗位评估、JD、招聘截图、BOSS直聘、猎聘、拉勾、面试或投递管理时使用。
-argument-hint: "[scan|pdf|latex|email|offer-prep|titles|tracker] [岗位链接、JD 或任务说明]"
+metadata:
+  argument-hint: "[scan|pdf|latex|email|offer-prep|titles|tracker] [岗位链接、JD 或任务说明]"
 ---
 
 # 择程AI（career-one）
@@ -10,7 +11,7 @@ argument-hint: "[scan|pdf|latex|email|offer-prep|titles|tracker] [岗位链接�
 
 ## 工作区定位与安装
 
-运行要求：Node.js 20.9+（推荐使用 Node.js 22 LTS 或更新的 LTS 版本）和本地文件读写能力；初始化依赖安装需要 npm，PDF 生成功能需要 Playwright Chromium。
+运行要求：Node.js 20.9+（推荐使用 Node.js 22 LTS 或更新的 LTS 版本）、git 和本地文件读写能力；初始化依赖安装需要 npm，PDF 生成功能需要 Playwright Chromium。
 
 1. 当前目录同时存在 `AGENTS.md` 和 `doctor.mjs` 时，将其视为择程AI工作区，直接执行后续流程。
 2. 当前目录不是择程AI工作区时，不得把简历或配置写入 Skill 安装目录。先解析本 Skill 根目录，再运行：

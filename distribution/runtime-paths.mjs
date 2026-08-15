@@ -8,6 +8,8 @@ export const RUNTIME_PATHS = [
   "DATA_CONTRACT.md",
   "ARCHITECTURE.md",
   "README.md",
+  "PRIVACY.md",
+  "TERMS.md",
   "LICENSE",
   "VERSION",
   "release.config.json",

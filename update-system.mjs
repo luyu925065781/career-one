@@ -233,6 +233,8 @@ const SYSTEM_PATHS = [
   'CHANGELOG.md',
   'CODE_OF_CONDUCT.md',
   'LEGAL_DISCLAIMER.md',
+  'PRIVACY.md',
+  'TERMS.md',
   'SECURITY.md',
   'LICENSE',
   'CITATION.cff',

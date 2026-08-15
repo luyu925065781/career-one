@@ -20,15 +20,27 @@
 
 ## 快速开始
 
-运行需要 Git 和 Node.js 20.9+，推荐使用 Node.js 22 LTS 或更新的 LTS 版本。从公开仓库获取并安装：
+运行需要 Git 和 Node.js 20.9+，推荐使用 Node.js 22 LTS 或更新的 LTS 版本。当前公开测试版最快的安装方式是：
+
+```bash
+npx career-one@next
+cd career-one
+codex    # 或 claude / opencode / gemini / qwen / agy / grok
+```
+
+安装器会检出经过验证的不可变 GitHub Release，并按锁文件安装根目录与 Web 依赖。正式版发布后可把 `@next` 改为 `@latest`。
+
+<details>
+<summary>希望先审计源码或手动安装？</summary>
 
 ```bash
 git clone https://github.com/luyu925065781/career-one.git
 cd career-one
 npm ci --ignore-scripts
 (cd web && npm ci)
-codex    # 或 claude / opencode / gemini / qwen / agy / grok
 ```
+
+</details>
 
 首次运行时，Agent 会用中文引导你导入简历、完善求职画像并设置目标岗位，无需手工编辑配置文件。
 
@@ -98,7 +110,7 @@ codex exec --sandbox workspace-write --search "使用择程AI评估这个岗位�
 - 用户可见材料只使用本地已确认的简历、画像、作品和面试故事，不虚构经历、指标或项目归属。
 - 岗位发现不会绕过招聘平台登录、权限或反爬机制；国内平台以用户主动搜索和提供岗位为主。
 - Agent 可以评估、起草和协助填写，但不会替用户点击最终提交、发送或申请按钮。
-- 评估结果仅供求职决策参考；提交材料前请核对事实和表述。完整条款见 [免责声明](LEGAL_DISCLAIMER.md)。
+- 评估结果仅供求职决策参考；提交材料前请核对事实和表述。完整说明见 [隐私政策](PRIVACY.md)、[使用条款](TERMS.md)与[免责声明](LEGAL_DISCLAIMER.md)。
 
 ## 免责声明
 
@@ -109,7 +121,7 @@ codex exec --sandbox workspace-write --search "使用择程AI评估这个岗位�
 3. **你需要遵守第三方服务条款。** 你必须按照所使用招聘平台（Greenhouse、Lever、Workday、LinkedIn 等）的服务条款来使用本工具。不要用它向雇主发送垃圾申请，也不要对 ATS 系统造成过载。
 4. **不提供任何保证。** 评估结果只是建议，不是真相。AI 模型可能会幻觉出并不存在的技能或经历。作者不对任何求职结果、申请被拒、账号受限或其他后果承担责任。
 
-完整内容见 [LEGAL_DISCLAIMER.md](LEGAL_DISCLAIMER.md)。本软件依据 [MIT License](LICENSE) 以“按现状”方式提供，不附带任何形式的担保。
+完整内容见 [隐私政策](PRIVACY.md)、[使用条款](TERMS.md)与[免责声明](LEGAL_DISCLAIMER.md)。本软件依据 [MIT License](LICENSE) 以“按现状”方式提供，不附带任何形式的担保。
 
 ## 许可证
 
