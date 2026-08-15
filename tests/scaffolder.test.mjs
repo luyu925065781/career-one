@@ -1,4 +1,9 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import {
   dependencyInstallCommands,
@@ -8,8 +13,24 @@ import {
   selectReleaseTag,
 } from "../scaffolder/bin/installer-core.mjs";
 
+test("npm 安装器通过 node_modules/.bin 符号链接启动时仍执行 CLI", () => {
+  const tempRoot = mkdtempSync(join(tmpdir(), "career-one-cli-"));
+  const cliPath = fileURLToPath(new URL("../scaffolder/bin/cli.mjs", import.meta.url));
+  const symlinkPath = join(tempRoot, "career-one");
+  try {
+    symlinkSync(cliPath, symlinkPath);
+    const result = spawnSync(process.execPath, [symlinkPath, "--help"], {
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /career-one \[目录\]/);
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test("npm 安装器无参数时直接初始化，并由包版本推断发布通道", () => {
-  assert.deepEqual(parseInstallArgs([], "1.1.0-beta.3"), {
+  assert.deepEqual(parseInstallArgs([], "1.1.0-beta.4"), {
     command: "init",
     target: "career-one",
     channel: "beta",
@@ -22,7 +43,7 @@ test("npm 安装器无参数时直接初始化，并由包版本推断发布通�
 
 test("npm 安装器兼容 init 与直接目录参数，并允许显式通道", () => {
   assert.deepEqual(
-    parseInstallArgs(["init", "my-career", "--channel", "stable", "--skip-install"], "1.1.0-beta.3"),
+    parseInstallArgs(["init", "my-career", "--channel", "stable", "--skip-install"], "1.1.0-beta.4"),
     {
       command: "init",
       target: "my-career",

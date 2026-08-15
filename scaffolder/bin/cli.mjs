@@ -7,9 +7,9 @@
 // being absent. Pre-creating them from the examples would suppress that
 // onboarding and leave the user with placeholder data.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { join, delimiter } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { ensureSkillEntrypoints } from "./skill-entrypoints.mjs";
 import {
   dependencyInstallCommands,
@@ -164,6 +164,13 @@ async function main(argv = process.argv.slice(2)) {
   console.log("  npx playwright install chromium\n");
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
+let invokedDirectly = false;
+try {
+  invokedDirectly = realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+} catch {
+  // Imported modules and malformed argv values are not direct CLI invocations.
+}
+
+if (invokedDirectly) {
   main().catch((err) => die(err?.message || String(err)));
 }
