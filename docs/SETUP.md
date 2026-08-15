@@ -8,9 +8,19 @@
 
 ## Quick Start
 
-### Invite beta — `v1.1.0-beta.1`
+### Public beta — `v1.1.0-beta.3`
 
-During the invite beta, do not use `npx career-one init`: the npm installer has not been republished and does not select prereleases. Open the `v1.1.0-beta.1` GitHub Prerelease, download `SHA256SUMS.txt`, and choose the matching asset:
+The fastest public-beta install is:
+
+```bash
+npx career-one@next
+cd career-one
+codex   # or claude / gemini / qwen / opencode / agy / grok
+```
+
+The installer resolves the `next` npm tag to the newest beta GitHub Release, checks out that immutable tag, and installs the root and Web dependencies from their lockfiles. It fails closed rather than silently falling back to a mutable branch. After the stable release, use `npx career-one@latest`.
+
+For a downloadable Agent package, open the `v1.1.0-beta.3` GitHub Prerelease, download `SHA256SUMS.txt`, and choose the matching asset:
 
 - Codex: `career-one-codex.zip`
 - WorkBuddy: `career-one-workbuddy.zip`
@@ -18,7 +28,7 @@ During the invite beta, do not use `npx career-one init`: the npm installer has 
 For any supported Agent CLI, clone the same immutable tag:
 
 ```bash
-git clone --branch v1.1.0-beta.1 --depth 1 https://github.com/luyu925065781/career-one.git
+git clone --branch v1.1.0-beta.3 --depth 1 https://github.com/luyu925065781/career-one.git
 cd career-one
 npm ci --ignore-scripts
 (cd web && npm ci)
@@ -31,7 +41,7 @@ Verify downloaded Release assets from the directory containing the ZIP files and
 shasum -a 256 -c SHA256SUMS.txt
 ```
 
-On Linux, use `sha256sum -c SHA256SUMS.txt`. The stable npm installer can return after it is republished and its end-to-end install path is verified; until then, the tag and checksums above are authoritative.
+On Linux, use `sha256sum -c SHA256SUMS.txt`. Release tags and checksums are the authoritative fallback when npm is unavailable.
 
 **On first launch, career-one walks you through setup by chatting** — it asks for your CV, your details (name, target roles, salary), and sets up the job scanner with pre-configured companies. Nothing to edit by hand: just answer its questions. Then paste a job offer URL or description and it evaluates it, writes a report, generates a tailored PDF, and tracks it.
 
@@ -65,7 +75,7 @@ codex exec "Run career-one tracker mode and summarize the current statuses."
 ```bash
 git clone --branch develop https://github.com/luyu925065781/career-one.git
 cd career-one
-npm install --ignore-scripts
+npm ci --ignore-scripts
 (cd web && npm ci)
 ```
 

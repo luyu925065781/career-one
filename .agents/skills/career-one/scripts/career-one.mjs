@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 const SKILL_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BUNDLED_RUNTIME = join(SKILL_ROOT, "assets", "runtime");
 const NPM = process.platform === "win32" ? "npm.cmd" : "npm";
+const GIT = process.platform === "win32" ? "git.exe" : "git";
+const REPOSITORY_URL = "https://github.com/luyu925065781/career-one.git";
 const MIN_NODE_VERSION = "20.9.0";
 
 function nodeVersionAtLeast(version, minimum) {
@@ -160,19 +162,52 @@ function init(args) {
     fail(`目标目录 ${target} 不是空目录；为保护已有文件，初始化已停止。`, 2);
   }
 
+  const gitVersion = spawnSync(GIT, ["--version"], { stdio: "ignore" });
+  if (gitVersion.error || gitVersion.status !== 0) {
+    fail("初始化可升级工作区需要 git，但当前 PATH 中未找到 git。", 2);
+  }
+
   mkdirSync(target, { recursive: true });
   cpSync(BUNDLED_RUNTIME, target, { recursive: true, force: false, errorOnExist: true });
 
+  const versionFile = join(target, "VERSION");
+  const version = existsSync(versionFile)
+    ? readFileSync(versionFile, "utf8").trim().split(/\s+/)[0]
+    : "unknown";
+  const gitSteps = [
+    ["init"],
+    ["remote", "add", "origin", REPOSITORY_URL],
+    ["add", "-A"],
+    [
+      "-c",
+      "user.name=career-one installer",
+      "-c",
+      "user.email=installer@career-one.local",
+      "-c",
+      "commit.gpgSign=false",
+      "commit",
+      "--no-gpg-sign",
+      "-m",
+      `chore: initialize career-one ${version}`,
+    ],
+  ];
+  for (const step of gitSteps) {
+    const result = spawnSync(GIT, step, { cwd: target, stdio: "ignore" });
+    if (result.error || result.status !== 0) {
+      fail(`工作区文件已复制，但 Git 更新基线初始化失败（git ${step[0]}）。`, 2);
+    }
+  }
+
   if (!skipInstall) {
-    const install = spawnSync(NPM, ["install", "--ignore-scripts"], { cwd: target, stdio: "inherit" });
+    const install = spawnSync(NPM, ["ci", "--ignore-scripts"], { cwd: target, stdio: "inherit" });
     if (install.error || install.status !== 0) {
-      fail(`工作区已创建，但依赖安装失败。请进入 ${target} 后运行 npm install --ignore-scripts。`);
+      fail(`工作区已创建，但依赖安装失败。请进入 ${target} 后运行 npm ci --ignore-scripts。`);
     }
     const webDir = join(target, "web");
     if (existsSync(join(webDir, "package.json"))) {
-      const webInstall = spawnSync(NPM, ["install", "--ignore-scripts"], { cwd: webDir, stdio: "inherit" });
+      const webInstall = spawnSync(NPM, ["ci", "--ignore-scripts"], { cwd: webDir, stdio: "inherit" });
       if (webInstall.error || webInstall.status !== 0) {
-        fail(`基础工作区已创建，但 Web 依赖安装失败。请进入 ${webDir} 后运行 npm install --ignore-scripts。`);
+        fail(`基础工作区已创建，但 Web 依赖安装失败。请进入 ${webDir} 后运行 npm ci --ignore-scripts。`);
       }
     }
   }

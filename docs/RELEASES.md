@@ -77,10 +77,18 @@ npm run release:verify -- --channel stable
 ## 邀请内测发布
 
 1. 在 `develop` 或发布候选分支完成 P0 门禁，确认 `stable + beta` 功能范围与本轮测试目标一致。
-2. 执行 `release:prepare --channel beta --version 1.1.0-beta.1`，再执行 `release:verify --channel beta`。
+2. 执行 `release:prepare --channel beta --version 1.1.0-beta.3`，再执行 `release:verify --channel beta`。
 3. 从干净提交手动触发 `Release` workflow；先以 `publish=false` 验证完整根测试、Web、audit、分发测试和构建。
 4. 验证通过后对同一不可变提交以 `publish=true` 创建 prerelease，不从本地工作目录手工上传 ZIP。
-5. Release 必须同时包含 `career-one-codex.zip`、`career-one-workbuddy.zip` 和 `SHA256SUMS.txt`；测试用户按 checksum 核对附件，不使用稳定版 `npx` 安装路径。
+5. Release 必须同时包含 `career-one-codex.zip`、`career-one-workbuddy.zip` 和 `SHA256SUMS.txt`；测试用户可用 `npx career-one@next` 安装，或按 checksum 核对附件。
+
+## npm 发布
+
+- beta 版本发布到 dist-tag `next`，用户运行 `npx career-one@next`。
+- stable 版本发布到 dist-tag `latest`，用户运行 `npx career-one@latest`。
+- `.github/workflows/npm-publish.yml` 使用 GitHub Actions OIDC Trusted Publishing；仓库和 workflow 文件名必须与 npm 的 Trusted Publisher 配置完全一致。
+- 包首次恢复发布时需要维护者在本地完成一次交互式 `npm publish --access public --tag next`；包存在后再绑定 Trusted Publisher，后续由 workflow 发布。
+- npm 发布只能指向已经存在且通过校验的同版本 GitHub Release，安装器不会回退到 `develop` 或 `main`。
 
 ## 发布检查单
 

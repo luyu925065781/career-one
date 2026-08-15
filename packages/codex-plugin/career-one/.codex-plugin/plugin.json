@@ -1,18 +1,37 @@
 {
   "name": "career-one",
-  "version": "1.1.0-beta.2",
+  "version": "1.1.0-beta.4",
   "description": "择程AI：面向中国大陆用户的本地优先 AI 求职工作台",
   "author": {
-    "name": "择程AI contributors"
+    "name": "NumberX",
+    "url": "https://github.com/luyu925065781"
   },
+  "homepage": "https://github.com/luyu925065781/career-one",
+  "repository": "https://github.com/luyu925065781/career-one",
+  "license": "MIT",
+  "keywords": [
+    "career-one",
+    "求职",
+    "简历",
+    "岗位评估",
+    "面试准备"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "择程AI",
     "shortDescription": "本地优先的中文 AI 求职工作台",
     "longDescription": "在本地建立简历档案、评估岗位、生成定制材料、准备面试并管理投递进度。个人数据保存在用户自己的工作区。",
-    "developerName": "择程AI contributors",
+    "developerName": "NumberX",
     "category": "Productivity",
     "capabilities": [],
-    "defaultPrompt": "使用 $career-one 在本地建立我的中文求职工作区。"
+    "websiteURL": "https://github.com/luyu925065781/career-one",
+    "privacyPolicyURL": "https://github.com/luyu925065781/career-one/blob/develop/PRIVACY.md",
+    "termsOfServiceURL": "https://github.com/luyu925065781/career-one/blob/develop/TERMS.md",
+    "brandColor": "#FACC15",
+    "defaultPrompt": [
+      "使用 $career-one 在本地建立我的中文求职工作区。",
+      "使用 $career-one 评估这个岗位，并给出是否值得投递的明确建议。",
+      "使用 $career-one 查看我的求职进度并建议下一步。"
+    ]
   }
 }

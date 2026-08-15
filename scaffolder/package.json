@@ -1,6 +1,6 @@
 {
   "name": "career-one",
-  "version": "1.1.0-beta.2",
+  "version": "1.1.0-beta.4",
   "description": "择程AI（career-one）一键安装器：面向中国大陆用户的本地优先 AI 求职工作台",
   "bin": {
     "career-one": "bin/cli.mjs"
@@ -8,6 +8,7 @@
   "type": "module",
   "files": [
     "bin/cli.mjs",
+    "bin/installer-core.mjs",
     "bin/skill-entrypoints.mjs",
     "README.md",
     "LICENSE"
