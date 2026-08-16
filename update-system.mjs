@@ -12,7 +12,7 @@
  *   node update-system.mjs rollback   # Rollback last update
  *   node update-system.mjs dismiss    # Dismiss update check
  *
- * See DATA_CONTRACT.md for the full system/user layer definitions.
+ * See docs/DATA_CONTRACT.md for the full system/user layer definitions.
  */
 
 import { execFile, execFileSync, execSync } from 'child_process';
@@ -113,7 +113,6 @@ const SYSTEM_PATHS = [
   'CODEX.md',
   'OPENCODE.md',
   'AGENTS.md',
-  'DESIGN.md',
   'GEMINI.md',
   'KIMI.md',
   'career-one.mjs',
@@ -161,17 +160,7 @@ const SYSTEM_PATHS = [
   'writing-samples/README.md',
   'release.config.json',
   'VERSION',
-  'DATA_CONTRACT.md',
-  'CONTRIBUTING.md',
-  'ARCHITECTURE.md',
-  'DESIGN_SYSTEM.md',
   'README.md',
-  'CHANGELOG.md',
-  'CODE_OF_CONDUCT.md',
-  'LEGAL_DISCLAIMER.md',
-  'PRIVACY.md',
-  'TERMS.md',
-  'SECURITY.md',
   'LICENSE',
   'CITATION.cff',
   '.editorconfig',
@@ -183,7 +172,6 @@ const SYSTEM_PATHS = [
   'docker-compose.yml',
   '.dockerignore',
   'career-one-docker',
-  'DOCKER.md',
   'plugins/',
   'plugins-registry/',
   'plugins-registry.json',
@@ -288,6 +276,18 @@ const OBSOLETE_SYSTEM_PATHS = [
   'validate-system-paths-coverage.mjs',
   'verify-pipeline.mjs',
   'verify-portals.mjs',
+  'ARCHITECTURE.md',
+  'CHANGELOG.md',
+  'CODE_OF_CONDUCT.md',
+  'CONTRIBUTING.md',
+  'DATA_CONTRACT.md',
+  'DESIGN.md',
+  'DESIGN_SYSTEM.md',
+  'DOCKER.md',
+  'LEGAL_DISCLAIMER.md',
+  'PRIVACY.md',
+  'SECURITY.md',
+  'TERMS.md',
 ];
 
 // User layer paths — NEVER touch these (safety check)

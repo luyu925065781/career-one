@@ -104,7 +104,7 @@ Se você for adaptar ou expandir os modos, siga este vocabulário para manter a 
 
 Se quiser melhorar uma tradução ou traduzir um modo adicional:
 
-1. Abra uma issue com a proposta (conforme `CONTRIBUTING.md`)
+1. Abra uma issue com a proposta (conforme `.github/CONTRIBUTING.md`)
 2. Siga o vocabulário acima para manter o tom consistente
 3. Traduza de forma natural e idiomática — nada de tradução literal palavra por palavra
 4. Mantenha os elementos estruturais (Bloco A-F, tabelas, blocos de código, instruções de tools) exatamente iguais

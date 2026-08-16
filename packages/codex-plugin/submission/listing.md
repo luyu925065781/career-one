@@ -8,8 +8,8 @@
 - Logo：`logo.png`（1024×1024 PNG，派生自项目现有 `web/src/app/icon.svg`）
 - 官网：https://github.com/luyu925065781/career-one
 - 支持：https://github.com/luyu925065781/career-one/issues
-- 隐私：https://github.com/luyu925065781/career-one/blob/develop/PRIVACY.md
-- 条款：https://github.com/luyu925065781/career-one/blob/develop/TERMS.md
+- 隐私：https://github.com/luyu925065781/career-one/blob/develop/docs/PRIVACY.md
+- 条款：https://github.com/luyu925065781/career-one/blob/develop/docs/TERMS.md
 - 可用地区：在门户中选择 OpenAI 当前支持的国家和地区；产品界面与求职语境默认面向中国大陆用户
 
 ## 简短说明

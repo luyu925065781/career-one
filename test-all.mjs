@@ -564,7 +564,7 @@ console.log('\n5. Data contract validation');
 
 // Check system files exist
 const systemFiles = [
-  'CLAUDE.md', 'CODEX.md', 'OPENCODE.md', 'VERSION', 'DATA_CONTRACT.md', 'docs/CODEX.md',
+  'CLAUDE.md', 'CODEX.md', 'OPENCODE.md', 'VERSION', 'docs/DATA_CONTRACT.md', 'docs/CODEX.md',
   'modes/_shared.md', 'modes/_profile.template.md',
   'modes/oferta.md', 'modes/pdf.md', 'modes/scan.md',
   'modes/heuristics/recruiter-side.md',
@@ -1326,7 +1326,7 @@ if (claudeMdDoc.includes('@AGENTS.md') && agentsMdDoc.includes('`offer-prep`')) 
   fail('agent docs missing offer-prep mode row');
 }
 
-const dataContractDoc = readFile('DATA_CONTRACT.md');
+const dataContractDoc = readFile('docs/DATA_CONTRACT.md');
 const gitignoreDoc = readFile('.gitignore');
 const updaterSrc = readFile('update-system.mjs');
 if (
@@ -6719,7 +6719,7 @@ try {
     fail('modes/titles.md is NOT in SYSTEM_PATHS — updates would never deliver it');
   }
 
-  const dataContract = readFile('DATA_CONTRACT.md');
+  const dataContract = readFile('docs/DATA_CONTRACT.md');
   if (dataContract.includes('modes/titles.md')) {
     pass('DATA_CONTRACT.md lists modes/titles.md as a system-layer file');
   } else {

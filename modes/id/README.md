@@ -98,7 +98,7 @@ Agar nada tetap konsisten jika kamu mengubah atau memperluas mode:
 
 Untuk memperbaiki terjemahan atau menambahkan mode:
 
-1. Buka Issue dengan usulanmu (lihat `CONTRIBUTING.md`)
+1. Buka Issue dengan usulanmu (lihat `.github/CONTRIBUTING.md`)
 2. Patuhi leksikon di atas agar nada tetap konsisten
 3. Terjemahkan secara idiomatik -- bukan kata per kata
 4. Pertahankan elemen struktural (Blok A-F, tabel, blok kode, instruksi perkakas) persis sama

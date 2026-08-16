@@ -126,7 +126,7 @@ Modes customize या extend करते समय इस vocabulary का �
 
 किसी translation को improve करना हो या नया mode add करना हो:
 
-1. `CONTRIBUTING.md` के अनुसार Issue खोलें
+1. `.github/CONTRIBUTING.md` के अनुसार Issue खोलें
 2. ऊपर के vocabulary का follow करें — consistent tone के लिए
 3. Word-for-word translation नहीं — idiomatic और natural Hindi
 4. Structural elements (Blocks A-F, tables, code blocks, tool instructions) exactly वैसे ही रखें

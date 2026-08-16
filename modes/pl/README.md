@@ -99,7 +99,7 @@ Aby zachować spójny ton, jeśli modyfikujesz lub rozszerzasz tryby:
 
 Aby ulepszyć tłumaczenie lub dodać tryb:
 
-1. Otwórz Issue z propozycją (zobacz `CONTRIBUTING.md`)
+1. Otwórz Issue z propozycją (zobacz `.github/CONTRIBUTING.md`)
 2. Trzymaj się powyższego słownika, aby zachować spójny ton
 3. Tłumacz idiomatycznie -- bez tłumaczenia słowo w słowo
 4. Zachowaj elementy strukturalne (Bloki A-F, tabele, bloki kodu, instrukcje narzędzi) identycznie

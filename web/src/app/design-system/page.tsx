@@ -32,7 +32,7 @@ function extractPrinciples(markdown: string): DesignPrinciple[] {
 }
 
 function readDesignDocument(): { document: DesignDocument; principles: DesignPrinciple[] } {
-  const source = fs.readFileSync(path.join(careerOneRoot(), "DESIGN.md"), "utf8");
+  const source = fs.readFileSync(path.join(careerOneRoot(), "docs", "DESIGN.md"), "utf8");
   const frontmatter = source.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
 
   if (!frontmatter) {

@@ -17,18 +17,18 @@ import { cn } from "@/lib/cn";
 import { canonStatus, scoreNum } from "@/lib/format";
 import { PRIMARY_NAV_ITEMS } from "@/lib/nav-items";
 
-type BarTone = "brand" | "info" | "infoSoft" | "success" | "warning" | "danger" | "dangerSoft";
+type ChartTone = "yellow" | "orange" | "red" | "green" | "blue" | "purple" | "neutral";
 type StatTone = "brand" | "info" | "success" | "warning" | "danger";
 const PageIcon = PRIMARY_NAV_ITEMS.home.icon;
 
-const BAR_TONE_CLASSES: Record<BarTone, string> = {
-  brand: "bg-brand-200/80",
-  info: "bg-icon-info/80",
-  infoSoft: "bg-icon-info/50",
-  success: "bg-icon-success/80",
-  warning: "bg-icon-warning/80",
-  danger: "bg-icon-danger/80",
-  dangerSoft: "bg-icon-danger/50",
+const CHART_TONE_CLASSES: Record<ChartTone, string> = {
+  yellow: "bg-accent-yellow",
+  orange: "bg-accent-orange",
+  red: "bg-accent-red",
+  green: "bg-accent-green",
+  blue: "bg-accent-blue",
+  purple: "bg-accent-purple",
+  neutral: "bg-faint",
 };
 
 const STAT_TONE_CLASSES: Record<StatTone, { card: string; value: string }> = {
@@ -39,14 +39,14 @@ const STAT_TONE_CLASSES: Record<StatTone, { card: string; value: string }> = {
   danger: { card: "border-danger-border bg-danger-surface", value: "text-metric-danger" },
 };
 
-const STAGES: { key: string; label: string; tone: BarTone }[] = [
-  { key: "EVALUATED", label: "已评估", tone: "brand" },
-  { key: "APPLIED", label: "已投递", tone: "info" },
-  { key: "RESPONDED", label: "已回复", tone: "infoSoft" },
-  { key: "INTERVIEW", label: "面试中", tone: "warning" },
-  { key: "OFFER", label: "已获 Offer", tone: "success" },
-  { key: "REJECTED", label: "被拒", tone: "danger" },
-  { key: "DISCARDED", label: "已放弃", tone: "dangerSoft" },
+const STAGES: { key: string; label: string; tone: ChartTone }[] = [
+  { key: "EVALUATED", label: "已评估", tone: "yellow" },
+  { key: "APPLIED", label: "已投递", tone: "blue" },
+  { key: "RESPONDED", label: "已回复", tone: "purple" },
+  { key: "INTERVIEW", label: "面试中", tone: "orange" },
+  { key: "OFFER", label: "已获 Offer", tone: "green" },
+  { key: "REJECTED", label: "被拒", tone: "red" },
+  { key: "DISCARDED", label: "已放弃", tone: "neutral" },
 ];
 const PROGRESS_STARTED_STATES = new Set([
   "APPLIED",
@@ -73,11 +73,11 @@ function summarizeApplications(applications: Application[]) {
     ? scores.reduce((sum, score) => sum + score, 0) / scores.length
     : 0;
   const scoreBuckets = ([
-    { label: "4.5 – 5.0", tone: "success", test: (score: number) => score >= 4.5 },
-    { label: "4.0 – 4.4", tone: "brand", test: (score: number) => score >= 4 && score < 4.5 },
-    { label: "3.0 – 3.9", tone: "warning", test: (score: number) => score >= 3 && score < 4 },
-    { label: "< 3.0", tone: "danger", test: (score: number) => score < 3 },
-  ] satisfies { label: string; tone: BarTone; test: (score: number) => boolean }[]).map((bucket) => ({
+    { label: "4.5 – 5.0", tone: "green", test: (score: number) => score >= 4.5 },
+    { label: "4.0 – 4.4", tone: "yellow", test: (score: number) => score >= 4 && score < 4.5 },
+    { label: "3.0 – 3.9", tone: "orange", test: (score: number) => score >= 3 && score < 4 },
+    { label: "< 3.0", tone: "red", test: (score: number) => score < 3 },
+  ] satisfies { label: string; tone: ChartTone; test: (score: number) => boolean }[]).map((bucket) => ({
     label: bucket.label,
     tone: bucket.tone,
     n: scores.filter(bucket.test).length,
@@ -428,7 +428,7 @@ export function TodayDashboard({
                   label={name}
                   value={count}
                   pct={(count / analytics.maxCompany) * 100}
-                  tone="brand"
+                  tone="purple"
                 />
               ))
             ) : (
@@ -644,7 +644,7 @@ function Bar({
   value: number;
   pct: number;
   total?: number;
-  tone: BarTone;
+  tone: ChartTone;
 }) {
   const share = total && total > 0 ? Math.round((value / total) * 100) : null;
 
@@ -658,7 +658,7 @@ function Bar({
       <div className="w-20 shrink-0 truncate text-xs text-muted sm:w-24" title={label}>{label}</div>
       <div aria-hidden className="relative h-2 flex-1 overflow-hidden rounded-control bg-surface-hover/70 ring-1 ring-inset ring-border/70">
         <div
-          className={cn("h-full rounded-control", BAR_TONE_CLASSES[tone])}
+          className={cn("h-full rounded-control", CHART_TONE_CLASSES[tone])}
           style={{ width: `${Math.max(pct, value > 0 ? 5 : 0)}%` }}
         />
       </div>

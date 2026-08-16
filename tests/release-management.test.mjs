@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -18,6 +19,16 @@ test("仓库根目录只保留稳定的系统入口脚本", () => {
     .filter((name) => name.endsWith(".mjs"))
     .sort();
   assert.deepEqual(actual, allowed, `根目录脚本必须迁移到 scripts/，仅保留：${allowed.join(", ")}`);
+});
+
+test("仓库根目录只保留 README 与 Agent 自动发现文档", () => {
+  const allowed = ["AGENTS.md", "CLAUDE.md", "CODEX.md", "GEMINI.md", "KIMI.md", "OPENCODE.md", "README.md"];
+  const repoRoot = new URL("../", import.meta.url);
+  const actual = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], { cwd: repoRoot, encoding: "utf8" })
+    .split("\0")
+    .filter((name) => name && !name.includes("/") && name.endsWith(".md") && existsSync(new URL(name, repoRoot)))
+    .sort();
+  assert.deepEqual(actual, allowed, `长文档必须归档到 docs/ 或 .github/，根目录仅保留：${allowed.join(", ")}`);
 });
 
 test("功能阶段按正式、内测、开发通道逐级开放", () => {
@@ -119,7 +130,7 @@ test("测试用户帮助入口不指向缺失的支持或商标政策", () => {
     "utf8",
   );
   const labeler = readFileSync(new URL("../.github/labeler.yml", import.meta.url), "utf8");
-  const disclaimer = readFileSync(new URL("../LEGAL_DISCLAIMER.md", import.meta.url), "utf8");
+  const disclaimer = readFileSync(new URL("../docs/LEGAL_DISCLAIMER.md", import.meta.url), "utf8");
   assert.match(welcome, /docs\/FAQ\.md/);
   assert.doesNotMatch(welcome, /SUPPORT\.md/);
   assert.doesNotMatch(labeler, /SUPPORT\.md/);
@@ -136,17 +147,17 @@ test("公开 Codex 插件声明稳定的身份、政策页面和 starter prompts
   assert.equal(manifest.license, "MIT");
   assert.equal(
     manifest.interface.privacyPolicyURL,
-    "https://github.com/luyu925065781/career-one/blob/develop/PRIVACY.md",
+    "https://github.com/luyu925065781/career-one/blob/develop/docs/PRIVACY.md",
   );
   assert.equal(
     manifest.interface.termsOfServiceURL,
-    "https://github.com/luyu925065781/career-one/blob/develop/TERMS.md",
+    "https://github.com/luyu925065781/career-one/blob/develop/docs/TERMS.md",
   );
   assert.ok(Array.isArray(manifest.interface.defaultPrompt));
   assert.ok(manifest.interface.defaultPrompt.length >= 1 && manifest.interface.defaultPrompt.length <= 3);
   for (const prompt of manifest.interface.defaultPrompt) assert.ok(prompt.length <= 128);
-  assert.match(readFileSync(new URL("../PRIVACY.md", import.meta.url), "utf8"), /本地|local/i);
-  assert.match(readFileSync(new URL("../TERMS.md", import.meta.url), "utf8"), /用户|user/i);
+  assert.match(readFileSync(new URL("../docs/PRIVACY.md", import.meta.url), "utf8"), /本地|local/i);
+  assert.match(readFileSync(new URL("../docs/TERMS.md", import.meta.url), "utf8"), /用户|user/i);
 });
 
 test("npm 发布工作流使用 OIDC，并严格区分 next 与 latest", () => {

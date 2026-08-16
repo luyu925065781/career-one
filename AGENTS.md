@@ -2,13 +2,13 @@
 
 ## 前端设计 Source of Truth
 
-前端视觉、颜色、文字层级、间距、圆角、交互状态和可访问性以根目录 `DESIGN_SYSTEM.md` 为准。实现时优先复用 `web/src/app/globals.css` 中的语义 Token，不得在页面组件中另建一套品牌色或中性色。
+前端视觉、颜色、文字层级、间距、圆角、交互状态和可访问性以 `docs/DESIGN_SYSTEM.md` 为准。实现时优先复用 `web/src/app/globals.css` 中的语义 Token，不得在页面组件中另建一套品牌色或中性色。
 
 **择程AI必须由用户自己的 Agent 完成个性化。** 首次使用时通过对话创建或完善 `cv.md`、个人画像和目标岗位。所有真实个人数据保存在用户当前工作区，系统层和可分发 Skill 不得包含任何用户简历事实。
 
 ## Data Contract (CRITICAL)
 
-There are two layers. Read `DATA_CONTRACT.md` for the full list.
+There are two layers. Read `docs/DATA_CONTRACT.md` for the full list.
 
 **User Layer (NEVER auto-updated, personalization goes HERE):**
 - `cv.md`, `config/profile.yml`, `modes/_profile.md`, `article-digest.md`, `portals.yml`
@@ -356,9 +356,9 @@ Default modes are in `modes/zh/` (Simplified Chinese, China mainland). The Engli
 
 ## Community and Governance
 
-- **Code of Conduct**: see `CODE_OF_CONDUCT.md`.
-- **Security**: use GitHub private vulnerability reporting; see `SECURITY.md`.
-- **Contributions**: see `CONTRIBUTING.md`.
+- **Code of Conduct**: see `.github/CODE_OF_CONDUCT.md`.
+- **Security**: use GitHub private vulnerability reporting; see `.github/SECURITY.md`.
+- **Contributions**: see `.github/CONTRIBUTING.md`.
 
 ## Headless / Batch Mode
 

@@ -79,4 +79,4 @@ career-one 使用无需构建的原生 ESM，因此引擎**无法真正隔离**�
 - 项目方运营的**中心化基础设施**，例如托管岗位聚合、共享匹配服务、代理或 Workers。这些属于**独立、可选的服务**，相关讨论见 [career-one 的后续方向（#904）](https://github.com/luyu925065781/career-one/discussions/904)，不属于开放核心。
 - **自动提交或盲目海投**。career-one 是决策辅助工具，不是群发机器人。它只为**你**起草申请，由你审阅并提交。任何钩子都不能提交申请，且 `humanInTheLoop: true` 是强制要求；核心和插件都遵守该规则。
 
-完整边界见 `CONTRIBUTING.md` 中的“Scope”章节。
+完整边界见 `.github/CONTRIBUTING.md` 中的“Scope”章节。

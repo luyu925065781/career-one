@@ -100,7 +100,7 @@ These files contain system logic, scripts, templates, and instructions that impr
 | `.grok/skills/*` | Skill definitions (Grok Build CLI) |
 | `docs/*` | Documentation |
 | `VERSION` | Current version number |
-| `DATA_CONTRACT.md` | This file |
+| `docs/DATA_CONTRACT.md` | This file |
 | `writing-samples/README.md` | System-owned onboarding documentation for the writing-samples directory |
 
 ## The Rule

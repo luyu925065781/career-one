@@ -1,6 +1,6 @@
 # 模板
 
-这里存放 career-one 脚本和模式使用的系统层模板。运行 `npm run update` 时，这些文件会自动更新；用户自定义内容应写入用户层文件，具体边界见 `DATA_CONTRACT.md`。
+这里存放 career-one 脚本和模式使用的系统层模板。运行 `npm run update` 时，这些文件会自动更新；用户自定义内容应写入用户层文件，具体边界见 `docs/DATA_CONTRACT.md`。
 
 ## 文件
 

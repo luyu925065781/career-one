@@ -44,6 +44,7 @@ function extractArray(name) {
 const systemPaths = extractArray('SYSTEM_PATHS');
 const userPaths = extractArray('USER_PATHS');
 const bootstrapPaths = extractArray('BOOTSTRAP_PATHS');
+const obsoletePaths = extractArray('OBSOLETE_SYSTEM_PATHS');
 
 const requiredSystemPaths = [
   'scripts/',
@@ -73,11 +74,8 @@ const requiredSystemPaths = [
   'web/package.json',
   'web/package-lock.json',
   'README.md',
-  'CHANGELOG.md',
-  'CODE_OF_CONDUCT.md',
-  'SECURITY.md',
-  'PRIVACY.md',
-  'TERMS.md',
+  'docs/',
+  '.github/',
   'LICENSE',
 ];
 
@@ -100,6 +98,24 @@ for (const path of requiredSystemPaths) {
 for (const path of requiredBootstrapPaths) {
   if (bootstrapPaths.includes(path)) pass(`BOOTSTRAP_PATHS covers ${path}`);
   else fail(`BOOTSTRAP_PATHS missing ${path}`);
+}
+
+for (const path of [
+  'ARCHITECTURE.md',
+  'CHANGELOG.md',
+  'CODE_OF_CONDUCT.md',
+  'CONTRIBUTING.md',
+  'DATA_CONTRACT.md',
+  'DESIGN.md',
+  'DESIGN_SYSTEM.md',
+  'DOCKER.md',
+  'LEGAL_DISCLAIMER.md',
+  'PRIVACY.md',
+  'SECURITY.md',
+  'TERMS.md',
+]) {
+  if (obsoletePaths.includes(path)) pass(`OBSOLETE_SYSTEM_PATHS prunes moved root document ${path}`);
+  else fail(`OBSOLETE_SYSTEM_PATHS missing moved root document ${path}`);
 }
 
 const twoPassManifestChecks = [

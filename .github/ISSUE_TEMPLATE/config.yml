@@ -7,5 +7,5 @@ contact_links:
     url: https://github.com/luyu925065781/career-one/discussions
     about: For ideas, Q&A, and community conversations.
   - name: "📤 Sharing scan results or automation output?"
-    url: https://github.com/luyu925065781/career-one/blob/main/DATA_CONTRACT.md
+    url: https://github.com/luyu925065781/career-one/blob/main/docs/DATA_CONTRACT.md
     about: Your scans and reports stay local (data/ + reports/). Please don't file them here — they'd be public, and they're not needed upstream. Point any scheduled run at your own fork.

@@ -101,8 +101,8 @@ for (const required of [
 }
 assert.match(
   disclaimer,
-  /\[[^\]]+\]\(LEGAL_DISCLAIMER\.md\)/,
-  "中文 README 免责声明必须链接到 LEGAL_DISCLAIMER.md",
+  /\[[^\]]+\]\(docs\/LEGAL_DISCLAIMER\.md\)/,
+  "中文 README 免责声明必须链接到 docs/LEGAL_DISCLAIMER.md",
 );
 
 const license = read("LICENSE");
@@ -323,7 +323,7 @@ const updaterSource = read("update-system.mjs");
 for (const requiredPath of ["start-web.mjs", "启动择程AI.command", "web/src/", "web/package.json", "web/package-lock.json"]) {
   assert.match(updaterSource, new RegExp(`['\"]${requiredPath.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}['\"]`), `更新器必须覆盖 ${requiredPath}`);
 }
-assert.match(read("DATA_CONTRACT.md"), /web\/src\//, "数据契约必须把 Web 源码声明为系统层");
+assert.match(read("docs/DATA_CONTRACT.md"), /web\/src\//, "数据契约必须把 Web 源码声明为系统层");
 
 const diagnosisView = read("web/src/components/cn-diagnose/cn-diagnose-view.tsx");
 assert.doesNotMatch(diagnosisView, /面试开场话术|BOSS 首轮沟通话术|BOSS 打招呼话术/, "岗位评估入口不得继续显示旧诊断话术");
@@ -371,7 +371,7 @@ assert.match(iconTokenComponents, /text-icon-success/, "成功状态图标必须
 assert.match(iconTokenComponents, /text-icon-warning/, "警告状态图标必须使用 icon-warning Token");
 assert.match(iconTokenComponents, /text-icon-danger/, "错误状态图标必须使用 icon-danger Token");
 
-const designSystem = read("DESIGN_SYSTEM.md");
+const designSystem = read("docs/DESIGN_SYSTEM.md");
 assert.match(designSystem, /^# 择程AI设计系统/m, "项目必须包含择程AI设计系统");
 assert.doesNotMatch(designSystem, /上游：数字超体|数字超体基础 Token|两层.*Token/, "择程AI设计系统必须作为独立 Token 来源，不能依赖上游映射");
 assert.match(designSystem, /gray-900.*#111827/, "项目设计系统必须定义主文字色");
@@ -381,7 +381,7 @@ assert.match(designSystem, /`tertiary`：第三优先级。使用 `surface` 白�
 assert.match(designSystem, /状态前景|状态浅底|状态描边/, "设计系统必须定义完整的状态语义 Token");
 assert.match(designSystem, /raised|floating|overlay/, "设计系统必须定义语义化阴影层级");
 
-const machineReadableDesign = read("DESIGN.md");
+const machineReadableDesign = read("docs/DESIGN.md");
 assert.match(machineReadableDesign, /^---\n/m, "DESIGN.md 必须保留机器可读的 YAML frontmatter");
 assert.match(machineReadableDesign, /^name:\s*择程AI设计系统$/m, "DESIGN.md 必须是择程AI自己的机器可读 Token");
 for (const tokenGroup of ["colors:", "typography:", "spacing:", "rounded:", "elevation:", "components:"]) {
@@ -393,7 +393,7 @@ assert.match(machineReadableDesign, /择程AI.*系统自带字体/, "产品规�
 assert.doesNotMatch(machineReadableDesign, /Instrument Serif/, "字体规范不得继续使用 Instrument Serif");
 
 const designSystemPage = read("web/src/app/design-system/page.tsx");
-assert.match(designSystemPage, /readFileSync\(path\.join\(careerOneRoot\(\), "DESIGN\.md"\)/, "UI 规范页必须从根目录 DESIGN.md 读取 Token");
+assert.match(designSystemPage, /readFileSync\(path\.join\(careerOneRoot\(\), "docs", "DESIGN\.md"\)/, "UI 规范页必须从 docs/DESIGN.md 读取 Token");
 assert.match(designSystemPage, /yaml\.load\(/, "UI 规范页必须解析 DESIGN.md 的 YAML frontmatter");
 assert.match(designSystemPage, /DesignSystemShowcase/, "UI 规范页必须把解析后的 Token 交给组件展台");
 
@@ -414,8 +414,8 @@ assert.doesNotMatch(webLayout, /instrumentSerif/, "根布局不得继续加载 I
 const buttonSource = read("web/src/components/ui/button.tsx");
 assert.match(buttonSource, /tertiary:\s*"[^"]*border-outline-border[^"]*bg-surface[^"]*text-outline-text[^"]*hover:border-outline-border-hover[^"]*hover:bg-outline-bg/, "通用第三优先级按钮必须使用中性描边 Token");
 assert.doesNotMatch(buttonSource, /tertiary:\s*"[^"]*hover:(?:border|bg|text)-brand/, "通用第三优先级按钮 hover 不得使用品牌色");
-assert.match(read("AGENTS.md"), /DESIGN_SYSTEM\.md/, "AGENTS 必须声明前端设计 source of truth");
-assert.match(read("CLAUDE.md"), /DESIGN_SYSTEM\.md/, "CLAUDE 必须声明前端设计 source of truth");
+assert.match(read("AGENTS.md"), /docs\/DESIGN_SYSTEM\.md/, "AGENTS 必须声明前端设计 source of truth");
+assert.match(read("CLAUDE.md"), /docs\/DESIGN_SYSTEM\.md/, "CLAUDE 必须声明前端设计 source of truth");
 
 const webIcon = read("web/src/app/icon.svg");
 assert.match(webIcon, /<linearGradient[^>]*id="brand-gradient"/, "择程AI图标必须使用品牌渐变");

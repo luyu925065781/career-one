@@ -31,7 +31,7 @@ career-one interacts with career portals and job boards (Greenhouse, Lever, Ashb
 - Do not use this tool to scrape platforms that prohibit automated access.
 - Do not use this tool to spam employers, overwhelm ATS systems, or submit mass applications.
 - Any consequences from ToS violations — including IP bans, account restrictions, or legal action from platforms — are solely the responsibility of the user.
-- The maintainers actively reject contributions that facilitate ToS violations (see CONTRIBUTING.md).
+- The maintainers actively reject contributions that facilitate ToS violations (see [CONTRIBUTING.md](../.github/CONTRIBUTING.md)).
 
 ## 5. Acceptable Use
 

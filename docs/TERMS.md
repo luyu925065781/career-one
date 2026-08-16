@@ -29,4 +29,4 @@ Agent、模型供应商、GitHub、招聘网站和可选插件属于独立第三
 
 ## 联系方式
 
-使用问题可通过 [GitHub Issues](https://github.com/luyu925065781/career-one/issues) 提交。安全问题请遵循仓库中的 `SECURITY.md`，不要公开披露漏洞或凭据。
+使用问题可通过 [GitHub Issues](https://github.com/luyu925065781/career-one/issues) 提交。安全问题请遵循仓库中的 [SECURITY.md](../.github/SECURITY.md)，不要公开披露漏洞或凭据。
