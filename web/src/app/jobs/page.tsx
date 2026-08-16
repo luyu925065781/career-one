@@ -245,8 +245,8 @@ export default function JobsHistory() {
 
   return (
     <div className="page-shell py-8 max-sm:pb-24" aria-busy={!jobsReady}>
-      <div className="flex items-end justify-between gap-4">
-        <div className="min-w-0 flex-1">
+      <div data-ui-page-header>
+        <div className="min-w-0">
           <h1 className="page-title">Agent 任务</h1>
           <p className="mt-1 w-full text-sm text-muted">
             持久记录每次 Agent 执行，重新打开工作台仍可查看。
@@ -265,7 +265,7 @@ export default function JobsHistory() {
           正在加载 Agent 任务…
         </div>
       ) : visibleJobs.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-14 text-center text-sm text-muted">
+        <div data-ui-empty-state="panel" className="mt-6 px-6 py-14 text-center text-sm">
           还没有 Agent 任务。请在 Codex 等 Agent 产品中使用择程AI发起任务。
         </div>
       ) : (

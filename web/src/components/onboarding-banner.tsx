@@ -70,7 +70,7 @@ export function ProfileSetupChecklist({ missing }: { missing: string[] }) {
         {actions.map((action) => {
           const ActionIcon = action.icon;
           return (
-            <article key={action.id} className="rounded-card border border-border bg-surface/75 p-4">
+            <article key={action.id} data-ui-card="solid" className="p-4">
               <div className="flex items-start gap-3">
                 <span
                   className={cn(

@@ -142,7 +142,7 @@ export function ConfigForm() {
                 <Loader2 className="size-4 animate-spin" /> 正在检查本机已安装的 Agent…
               </div>
             ) : installed.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border bg-surface/30 p-4 text-sm text-muted">
+              <div data-ui-empty-state="panel" className="p-4 text-sm">
                 还没有 Agent？可以从 <span className="text-foreground">Codex</span> 开始，或使用 <span className="text-foreground">OpenCode</span> 搭配 Qwen、GLM 等模型。{" "}
                 <a href="https://career-one.org/docs/free-ai-engine" target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-brand hover:underline">
                   查看免费方案 <ExternalLink className="size-3" />
@@ -206,7 +206,7 @@ export function ConfigForm() {
                   );
                 })}
                 {installed.length === 0 && (
-                  <p className="rounded-xl border border-dashed border-border bg-surface/30 p-4 text-xs text-muted">
+                  <p data-ui-empty-state="panel" className="p-4 text-xs">
                     PATH 中未发现支持的 Agent CLI。请先安装 Codex、Claude Code 或 OpenCode 等工具。
                   </p>
                 )}
@@ -263,7 +263,7 @@ export function ConfigForm() {
         )}
 
         {mode === "manual" && (
-          <div className="rounded-xl border border-dashed border-border bg-surface/30 p-4 text-sm text-muted">
+          <div data-ui-empty-state="panel" className="p-4 text-sm">
             无需 Key、无需配置的简化模式，正在规划中。
           </div>
         )}

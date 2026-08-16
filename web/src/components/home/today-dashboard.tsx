@@ -32,11 +32,11 @@ const BAR_TONE_CLASSES: Record<BarTone, string> = {
 };
 
 const STAT_TONE_CLASSES: Record<StatTone, { card: string; value: string }> = {
-  brand: { card: "border-brand/30 bg-brand-soft/40", value: "text-metric-brand" },
-  info: { card: "border-icon-info/25 bg-icon-info/[0.06]", value: "text-metric-info" },
-  success: { card: "border-icon-success/25 bg-icon-success/[0.06]", value: "text-metric-success" },
-  warning: { card: "border-icon-warning/25 bg-icon-warning/[0.06]", value: "text-metric-warning" },
-  danger: { card: "border-icon-danger/25 bg-icon-danger/[0.06]", value: "text-metric-danger" },
+  brand: { card: "border-brand/30 bg-brand-soft", value: "text-metric-brand" },
+  info: { card: "border-info-border bg-info-surface", value: "text-metric-info" },
+  success: { card: "border-success-border bg-success-surface", value: "text-metric-success" },
+  warning: { card: "border-warning-border bg-warning-surface", value: "text-metric-warning" },
+  danger: { card: "border-danger-border bg-danger-surface", value: "text-metric-danger" },
 };
 
 const STAGES: { key: string; label: string; tone: BarTone }[] = [
@@ -119,6 +119,13 @@ function summarizeApplications(applications: Application[]) {
     offers,
     averageTone,
   };
+}
+
+function averageScoreHint(average: number) {
+  if (!average) return "完成首个评估，查看整体岗位匹配度";
+  if (average >= 4) return "整体匹配良好，优先推进高分岗位";
+  if (average >= 3) return "详尽的岗位分析，提升入职成功率";
+  return "收紧目标范围，优先排除低匹配岗位";
 }
 
 // The retention "Today": a dual-loop action queue (the maintainer's
@@ -224,11 +231,19 @@ export function TodayDashboard({
   return (
     <div className="page-shell py-10 max-sm:pb-24">
       <div data-dashboard-stats className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat value={analytics.total} label="已评估" tone="brand" />
+        <Stat
+          value={analytics.total}
+          label="已评估"
+          tone="brand"
+          hint={analytics.total === 0
+            ? "完成首个评估，建立岗位对比基线"
+            : "助你理解自己的优势，明确职业方向"}
+        />
         <Stat
           value={analytics.average ? analytics.average.toFixed(2) : "—"}
           label="平均分"
           tone={analytics.averageTone}
+          hint={averageScoreHint(analytics.average)}
         />
         <Stat
           value={analytics.interviews}
@@ -248,7 +263,7 @@ export function TodayDashboard({
         data-dashboard-primary-grid
         className="mt-6 grid gap-4"
       >
-        <section className="dot-bg relative h-full overflow-hidden rounded-2xl border border-border bg-surface/40 px-7 py-10 md:px-10 md:py-12">
+        <section className="dot-bg relative h-full overflow-hidden rounded-2xl bg-surface/40 px-7 py-10 md:px-10 md:py-12">
           <HeroGlow />
           <div className="relative z-10">
             <p className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-muted">
@@ -311,13 +326,15 @@ export function TodayDashboard({
           </div>
         </section>
 
-        <GettingStartedCard
-          steps={guideSteps}
-          complete={guideComplete}
-          setupMissing={profileSetupMissing}
-        >
-          {profileSetupNeeded && <ProfileSetupChecklist missing={profileSetupMissing} />}
-        </GettingStartedCard>
+        {!guideComplete && (
+          <GettingStartedCard
+            steps={guideSteps}
+            complete={guideComplete}
+            setupMissing={profileSetupMissing}
+          >
+            {profileSetupNeeded && <ProfileSetupChecklist missing={profileSetupMissing} />}
+          </GettingStartedCard>
+        )}
       </div>
 
       {/* A. Follow-ups due (demand loop) */}
@@ -456,7 +473,7 @@ function GettingStartedCard({
       <div className="px-5 py-5 md:px-7 md:py-6">
         <div className="flex items-start justify-between gap-5">
           <div className="min-w-0">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-brand-text">新手流程</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-brand-text">新用户教程</p>
             <h2 id="getting-started-title" className="font-display mt-1 text-2xl text-landing">
               {complete ? "求职流程已完成" : "完成你的求职闭环"}
             </h2>
@@ -591,7 +608,7 @@ function Stat({
 
   return (
     <div className={cn("min-h-28 rounded-card border p-4", colors.card)}>
-      <span aria-hidden className={cn("mb-3 block h-1 w-8 rounded-full", BAR_TONE_CLASSES[tone])} />
+      <span aria-hidden className={cn("mb-3 block h-1 w-8 rounded-full", colors.value, "bg-current")} />
       <div className={cn("text-3xl font-semibold tabular-nums", colors.value)}>{value}</div>
       <div className="mt-1 text-xs text-faint">{label}</div>
       {hint && <p className="mt-2 text-xs leading-5 text-muted">{hint} →</p>}

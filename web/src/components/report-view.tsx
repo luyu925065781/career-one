@@ -407,7 +407,7 @@ export function ReportView({
           <ScoreMethodology />
         </>
       ) : (
-        <div className="mt-8 flex items-center gap-3 rounded-2xl border border-dashed border-border bg-surface/30 p-5 text-sm text-muted">
+        <div data-ui-empty-state="panel" className="mt-8 flex items-center gap-3 p-5 text-sm">
           <FileText className="size-5 shrink-0 text-icon-muted" />
           在 <code className="text-foreground">reports/</code> 中未找到 #{id} 的报告文件。
         </div>

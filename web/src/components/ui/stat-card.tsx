@@ -30,11 +30,13 @@ export function StatCard({
   return (
     <Link
       href={href}
+      data-ui-card="subtle"
+      data-card-elevation="raised"
+      data-card-interactive="true"
       className={cn(
-        "group relative overflow-hidden rounded-card border border-border bg-surface/50 bg-origin-border p-5 shadow-raised transition-colors",
+        "group relative overflow-hidden bg-origin-border p-5",
         CORNERS[corner],
         "from-brand/10 via-transparent to-transparent",
-        "hover:bg-surface-hover",
       )}
     >
       <Icon className="size-5 text-icon-brand" />

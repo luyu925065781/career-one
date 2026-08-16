@@ -25,13 +25,7 @@ const JourneyProfileIcon = UserRound;
 const JourneyStoryIcon = PRIMARY_NAV_ITEMS.interviewStories.icon;
 const JourneyDiagnosisIcon = PRIMARY_NAV_ITEMS.jobDiagnosis.icon;
 
-export function CvEditor({
-  storyCount = 0,
-  profileReady = false,
-}: {
-  storyCount?: number;
-  profileReady?: boolean;
-}) {
+export function CvEditor() {
   const [content, setContent] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [exists, setExists] = useState(true);
@@ -70,8 +64,8 @@ export function CvEditor({
 
   return (
     <div className="page-shell py-8">
-      <div className="flex items-end justify-between gap-4">
-        <div className="min-w-0 flex-1">
+      <div data-ui-page-header>
+        <div className="min-w-0">
           <div className="flex items-center gap-3">
             <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
             <h1 className="page-title">简历编辑器</h1>
@@ -95,16 +89,6 @@ export function CvEditor({
       </div>
 
       {!exists && loaded && <CvAgentOnboarding />}
-      {exists && loaded && (
-        <JourneyHandoffCard
-          stage={!profileReady
-            ? "profile-current"
-            : storyCount > 0
-              ? "story-complete"
-              : "story-current"}
-        />
-      )}
-
       {!loaded ? (
         <div className="mt-6 text-sm text-muted">正在加载…</div>
       ) : (
@@ -191,14 +175,15 @@ export function JourneyHandoffCard({
   return (
     <section
       data-journey-handoff={stage}
+      data-ui-card="solid"
       role="region"
       aria-labelledby={titleId}
-      className="mt-6 overflow-hidden rounded-card border border-border bg-surface"
+      className="mt-6 overflow-hidden"
     >
       <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <div className="min-w-0">
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-            新手流程 · {content.eyebrow}
+            新用户教程 · {content.eyebrow}
           </p>
           <h2 id={titleId} className="mt-1.5 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
             {content.title}
@@ -655,17 +640,19 @@ export function StoryActions({ story }: { story: InterviewStory }) {
 
       {manualOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm"
+          data-ui-dialog-backdrop
+          className="z-[60]"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !saving) setManualOpen(false);
           }}
         >
           <section
+            data-ui-dialog="standard"
             role="dialog"
             aria-modal="true"
             aria-labelledby={`story-editor-title-${story.id}`}
-            className="flex max-h-[calc(100vh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+            className="flex max-h-[calc(100vh-2rem)] w-full max-w-6xl flex-col overflow-hidden"
           >
             <header className="flex items-start gap-4 border-b border-border px-5 py-4 sm:px-6">
               <div className="min-w-0 flex-1">

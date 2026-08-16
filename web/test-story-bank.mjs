@@ -231,19 +231,17 @@ test("interview page hands story optimization to the user's Agent and keeps manu
   assert.match(manager, /variant="tertiary"/);
 });
 
-test("an empty story bank starts only after the profile step", () => {
+test("the CV editor stops repeating onboarding after the CV handoff", () => {
   const cvPage = readWeb("./src/app/cv/page.tsx");
   const page = readWeb("./src/app/interview/page.tsx");
   const manager = readWeb("./src/components/cv-editor.tsx");
   const jobStore = readWeb("./src/components/jobs/job-store.tsx");
 
-  assert.match(cvPage, /readStoryBank/);
-  assert.match(cvPage, /doctorState/);
-  assert.doesNotMatch(cvPage, /assessStoryReadiness|readyStoryCount/);
-  assert.match(cvPage, /<CvEditor storyCount=\{stories\.length\} profileReady=\{profileReady\}\s*\/>/);
+  assert.doesNotMatch(cvPage, /readStoryBank|doctorState|storyCount|profileReady/);
+  assert.match(cvPage, /<CvEditor\s*\/>/);
+  assert.match(manager, /export function CvEditor\(\)/);
+  assert.doesNotMatch(manager, /<JourneyHandoffCard\s+stage=/);
   assert.match(manager, /export function JourneyHandoffCard/);
-  assert.match(manager, /!profileReady[\s\S]{0,80}"profile-current"/);
-  assert.match(manager, /storyCount > 0[\s\S]{0,80}"story-complete"[\s\S]{0,80}"story-current"/);
   assert.doesNotMatch(manager, /readyStoryCount|STORY_READY_TARGET/);
   assert.match(manager, /简历已准备好，下一步一次确认求职画像/);
   assert.match(manager, /href="\/profile"/);
@@ -277,7 +275,8 @@ test("journey handoff advances after the first story without a readiness gate", 
   const manager = readWeb("./src/components/cv-editor.tsx");
   const taskPage = readWeb("./src/app/jobs/[id]/page.tsx");
 
-  assert.match(manager, /rounded-card border border-border bg-surface/);
+  assert.match(manager, /data-journey-handoff=\{stage\}[\s\S]*?data-ui-card="solid"/);
+  assert.doesNotMatch(manager, /rounded-card border border-border bg-surface/);
   assert.doesNotMatch(manager, /data-journey-handoff[^>]+border-brand/);
   assert.match(manager, /整理面试故事库/);
   assert.match(manager, /岗位评估/);
@@ -327,7 +326,8 @@ test("interview page keeps quality guidance optional and never gates evaluation"
   assert.match(page, /assessment\.pendingPrompts/);
   assert.match(page, /还差 \{assessment\.missingChecks\.length\} 项/);
   assert.match(page, /id="story-list"/);
-  assert.match(page, /rounded-card border border-border bg-surface/);
+  assert.match(page, /function StoryCard[\s\S]*?<article data-ui-card="solid"/);
+  assert.doesNotMatch(page, /function StoryCard[\s\S]*?<article[^>]*rounded-card/);
   assert.doesNotMatch(page, /“可使用”|label="可使用"|\? "可使用"/);
 });
 

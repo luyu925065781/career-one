@@ -170,7 +170,7 @@ export default function CareerProfilePage() {
 
   return (
     <div className="page-shell py-8 max-sm:pb-24">
-      <header className="flex flex-wrap items-start justify-between gap-5">
+      <header data-ui-page-header>
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
@@ -187,7 +187,7 @@ export default function CareerProfilePage() {
         />
       </header>
 
-      <section className="mt-8 overflow-hidden rounded-card border border-border bg-surface" aria-labelledby="profile-summary-title">
+      <section data-ui-card="solid" className="mt-8 overflow-hidden" aria-labelledby="profile-summary-title">
         <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0">
             <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand-text">本地求职画像</p>
@@ -226,7 +226,7 @@ export default function CareerProfilePage() {
         ))}
       </div>
 
-      <section className="mt-6 rounded-card border border-border bg-surface p-5 sm:p-6" aria-labelledby="profile-strategy-title">
+      <section data-ui-card="solid" className="mt-6 p-5 sm:p-6" aria-labelledby="profile-strategy-title">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand-text">策略层</p>
@@ -240,18 +240,18 @@ export default function CareerProfilePage() {
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{strategy}</ReactMarkdown>
           </article>
         ) : (
-          <p className="mt-5 rounded-card border border-dashed border-border bg-surface/40 p-5 text-sm text-muted">
+          <p data-ui-empty-state="panel" className="mt-5 p-5 text-sm">
             个性化策略仍待确认。Agent 会根据你的真实经历和目标岗位生成候选稿。
           </p>
         )}
       </section>
 
       <nav className="mt-6 grid gap-3 sm:grid-cols-2" aria-label="求职材料流程">
-        <Link href="/cv" className="group rounded-card border border-border bg-surface p-4 transition-colors hover:bg-surface-hover">
+        <Link href="/cv" data-ui-card="solid" data-card-interactive="true" className="group p-4">
           <span className="flex items-center gap-2 text-xs text-faint"><ArrowLeft className="size-3.5" /> 上一环节</span>
           <span className="mt-1 block text-sm font-semibold text-foreground">我的简历</span>
         </Link>
-        <Link href="/interview" className="group rounded-card border border-border bg-surface p-4 text-right transition-colors hover:bg-surface-hover">
+        <Link href="/interview" data-ui-card="solid" data-card-interactive="true" className="group p-4 text-right">
           <span className="flex items-center justify-end gap-2 text-xs text-faint">下一环节 <ArrowRight className="size-3.5" /></span>
           <span className="mt-1 block text-sm font-semibold text-foreground">面试故事库</span>
         </Link>
@@ -272,7 +272,7 @@ function ProfileSection({
   rows: ProfileRowData[];
 }) {
   return (
-    <section className="rounded-card border border-border bg-surface p-5 sm:p-6" aria-labelledby={`profile-section-${title}`}>
+    <section data-ui-card="solid" className="p-5 sm:p-6" aria-labelledby={`profile-section-${title}`}>
       <div className="flex items-start gap-3 border-b border-border pb-4">
         <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-icon-brand">
           <Icon className="size-4.5" aria-hidden="true" />

@@ -104,19 +104,21 @@ export function AgentTaskHandoffDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[110] flex items-center justify-center bg-background/75 p-4 backdrop-blur-sm"
+      data-ui-dialog-backdrop
+      className="z-[110]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) closeDialog();
       }}
     >
       <div
+        data-ui-dialog="standard"
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         onKeyDown={handleDialogKeyDown}
-        className="w-full max-w-xl rounded-2xl border border-border bg-surface p-6 shadow-2xl"
+        className="w-full max-w-xl p-6"
       >
         <div className="flex items-start gap-4">
           <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-soft text-icon-brand">

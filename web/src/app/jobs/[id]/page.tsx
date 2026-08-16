@@ -186,19 +186,21 @@ function QueuedTaskArchiveButton({ job }: { job: Job }) {
 
       {open && createPortal(
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-background/75 p-4 backdrop-blur-sm"
+          data-ui-dialog-backdrop
+          className="z-[110]"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeDialog();
           }}
         >
           <div
+            data-ui-dialog="standard"
             ref={dialogRef}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby={titleId}
             aria-describedby={descriptionId}
             onKeyDown={handleDialogKeyDown}
-            className="w-full max-w-md rounded-panel border border-border bg-surface p-6 shadow-overlay"
+            className="w-full max-w-md p-6"
           >
             <div className="flex items-start gap-3">
               <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-danger-surface text-icon-danger">
@@ -433,7 +435,7 @@ function ProposalReview({
 
   const status = detail?.status ?? proposal.status;
   return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-surface/45">
+    <article data-ui-card="subtle" className="overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
         <div>
           <p className="text-sm font-semibold text-foreground">{proposal.title}</p>

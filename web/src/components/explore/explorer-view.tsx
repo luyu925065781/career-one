@@ -112,7 +112,7 @@ export function ExplorerView({
           ["01", "找到岗位", "在平台或公司官网查看真实职位"],
           ["02", "查看评估", "把截图交给 Agent，根据报告决定下一步"],
         ].map(([number, title, description], index) => (
-          <li key={number} className="relative rounded-card border border-border bg-surface/40 p-4">
+          <li key={number} data-ui-card="quiet" className="relative p-4">
             {index < 1 && <span className="absolute right-[-0.75rem] top-1/2 hidden h-px w-3 bg-border sm:block" aria-hidden="true" />}
             <span className={cn("text-xs font-semibold tabular-nums", index === 0 ? "text-brand-text" : "text-faint")}>{number}</span>
             <h3 className="mt-2 text-sm font-semibold text-foreground">{title}</h3>
