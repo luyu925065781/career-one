@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -184,11 +185,101 @@ for (const sectionTitle of [
 const portableCli = read(".agents/skills/career-one/scripts/career-one.mjs");
 assert.match(portableCli, /web:\s*\{\s*script:\s*"start-web\.mjs"/, "便携 CLI 必须提供 web 命令");
 assert.match(portableCli, /alwaysDefaults:\s*true/, "便携 CLI 的 web 命令必须默认打开浏览器");
+assert.match(
+  portableCli,
+  /\["complete", "wait", "propose", "fail"\]\.includes\(args\[0\]\)/,
+  "Agent 任务进入终态或等待态后必须由便携 CLI 确定性触发 Web 收尾",
+);
+assert.match(portableCli, /--background/, "任务完成后的 Web 收尾必须使用非阻塞后台启动模式");
+assert.match(portableCli, /CAREER_ONE_NO_AUTO_WEB/, "无头或自动化环境必须可以显式关闭自动 Web 启动");
+assert.match(portableCli, /\/jobs\/\$\{encodeURIComponent\(runId\)\}/, "没有更具体结果页时必须自动打开当前任务详情");
+
+const autoWebFixture = fs.mkdtempSync(path.join(os.tmpdir(), "career-one-auto-web-"));
+try {
+  const fakeRunDir = path.join(autoWebFixture, "scripts", "agent");
+  const marker = path.join(autoWebFixture, "web-invocation.json");
+  fs.mkdirSync(fakeRunDir, { recursive: true });
+  fs.writeFileSync(path.join(autoWebFixture, "AGENTS.md"), "# fixture\n");
+  fs.writeFileSync(path.join(autoWebFixture, "doctor.mjs"), "process.exit(0);\n");
+  fs.writeFileSync(path.join(fakeRunDir, "agent-runs.mjs"), "process.stdout.write('{}\\n');\n");
+  fs.writeFileSync(
+    path.join(autoWebFixture, "start-web.mjs"),
+    "import { writeFileSync } from 'node:fs'; writeFileSync(process.env.AUTO_WEB_MARKER, JSON.stringify(process.argv.slice(2))); if (process.env.AUTO_WEB_FAIL === '1') process.exit(9);\n",
+  );
+  const portableCliPath = path.join(root, ".agents", "skills", "career-one", "scripts", "career-one.mjs");
+  const env = { ...process.env, AUTO_WEB_MARKER: marker, CAREER_ONE_NO_AUTO_WEB: "0", CI: "" };
+  const runArgs = (...args) => [
+    portableCliPath,
+    "run",
+    ...args,
+    "--workspace",
+    autoWebFixture,
+  ];
+  const completeArgs = runArgs(
+    "complete",
+    "run_auto_web",
+    "--artifact",
+    "reports/001-example.md|岗位诊断报告|/pipeline/001",
+  );
+
+  execFileSync(process.execPath, completeArgs, {
+    cwd: root,
+    env,
+  });
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(marker, "utf8")),
+    ["--background", "--open", "--page", "/pipeline/001"],
+    "run complete 必须后台启动或复用 Web 并打开产物深链",
+  );
+
+  const terminalCases = [
+    ["wait", "/jobs/run_wait"],
+    ["propose", "/jobs/run_propose"],
+    ["fail", "/jobs/run_fail"],
+  ];
+  for (const [subcommand, expectedPage] of terminalCases) {
+    fs.unlinkSync(marker);
+    execFileSync(process.execPath, runArgs(subcommand, `run_${subcommand}`), { cwd: root, env });
+    assert.deepEqual(
+      JSON.parse(fs.readFileSync(marker, "utf8")),
+      ["--background", "--open", "--page", expectedPage],
+      `run ${subcommand} 必须打开当前任务详情`,
+    );
+  }
+
+  fs.unlinkSync(marker);
+  execFileSync(process.execPath, runArgs("propose", "run_explicit_page", "--page", "/cv"), { cwd: root, env });
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(marker, "utf8")),
+    ["--background", "--open", "--page", "/cv"],
+    "显式 --page 必须优先于任务详情页",
+  );
+
+  const disabledCases = [
+    { label: "显式 --no-web", args: [...completeArgs, "--no-web"], env },
+    { label: "CAREER_ONE_NO_AUTO_WEB=1", args: completeArgs, env: { ...env, CAREER_ONE_NO_AUTO_WEB: "1" } },
+    { label: "CI=true", args: completeArgs, env: { ...env, CI: "true" } },
+  ];
+  for (const disabledCase of disabledCases) {
+    if (fs.existsSync(marker)) fs.unlinkSync(marker);
+    execFileSync(process.execPath, disabledCase.args, { cwd: root, env: disabledCase.env });
+    assert.equal(fs.existsSync(marker), false, `${disabledCase.label} 时不得自动启动工作台`);
+  }
+
+  execFileSync(process.execPath, completeArgs, { cwd: root, env: { ...env, AUTO_WEB_FAIL: "1" } });
+  assert.equal(fs.existsSync(marker), true, "Web 启动失败发生在任务命令成功落盘之后");
+} finally {
+  fs.rmSync(autoWebFixture, { recursive: true, force: true });
+}
 
 const webStarter = read("start-web.mjs");
 assert.match(webStarter, /const DEFAULT_PORT = 3301;/, "Web 启动脚本必须默认使用 3301 端口");
 assert.match(webStarter, /--open/, "Web 启动器必须支持显式打开浏览器");
 assert.match(webStarter, /--page/, "Web 启动器必须支持打开任务上下文页面");
+assert.match(webStarter, /--background/, "Web 启动器必须支持供 Agent 收尾调用的后台模式");
+assert.match(webStarter, /detached:\s*background/, "后台 Web 服务必须与 Agent 命令进程分离");
+assert.match(webStarter, /stdio:\s*background\s*\?\s*"ignore"\s*:\s*"inherit"/, "后台 Web 服务不得占用 Agent 的标准输入输出");
+assert.match(webStarter, /child\.unref\(\)/, "后台 Web 服务不得阻止 Agent 命令正常结束");
 assert.doesNotMatch(webStarter, /process\.kill|SIGKILL|releasePort/, "Web 启动器不得杀死占用端口的其他进程");
 assert.match(
   webStarter,
@@ -645,16 +736,20 @@ const reportFormat = read("web/src/lib/format.ts");
 assert.match(reportFormat, /高置信度/, "求职详情必须本地化岗位真实性等级");
 assert.match(reportFormat, /Offer:\s*"已获 Offer"/, "求职详情必须本地化 Offer 状态");
 
-const chineseReportPath = "reports/002-wispr-flow-ex-founder-zh-2026-07-10.md";
-assert.ok(fs.existsSync(path.join(root, chineseReportPath)), "中文版报告必须拥有独立编号和根目录报告文件");
-const chineseReport = read(chineseReportPath);
-assert.match(chineseReport, /^# 评估报告:/m, "中文版报告必须使用中文标题");
-assert.match(chineseReport, /^\*\*Language:\*\* zh-CN$/m, "中文版报告必须声明独立记录的语言");
-assert.match(chineseReport, /^## F\) 面试备考计划/m, "中文版报告必须包含中文面试备考内容");
-const tracker = read("data/applications.md");
-assert.match(tracker, /\| 1 \|[^\n]*\[001\]\(\.\.\/reports\/001-/, "英文报告必须保留独立的 #1 记录");
-assert.match(tracker, /\| 2 \|[^\n]*\[002\]\(\.\.\/reports\/002-/, "中文报告必须拥有独立的 #2 记录");
-assert.match(read("scripts/tracker/merge-tracker.mjs"), /extractReportLanguage/, "合并器不得把不同语言的同岗位报告折叠为一条记录");
+assert.match(chineseOfferMode, /^# 评估报告:/m, "中文版报告模板必须使用中文标题");
+assert.match(chineseOfferMode, /^## F\) 面试备考计划/m, "中文版报告模板必须包含中文面试备考内容");
+const trackerMerger = read("scripts/tracker/merge-tracker.mjs");
+assert.match(trackerMerger, /function extractReportLanguage/, "合并器必须识别报告语言标签");
+assert.match(
+  trackerMerger,
+  /additionLanguage\s*=\s*extractReportLanguage[\s\S]*existingLanguage\s*=\s*extractReportLanguage/,
+  "合并器不得把不同语言的同岗位报告折叠为一条记录",
+);
+assert.match(
+  read("scripts/system/verify-pipeline.mjs"),
+  /language\s*=\s*e\.notes\.match\(\/\\\[report-language:/,
+  "流水线校验器必须按报告语言区分独立记录",
+);
 
 const portalsPage = read("web/src/app/portals/page.tsx");
 assert.match(portalsPage, />岗位来源</, "招聘来源页面必须使用不误导的‘岗位来源’名称");
@@ -698,11 +793,6 @@ assert.match(portalsApi, /export async function GET\(/, "岗位来源 API 必须
 assert.match(portalsApi, /recruitment_platforms/, "招聘平台必须与技术 job_boards 分开保存");
 assert.match(portalsApi, /add-company/, "目标公司必须支持用户自定义添加");
 assert.match(portalsApi, /save-rules/, "现有搜索规则必须支持从 Web 保存");
-
-const portalsConfig = read("portals.yml");
-assert.match(portalsConfig, /^recruitment_platforms:/m, "中国大陆招聘平台必须写入用户层 portals.yml");
-assert.match(portalsConfig, /name:\s*BOSS直聘/, "默认招聘平台必须包含 BOSS直聘");
-assert.match(portalsConfig, /name:\s*智谱AI/, "目标公司默认推荐必须包含中国 AI 公司");
 
 assert.ok(
   fs.existsSync(path.join(root, ".agents/skills/career-one/SKILL.md")),

@@ -94,9 +94,11 @@ function openBrowser(url) {
   opener.unref();
 }
 
-async function waitForWorkbench(port, child, timeoutMs = 45_000) {
+async function waitForWorkbench(port, child, getSpawnError = () => null, timeoutMs = 45_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    const spawnError = getSpawnError();
+    if (spawnError) throw new Error(`Next.js 无法启动：${spawnError.message}`);
     if (child.exitCode !== null) throw new Error(`Next.js 已提前退出（退出码 ${child.exitCode}）`);
     if (await isCareerOneWorkbench(port)) return;
     await delay(300);
@@ -110,6 +112,7 @@ export async function startWeb(argv = process.argv.slice(2)) {
   const baseUrl = `http://localhost:${port}`;
   const targetUrl = `${baseUrl}${page}`;
   const shouldOpen = argv.includes("--open") || argv.includes("--page");
+  const background = argv.includes("--background");
 
   if (argv.includes("--dry-run")) {
     console.log(`将启动或复用择程AI工作台：${baseUrl}`);
@@ -128,23 +131,33 @@ export async function startWeb(argv = process.argv.slice(2)) {
   }
 
   const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-  console.log(`→ 正在启动择程AI工作台：${baseUrl}`);
+  console.log(`→ 正在${background ? "后台" : ""}启动择程AI工作台：${baseUrl}`);
   const child = spawn(npmCommand, ["run", "dev", "--", "--port", String(port)], {
     cwd: WEB_DIR,
     env: process.env,
-    stdio: "inherit",
+    detached: background,
+    stdio: background ? "ignore" : "inherit",
     shell: false,
+    windowsHide: background,
   });
+  let spawnError;
   child.once("error", (error) => {
-    console.error(`启动前端失败：${error.message}`);
-    process.exitCode = 1;
+    spawnError = error;
+    if (!background) {
+      console.error(`启动前端失败：${error.message}`);
+      process.exitCode = 1;
+    }
   });
-  child.once("exit", (code, signal) => {
-    if (signal) console.log(`前端服务已由信号 ${signal} 停止`);
-    process.exitCode = code ?? (signal ? 1 : 0);
-  });
+  if (background) {
+    child.unref();
+  } else {
+    child.once("exit", (code, signal) => {
+      if (signal) console.log(`前端服务已由信号 ${signal} 停止`);
+      process.exitCode = code ?? (signal ? 1 : 0);
+    });
+  }
 
-  await waitForWorkbench(port, child);
+  await waitForWorkbench(port, child, () => spawnError);
   console.log(`✓ 择程AI工作台已就绪：${baseUrl}`);
   console.log(`→ 当前任务页面：${targetUrl}`);
   if (shouldOpen) openBrowser(targetUrl);

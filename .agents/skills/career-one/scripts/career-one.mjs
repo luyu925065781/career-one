@@ -96,7 +96,7 @@ const HELP = `择程AI（career-one）便携命令
   career-one.mjs find [参数]                  查找报告或岗位
   career-one.mjs pdf [参数]                   生成 PDF
   career-one.mjs status                       查看中国大陆工作区状态
-  career-one.mjs run [start|progress|wait|complete|fail|list|propose|approve|reject]
+  career-one.mjs run [start|progress|wait|complete|fail|list|propose|approve|reject] [--no-web]
                                               记录 Agent/Web 共享任务与待确认修改
   career-one.mjs web [--page /页面]             启动或复用工作台并打开指定页面
   career-one.mjs version                      显示运行时版本
@@ -119,6 +119,36 @@ function withoutOption(args, name) {
   return args.filter((_, itemIndex) => itemIndex !== index && itemIndex !== index + 1);
 }
 
+function withoutFlag(args, name) {
+  return args.filter((arg) => arg !== name);
+}
+
+function repeatedOptionValues(args, name) {
+  const values = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === name && args[index + 1]) values.push(args[index + 1]);
+  }
+  return values;
+}
+
+function autoWebPage(args) {
+  const explicitPage = optionValue(args, "--page");
+  if (explicitPage) return explicitPage;
+  const artifacts = repeatedOptionValues(args, "--artifact");
+  for (let index = artifacts.length - 1; index >= 0; index -= 1) {
+    const page = String(artifacts[index]).split("|")[2];
+    if (page?.startsWith("/") && !page.startsWith("//")) return page;
+  }
+  const runId = args[1];
+  return runId ? `/jobs/${encodeURIComponent(runId)}` : "/jobs";
+}
+
+function shouldAutoOpenWeb(command, args, disabledByFlag) {
+  if (disabledByFlag || process.env.CAREER_ONE_NO_AUTO_WEB === "1") return false;
+  if (process.env.CI === "1" || process.env.CI === "true") return false;
+  return command === "run" && ["complete", "wait", "propose", "fail"].includes(args[0]);
+}
+
 function findWorkspace(start) {
   let current = resolve(start);
   while (true) {
@@ -139,7 +169,8 @@ function resolveWorkspace(args) {
 function run(command, args) {
   const spec = COMMANDS[command];
   const workspace = resolveWorkspace(args);
-  const forwarded = withoutOption(args, "--workspace");
+  const disabledByFlag = args.includes("--no-web");
+  const forwarded = withoutFlag(withoutOption(args, "--workspace"), "--no-web");
   const finalArgs = spec.alwaysDefaults
     ? [...spec.defaults, ...forwarded]
     : forwarded.length ? forwarded : spec.defaults;
@@ -147,7 +178,28 @@ function run(command, args) {
   if (!existsSync(script)) fail(`工作区缺少 ${spec.script}，请重新安装或更新择程AI。`);
   const result = spawnSync(process.execPath, [script, ...finalArgs], { cwd: workspace, stdio: "inherit" });
   if (result.error) fail(result.error.message);
-  process.exit(result.status ?? 1);
+  const status = result.status ?? 1;
+  if (status !== 0) process.exit(status);
+
+  if (shouldAutoOpenWeb(command, finalArgs, disabledByFlag)) {
+    const webScript = join(workspace, "start-web.mjs");
+    const page = autoWebPage(finalArgs);
+    if (!existsSync(webScript)) {
+      console.warn(`择程AI：任务已保存，但工作区缺少 start-web.mjs。请手动打开 http://localhost:3301${page}`);
+    } else {
+      const webResult = spawnSync(
+        process.execPath,
+        [webScript, "--background", "--open", "--page", page],
+        { cwd: workspace, stdio: "inherit" },
+      );
+      if (webResult.error || webResult.status !== 0) {
+        const reason = webResult.error?.message || `退出码 ${webResult.status}`;
+        console.warn(`择程AI：任务已保存，但工作台未能自动打开（${reason}）。请手动访问 http://localhost:3301${page}`);
+      }
+    }
+  }
+
+  process.exit(0);
 }
 
 function init(args) {
