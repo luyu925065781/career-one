@@ -167,7 +167,7 @@ const USER_LAYER_PREREQS = [
     path: 'cv.md',
     fix: [
       'Create cv.md in the project root with your CV in markdown',
-      'See examples/ for reference CVs',
+      'Ask your Agent to convert an existing CV or interview you step by step',
     ],
   },
   {

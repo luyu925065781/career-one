@@ -155,7 +155,7 @@ Hänge an `interview-prep/{company-slug}-{role-slug}.md` an:
 
 ## Step 9 — Write Session Transcript
 
-Schreibe nach dem Debrief außerdem ein maschinenlesbares Session-Transkript nach `interview-prep/sessions/{company-slug}-{role-slug}-{round}-{YYYY-MM-DD}.md`. Dies ist eine strukturierte Aufzeichnung der Runde für nachgelagerte Analysemodi; die mit Sprecher gekennzeichneten Turns lassen einen Konsumenten jede Seite lesen, ohne neu ableiten zu müssen, wer gesprochen hat. Der vollständige Contract liegt in `interview-prep/sessions/README.md`.
+Schreibe nach dem Debrief außerdem ein maschinenlesbares Session-Transkript nach `interview-prep/sessions/{company-slug}-{role-slug}-{round}-{YYYY-MM-DD}.md`. Dies ist eine strukturierte Aufzeichnung der Runde für nachgelagerte Analysemodi; die mit Sprecher gekennzeichneten Turns lassen einen Konsumenten jede Seite lesen, ohne neu ableiten zu müssen, wer gesprochen hat. Das vollständige Format und die Regeln folgen unten.
 
 Format:
 

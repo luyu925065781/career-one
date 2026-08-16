@@ -48,9 +48,8 @@ them. Reach the network **only** through `ctx.fetch` (your manifest
 `allowedHosts` is enforced, with SSRF protection). Keys arrive via `ctx.env`,
 non-secret settings via `ctx.settings`.
 
-See `plugins/README.md` for the full contract + the honest trust model (plain
-ESM has no hard sandbox — bundled plugins are code-reviewed; your own are your
-trust).
+Plain ESM has no hard sandbox: bundled plugins are code-reviewed, while local
+plugins remain code that you explicitly choose to trust.
 
 ## Publishing + getting approved
 

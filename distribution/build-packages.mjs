@@ -22,8 +22,6 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const SKILL_SOURCE = join(ROOT, ".agents", "skills", "career-one");
 const CODEX_SOURCE = join(ROOT, "packages", "codex-plugin", "career-one");
 const DEFAULT_OUTPUT = join(ROOT, "dist", "marketplaces");
-const SAFE_USER_SCAFFOLDS = new Set(["writing-samples/README.md", "interview-prep/sessions/README.md"]);
-
 function toRelative(source) {
   return normalizeRuntimePath(relative(ROOT, source).split(sep).join("/"));
 }
@@ -31,7 +29,6 @@ function toRelative(source) {
 function includeSource(source) {
   const rel = toRelative(source);
   if (!rel || rel.startsWith("..")) return true;
-  if (SAFE_USER_SCAFFOLDS.has(rel)) return true;
   return !isUserDataPath(rel) && !isDistributionOnlyExclusion(rel);
 }
 

@@ -24,7 +24,7 @@ npx career-one@next init [folder]   # 兼容旧语法
 npx career-one@latest [folder]      # 正式版通道
 ```
 
-如需手动安装，仍可使用 `git clone`；具体步骤见[设置指南](https://github.com/luyu925065781/career-one/blob/main/docs/SETUP.md)。
+如需手动安装，仍可使用 `git clone`；具体步骤见[快速开始](https://github.com/luyu925065781/career-one#快速开始)。
 
 ## 环境要求
 

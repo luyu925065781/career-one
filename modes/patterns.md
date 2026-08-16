@@ -110,7 +110,7 @@ If no sessions are present, **skip this step silently** and proceed with outcome
 
 If sessions exist, for each one:
 1. Separate the candidate's answers from the interviewer's questions. If speaker labels are missing, infer them (turns tagged `**Interviewer:**` / `**Candidate:**` per the session format).
-2. Determine the competency / role-signal each substantive answer demonstrates (e.g. *instructional-design*, *systems-architecture*, *data-analysis*, *stakeholder-management*, *people-leadership*). **Tags first, inference as fallback:** if the answer already carries an explicit competency tag — `<!-- competency: ... -->` per the convention in `interview-prep/sessions/README.md`, whether written by hand or emitted by a debrief tool (e.g. `interview/debrief`) — use it directly. Only infer the competency yourself when no tag is present.
+2. Determine the competency / role-signal each substantive answer demonstrates (e.g. *instructional-design*, *systems-architecture*, *data-analysis*, *stakeholder-management*, *people-leadership*). **Tags first, inference as fallback:** if the answer already carries an explicit `<!-- competency: ... -->` tag, whether written by hand or emitted by a debrief tool (e.g. `interview/debrief`), use it directly. Only infer the competency yourself when no tag is present.
 3. Mark whether the answer is **fluent and specific** (concrete metrics, named tools, real decisions) or **flat and generic** (hedged, vague, textbook).
 
 Then aggregate across all sessions:

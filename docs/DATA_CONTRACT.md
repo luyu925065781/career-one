@@ -16,7 +16,7 @@ These files contain your personal data, customizations, and work product. Update
 | `article-digest.md` | Your proof points from portfolio |
 | `interview-prep/story-bank.md` | Your accumulated STAR+R stories |
 | `interview-prep/{company}-{role}.md` | Company-specific interview prep reports (written by `/career-one interview-prep`) |
-| `interview-prep/sessions/*.md` | Interview sessions — real transcripts + mock sessions (sensitive: real names/companies; gitignored except scaffold). Drives `patterns` Step 1b targeting signal and `interview-redflag` analysis. Scaffold files (`README.md`, `.gitkeep`) are system-owned. |
+| `interview-prep/sessions/*.md` | Interview sessions — real transcripts + mock sessions (sensitive: real names/companies; gitignored). Drives `patterns` Step 1b targeting signal and `interview-redflag` analysis. |
 | `portals.yml` | Your customized company list |
 | `config/plugins.yml` | Your plugin activation toggles (opt-in; seeded from `config/plugins.example.yml`) |
 | `plugins.local/` | Your own / private plugins (never auto-updated) |
@@ -31,7 +31,7 @@ These files contain your personal data, customizations, and work product. Update
 | `data/task-attachments/*` | Local screenshots attached to Agent tasks; retained for report traceability until the user removes them |
 | `data/offers/*` | Your received offers/contracts, promise notes, prep reports, and reply drafts (PII — gitignored, written by the `offer-prep` mode) |
 | `data/salary-observations.tsv` | Your append-only compensation observation log: `{tracker#}\t{date}\t{desired\|advertised\|actual}\t{amount}\t{currency}\t{source}\t{note}`. Written by interactive modes when a figure is stated/confirmed; never edited in place. Advertised figures come from reports' `advertised_comp` instead — reports are themselves observation sources. Read by `salary-gap.mjs` |
-| `writing-samples/*` | Your personal writing samples for style calibration (except `writing-samples/README.md`, which is system-owned documentation delivered by updates) |
+| `writing-samples/*` | Your personal writing samples for style calibration |
 | `reports/*` | Your evaluation reports |
 | `output/*` | Your generated PDFs and local pending-change proposal drafts |
 | `jds/*` | Your saved job descriptions |
@@ -101,7 +101,6 @@ These files contain system logic, scripts, templates, and instructions that impr
 | `docs/*` | Documentation |
 | `VERSION` | Current version number |
 | `docs/DATA_CONTRACT.md` | This file |
-| `writing-samples/README.md` | System-owned onboarding documentation for the writing-samples directory |
 
 ## The Rule
 

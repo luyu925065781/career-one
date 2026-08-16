@@ -58,8 +58,6 @@ const requiredSystemPaths = [
   'modes/hi/',
   'modes/tr/',
   'modes/ua/',
-  'batch/README.md',
-  'examples/',
   'config/profile.example.yml',
   '.env.example',
   '.claude-plugin/',
@@ -116,6 +114,62 @@ for (const path of [
 ]) {
   if (obsoletePaths.includes(path)) pass(`OBSOLETE_SYSTEM_PATHS prunes moved root document ${path}`);
   else fail(`OBSOLETE_SYSTEM_PATHS missing moved root document ${path}`);
+}
+
+for (const path of [
+  'CITATION.cff',
+  'batch/README.md',
+  'docs/APPLY_AUTOFILL.md',
+  'docs/ARCHITECTURE.md',
+  'docs/CHANGELOG.md',
+  'docs/CODEX.md',
+  'docs/CUSTOMIZATION.md',
+  'docs/DOCKER.md',
+  'docs/FAQ.md',
+  'docs/FREE_TIER.md',
+  'docs/PLUGIN_REVIEW.md',
+  'docs/RUNNING_ON_A_BUDGET.md',
+  'docs/SCRIPTS.md',
+  'docs/SETUP.md',
+  'docs/SUPPORTED_CLIS.md',
+  'docs/SUPPORTED_JOB_BOARDS.md',
+  'docs/local-parser-cookbook.md',
+  'docs/og-image.jpg',
+  'docs/roadmap-phases.jpg',
+  'docs/vision-banner.jpg',
+  'examples/README.md',
+  'examples/article-digest-example.md',
+  'examples/ats-normalization-test.md',
+  'examples/cv-example.md',
+  'examples/dual-track-engineer-instructor/README.md',
+  'examples/dual-track-engineer-instructor/cv.md',
+  'examples/resume-example.md',
+  'examples/sample-report.md',
+  'modes/ar/README.md',
+  'modes/da/README.md',
+  'modes/de/README.md',
+  'modes/es/README.md',
+  'modes/fr/README.md',
+  'modes/hi/README.md',
+  'modes/id/README.md',
+  'modes/interview/README.md',
+  'modes/it/README.md',
+  'modes/ja/README.md',
+  'modes/ko/README.md',
+  'modes/pl/README.md',
+  'modes/pt/README.md',
+  'modes/ru/README.md',
+  'modes/tr/README.md',
+  'modes/ua/README.md',
+  'modes/zh/README.md',
+  'plugins/README.md',
+  'seeds/README.md',
+  'templates/README.md',
+  'web/CHANGELOG.md',
+  'web/README.md',
+]) {
+  if (obsoletePaths.includes(path)) pass(`OBSOLETE_SYSTEM_PATHS prunes removed documentation ${path}`);
+  else fail(`OBSOLETE_SYSTEM_PATHS missing removed documentation ${path}`);
 }
 
 const twoPassManifestChecks = [
@@ -196,11 +250,8 @@ for (const userPath of ['cv.md', 'config/profile.yml', 'modes/_profile.md', 'por
 }
 
 const allowedSystemUserOverlap = new Set([
-  'writing-samples/README.md',
-  // System-owned scaffold inside the user-layer interview-prep/ dir (#1242):
-  // the updater ships these two, but never the real session files alongside them.
+  // Empty marker only: the updater never ships real session files alongside it.
   'interview-prep/sessions/.gitkeep',
-  'interview-prep/sessions/README.md',
 ]);
 let hasSystemUserCollision = false;
 for (const systemPath of systemPaths) {

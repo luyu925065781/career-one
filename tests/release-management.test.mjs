@@ -31,6 +31,47 @@ test("仓库根目录只保留 README 与 Agent 自动发现文档", () => {
   assert.deepEqual(actual, allowed, `长文档必须归档到 docs/ 或 .github/，根目录仅保留：${allowed.join(", ")}`);
 });
 
+test("说明文档保持最小集合，不重新引入旧项目资料", () => {
+  const repoRoot = new URL("../", import.meta.url);
+  const tracked = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], { cwd: repoRoot, encoding: "utf8" })
+    .split("\0")
+    .filter((name) => name && existsSync(new URL(name, repoRoot)));
+
+  const allowedDocs = [
+    "docs/DATA_CONTRACT.md",
+    "docs/DESIGN.md",
+    "docs/DESIGN_SYSTEM.md",
+    "docs/LEGAL_DISCLAIMER.md",
+    "docs/PLUGINS.md",
+    "docs/PRIVACY.md",
+    "docs/RELEASES.md",
+    "docs/TERMS.md",
+  ];
+  assert.deepEqual(
+    tracked.filter((name) => name.startsWith("docs/")).sort(),
+    allowedDocs,
+    "docs/ 只保留仍有明确运行、治理或发布责任的文档",
+  );
+
+  const allowedReadmes = [
+    "README.md",
+    "plugins/_template/README.md",
+    "scaffolder/README.md",
+  ];
+  assert.deepEqual(
+    tracked.filter((name) => /(^|\/)(README|CHANGELOG)\.md$/.test(name)).sort(),
+    allowedReadmes,
+    "子目录不得重复维护说明书；运行规则应留在代码、模式或唯一契约中",
+  );
+
+  assert.equal(tracked.includes("CITATION.cff"), false, "不保留未进入产品使用链路的引用元数据");
+  assert.deepEqual(
+    tracked.filter((name) => name.startsWith("examples/") && name.endsWith(".md")),
+    [],
+    "旧项目示例文档不得继续随源码维护",
+  );
+});
+
 test("功能阶段按正式、内测、开发通道逐级开放", () => {
   assert.equal(stageEnabled("stable", "stable"), true);
   assert.equal(stageEnabled("beta", "stable"), false);
@@ -131,7 +172,7 @@ test("测试用户帮助入口不指向缺失的支持或商标政策", () => {
   );
   const labeler = readFileSync(new URL("../.github/labeler.yml", import.meta.url), "utf8");
   const disclaimer = readFileSync(new URL("../docs/LEGAL_DISCLAIMER.md", import.meta.url), "utf8");
-  assert.match(welcome, /docs\/FAQ\.md/);
+  assert.match(welcome, /career-one#快速开始/);
   assert.doesNotMatch(welcome, /SUPPORT\.md/);
   assert.doesNotMatch(labeler, /SUPPORT\.md/);
   assert.doesNotMatch(disclaimer, /TRADEMARK\.md/);
@@ -198,21 +239,11 @@ test("公开插件提交材料包含正反测试并且不会打入插件源码�
   );
 });
 
-test("面向中国大陆用户的项目级 README 以中文为主", () => {
+test("保留的公开与模板 README 以中文为主", () => {
   const expectedTitles = new Map([
     ["README.md", "# 择程AI"],
-    ["batch/README.md", "# 批量处理"],
-    ["examples/README.md", "# 示例"],
-    ["examples/dual-track-engineer-instructor/README.md", "# 示例：工程师与讲师双轨职业"],
-    ["interview-prep/sessions/README.md", "# 面试记录"],
-    ["modes/interview/README.md", "# 面试工作流"],
-    ["plugins/README.md", "# career-one 插件"],
     ["plugins/_template/README.md", "# {{NAME}}：career-one 插件"],
     ["scaffolder/README.md", "# career-one 安装器"],
-    ["seeds/README.md", "# 招聘渠道种子抓取器"],
-    ["templates/README.md", "# 模板"],
-    ["web/README.md", "# 择程AI Web 工作台"],
-    ["writing-samples/README.md", "# 写作样本"],
   ]);
 
   for (const [relative, expectedTitle] of expectedTitles) {
