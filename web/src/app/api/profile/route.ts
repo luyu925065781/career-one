@@ -74,7 +74,11 @@ export async function POST(req: Request) {
   // malformed" (NEVER overwrite — that would silently destroy the user's data).
   if (!fs.existsSync(file)) {
     try {
-      base = (yaml.load(fs.readFileSync(path.join(root, "config", "profile.example.yml"), "utf8")) as Record<string, unknown>) || {};
+      const systemExample = path.join(root, "system", "config", "profile.example.yml");
+      const examplePath = fs.existsSync(systemExample)
+        ? systemExample
+        : path.join(root, "config", "profile.example.yml");
+      base = (yaml.load(fs.readFileSync(examplePath, "utf8")) as Record<string, unknown>) || {};
       seeded = Object.keys(base).length > 0;
     } catch {
       base = {};

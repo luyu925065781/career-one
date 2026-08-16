@@ -34,7 +34,12 @@ let cache: CanonicalState[] | null = null;
 export function readCanonicalStates(): CanonicalState[] {
   if (cache) return cache;
   try {
-    const raw = fs.readFileSync(path.join(careerOneRoot(), "templates", "states.yml"), "utf8");
+    const root = careerOneRoot();
+    const systemPath = path.join(root, "system", "templates", "states.yml");
+    const statesPath = fs.existsSync(systemPath)
+      ? systemPath
+      : path.join(root, "templates", "states.yml");
+    const raw = fs.readFileSync(statesPath, "utf8");
     const doc = yaml.load(raw) as { states?: unknown };
     const list = Array.isArray(doc?.states) ? doc.states : null;
     if (list && list.length) {

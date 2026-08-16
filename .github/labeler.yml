@@ -3,8 +3,8 @@
       - any-glob-to-any-file:
           - AGENTS.md
           - CLAUDE.md
-          - OPENCODE.md
-          - docs/DATA_CONTRACT.md
+          - system/compat/agents/**
+          - system/docs/DATA_CONTRACT.md
           - modes/_shared.md
 
 "⚠️ agent-behavior":
@@ -12,22 +12,18 @@
       - any-glob-to-any-file:
           - modes/*.md
           - modes/**/*.md
-          - .claude/skills/**
-          - .opencode/skills/**
-          - .qwen/skills/**
-          - .antigravitycli/skills/**
-          - .grok/skills/**
+          - .agents/skills/**
 
 "🔧 scripts":
   - changed-files:
       - any-glob-to-any-file:
           - "*.mjs"
-          - batch/**
+          - system/batch/**
 
 "📄 docs":
   - changed-files:
       - any-glob-to-any-file:
-          - docs/**
+          - system/docs/**
           - "README*.md"
           - .github/CONTRIBUTING.md
           - GOVERNANCE.md
@@ -47,13 +43,14 @@
 "📊 dashboard":
   - changed-files:
       - any-glob-to-any-file:
-          - dashboard/**
+          - system/dashboard/**
 
 "📦 dependencies":
   - changed-files:
       - any-glob-to-any-file:
           - package.json
           - package-lock.json
+          - system/scaffolder/package.json
 
 "⚙️ ci":
   - changed-files:

@@ -7,7 +7,7 @@ body:
       value: |
         > ⚠️ **Privacy first.** Never paste your CV, scan results, or other personal data — issues are **public forever**.
 
-        This issue becomes your plugin's **home** (its changelog + compatibility/quarantine board). After it's filed, open a **registry PR** (the plugin template can do this for you on a release tag) to actually list it. See [docs/PLUGINS.md](https://github.com/luyu925065781/career-one/blob/main/docs/PLUGINS.md).
+        This issue becomes your plugin's **home** (its changelog + compatibility/quarantine board). After it's filed, open a **registry PR** (the plugin template can do this for you on a release tag) to actually list it. See [system/docs/PLUGINS.md](https://github.com/luyu925065781/career-one/blob/main/system/docs/PLUGINS.md).
   - type: checkboxes
     id: coc
     attributes:

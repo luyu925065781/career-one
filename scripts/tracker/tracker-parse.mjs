@@ -12,7 +12,7 @@
  * leading pipe, so the first real column ("#"/num) is index 1.
  */
 
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 
 /** The original fixed 9-column layout (num … notes at indices 1 … 9). */
 export const LEGACY_COLMAP = {
@@ -33,7 +33,10 @@ export const LEGACY_COLMAP = {
  * the file from a user-configured root at request time.)
  */
 export const HEADER_ALIASES = (() => {
-  const src = new URL('../../config/tracker-aliases.json', import.meta.url);
+  const systemSrc = new URL('../../system/config/tracker-aliases.json', import.meta.url);
+  const src = existsSync(systemSrc)
+    ? systemSrc
+    : new URL('../../config/tracker-aliases.json', import.meta.url);
   try {
     return JSON.parse(readFileSync(src, 'utf-8'));
   } catch (e) {

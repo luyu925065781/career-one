@@ -15,7 +15,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 export function registryDirPath(root) {
-  return path.join(root, 'plugins-registry');
+  const system = path.join(root, 'system', 'plugins-registry');
+  return existsSync(system) ? system : path.join(root, 'plugins-registry');
 }
 
 /** Legacy single-file location (pre per-plugin-files migration). */

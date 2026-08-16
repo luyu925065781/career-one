@@ -8,8 +8,86 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
-const read = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
+const sourceOverrides = new Map([
+  [".claude-plugin/plugin.json", "system/integrations/claude-plugin/plugin.json"],
+  [".claude-plugin/marketplace.json", "system/integrations/claude-plugin/marketplace.json"],
+  [".editorconfig", "system/config/editorconfig"],
+  [".env.example", "system/config/env.example"],
+  [".npmignore", "system/config/npmignore"],
+  [".release-please-manifest.json", "system/config/release-please-manifest.json"],
+  ["release-please-config.json", "system/config/release-please-config.json"],
+  ["Dockerfile", "system/deploy/Dockerfile"],
+  ["docker-compose.yml", "system/deploy/docker-compose.yml"],
+  ["flake.nix", "system/deploy/flake.nix"],
+  ["flake.lock", "system/deploy/flake.lock"],
+  ["career-one-docker", "system/deploy/career-one-docker"],
+  ["doctor.mjs", "system/compat/doctor.mjs"],
+  ["start-web.mjs", "system/compat/start-web.mjs"],
+  ["test-all.mjs", "system/compat/test-all.mjs"],
+  ["启动择程AI.command", "system/compat/启动择程AI.command"],
+]);
+const resolveSource = (rel) => {
+  const rootPath = path.join(root, rel);
+  if (fs.existsSync(rootPath)) return rootPath;
+  const override = sourceOverrides.get(rel);
+  return path.join(root, override || "system", override ? "" : rel);
+};
+const read = (rel) => fs.readFileSync(resolveSource(rel), "utf8");
 const json = (rel) => JSON.parse(read(rel));
+
+const trackedWorkingTreeFiles = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" })
+  .split("\0")
+  .filter((rel) => rel && fs.existsSync(path.join(root, rel)));
+const untrackedWorkingTreeFiles = execFileSync(
+  "git",
+  ["ls-files", "--others", "--exclude-standard", "-z"],
+  { cwd: root, encoding: "utf8" },
+).split("\0").filter(Boolean);
+const trackedRootEntries = [...new Set(
+  [...trackedWorkingTreeFiles, ...untrackedWorkingTreeFiles].map((rel) => rel.split("/")[0]),
+)].sort();
+const expectedTrackedRootEntries = [
+  ".agents",
+  ".dockerignore",
+  ".github",
+  ".gitignore",
+  "AGENTS.md",
+  "CLAUDE.md",
+  "LICENSE",
+  "README.md",
+  "VERSION",
+  "career-one.mjs",
+  "modes",
+  "package-lock.json",
+  "package.json",
+  "plugins",
+  "providers",
+  "scripts",
+  "system",
+  "tests",
+  "update-system.mjs",
+  "web",
+].sort();
+assert.deepEqual(
+  trackedRootEntries,
+  expectedTrackedRootEntries,
+  `GitHub 根目录必须精确收敛为 ${expectedTrackedRootEntries.length} 项；当前为 ${trackedRootEntries.length} 项`,
+);
+for (const compatibilitySource of [
+  "system/compat/doctor.mjs",
+  "system/compat/start-web.mjs",
+  "system/compat/test-all.mjs",
+  "system/distribution/runtime-paths.mjs",
+  "system/docs/DATA_CONTRACT.md",
+  "system/templates/states.yml",
+]) {
+  assert.ok(fs.existsSync(path.join(root, compatibilitySource)), `源码分层必须提供 ${compatibilitySource}`);
+}
+assert.match(
+  read("doctor.mjs"),
+  /import\(['"]\.\.\/\.\.\/scripts\/system\/verify-portals\.mjs['"]\)/,
+  "迁移后的 doctor strict 模式必须从仓库根导入渠道校验器",
+);
 
 const rootPackage = json("package.json");
 const runtimeReleaseConfig = json("release.config.json");
@@ -101,8 +179,8 @@ for (const required of [
 }
 assert.match(
   disclaimer,
-  /\[[^\]]+\]\(docs\/LEGAL_DISCLAIMER\.md\)/,
-  "中文 README 免责声明必须链接到 docs/LEGAL_DISCLAIMER.md",
+  /\[[^\]]+\]\(system\/docs\/LEGAL_DISCLAIMER\.md\)/,
+  "中文 README 免责声明必须链接到 system/docs/LEGAL_DISCLAIMER.md",
 );
 
 const license = read("LICENSE");
@@ -292,7 +370,7 @@ assert.match(
   "Web 启动器必须识别新版首页，不能依赖已移除的旧副标题",
 );
 
-const doubleClickStarterPath = path.join(root, "启动择程AI.command");
+const doubleClickStarterPath = resolveSource("启动择程AI.command");
 const doubleClickStarter = read("启动择程AI.command");
 assert.ok((fs.statSync(doubleClickStarterPath).mode & 0o111) !== 0, "macOS 双击启动文件必须保留可执行权限");
 assert.match(doubleClickStarter, /^#!\/bin\/zsh$/m, "macOS 双击启动文件必须由系统 zsh 执行");
@@ -393,7 +471,7 @@ assert.match(machineReadableDesign, /择程AI.*系统自带字体/, "产品规�
 assert.doesNotMatch(machineReadableDesign, /Instrument Serif/, "字体规范不得继续使用 Instrument Serif");
 
 const designSystemPage = read("web/src/app/design-system/page.tsx");
-assert.match(designSystemPage, /readFileSync\(path\.join\(careerOneRoot\(\), "docs", "DESIGN\.md"\)/, "UI 规范页必须从 docs/DESIGN.md 读取 Token");
+assert.match(designSystemPage, /path\.join\(root, "system", "docs", "DESIGN\.md"\)/, "UI 规范页必须兼容从 system/docs/DESIGN.md 读取 Token");
 assert.match(designSystemPage, /yaml\.load\(/, "UI 规范页必须解析 DESIGN.md 的 YAML frontmatter");
 assert.match(designSystemPage, /DesignSystemShowcase/, "UI 规范页必须把解析后的 Token 交给组件展台");
 

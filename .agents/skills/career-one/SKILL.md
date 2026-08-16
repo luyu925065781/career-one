@@ -129,7 +129,7 @@ node doctor.mjs --json
 
 ### 创建个人配置
 
-从 `config/profile.example.yml` 复制结构，并在一次回复中列出完整确认清单：
+从 `system/config/profile.example.yml` 复制结构，并在一次回复中列出完整确认清单：
 
 - 姓名、联系方式、所在城市与时区
 - 目标岗位与职级、地点偏好、工作方式与迁居意愿

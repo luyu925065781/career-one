@@ -5,7 +5,7 @@
  *
  * Usage:
  *   node career-one.mjs validate-portals
- *   node career-one.mjs validate-portals --file templates/portals.example.yml
+ *   node career-one.mjs validate-portals --file system/templates/portals.example.yml
  *   node career-one.mjs validate-portals --self-test
  */
 

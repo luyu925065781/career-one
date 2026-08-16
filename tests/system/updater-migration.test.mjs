@@ -58,34 +58,36 @@ const requiredSystemPaths = [
   'modes/hi/',
   'modes/tr/',
   'modes/ua/',
-  'config/profile.example.yml',
-  '.env.example',
-  '.claude-plugin/',
-  '.qwen/',
-  '.antigravitycli/skills/',
-  '.grok/skills/',
+  'system/',
+  '.agents/',
   'career-one.mjs',
-  'start-web.mjs',
-  '启动择程AI.command',
+  'update-system.mjs',
   'web/src/',
   'package-lock.json',
   'web/package.json',
   'web/package-lock.json',
   'README.md',
-  'docs/',
   '.github/',
+  '.gitignore',
+  '.dockerignore',
   'LICENSE',
+  'plugins/',
+  'providers/',
+  'tests/',
 ];
 
 const requiredBootstrapPaths = [
   '.agents/',
-  '.opencode/skills/',
-  '.antigravitycli/skills/',
-  '.grok/skills/',
+  'career-one.mjs',
+  'update-system.mjs',
   'providers/',
   'scripts/',
   'tests/',
-  'career-one.mjs',
+  'plugins/',
+  'system/',
+  '.gitignore',
+  'package.json',
+  'package-lock.json',
 ];
 
 for (const path of requiredSystemPaths) {
@@ -96,6 +98,28 @@ for (const path of requiredSystemPaths) {
 for (const path of requiredBootstrapPaths) {
   if (bootstrapPaths.includes(path)) pass(`BOOTSTRAP_PATHS covers ${path}`);
   else fail(`BOOTSTRAP_PATHS missing ${path}`);
+}
+
+for (const path of [
+  'CODEX.md',
+  'doctor.mjs',
+  'start-web.mjs',
+  '.claude/skills/career-one/SKILL.md',
+  '.opencode/skills/career-one/SKILL.md',
+  '.claude-plugin/',
+  '.env.example',
+  'config/profile.example.yml',
+  'batch/batch-runner.sh',
+  'data/.gitkeep',
+  'reports/.gitkeep',
+  'dashboard/',
+  'distribution/',
+  'docs/',
+  'scaffolder/',
+  'templates/',
+]) {
+  if (obsoletePaths.includes(path)) pass(`OBSOLETE_SYSTEM_PATHS prunes compacted source path ${path}`);
+  else fail(`OBSOLETE_SYSTEM_PATHS missing compacted source path ${path}`);
 }
 
 for (const path of [
@@ -187,7 +211,7 @@ const twoPassManifestChecks = [
   },
   {
     name: 're-exec fallback still covers the skill-entrypoints import (#1245)',
-    pattern: /REEXEC_FALLBACK_FILES\s*=\s*\[[^\]]*'scaffolder\/bin\/skill-entrypoints\.mjs'/,
+    pattern: /REEXEC_FALLBACK_FILES\s*=\s*\[[^\]]*'system\/scaffolder\/bin\/skill-entrypoints\.mjs'/,
   },
   {
     name: 'apply re-execs through the current Node binary',
@@ -247,6 +271,11 @@ for (const check of twoPassManifestChecks) {
 for (const userPath of ['cv.md', 'config/profile.yml', 'modes/_profile.md', 'portals.yml', 'data/', 'reports/']) {
   if (userPaths.includes(userPath)) pass(`USER_PATHS protects ${userPath}`);
   else fail(`USER_PATHS missing ${userPath}`);
+}
+
+for (const protectedPath of ['config/profile.yml', 'data/', 'reports/', 'output/', 'jds/', 'interview-prep/']) {
+  if (!obsoletePaths.includes(protectedPath)) pass(`OBSOLETE_SYSTEM_PATHS preserves user path ${protectedPath}`);
+  else fail(`OBSOLETE_SYSTEM_PATHS must not prune user path ${protectedPath}`);
 }
 
 const allowedSystemUserOverlap = new Set([

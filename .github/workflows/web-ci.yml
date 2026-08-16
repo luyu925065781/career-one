@@ -7,13 +7,13 @@ on:
     branches: [main, develop]
     paths:
       - 'web/**'
-      - 'release.config.json'
+      - 'system/release.config.json'
       - 'scripts/system/release.mjs'
   push:
     branches: [main, develop]
     paths:
       - 'web/**'
-      - 'release.config.json'
+      - 'system/release.config.json'
       - 'scripts/system/release.mjs'
 
 permissions:

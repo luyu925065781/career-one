@@ -152,11 +152,22 @@ function shouldAutoOpenWeb(command, args, disabledByFlag) {
 function findWorkspace(start) {
   let current = resolve(start);
   while (true) {
-    if (existsSync(join(current, "AGENTS.md")) && existsSync(join(current, "doctor.mjs"))) return current;
+    const hasDoctor = existsSync(join(current, "doctor.mjs"))
+      || existsSync(join(current, "system", "compat", "doctor.mjs"));
+    if (existsSync(join(current, "AGENTS.md")) && hasDoctor) return current;
     const parent = dirname(current);
     if (parent === current) return null;
     current = parent;
   }
+}
+
+function workspaceScript(workspace, script) {
+  const rootScript = join(workspace, script);
+  if (existsSync(rootScript)) return rootScript;
+  if (script === "doctor.mjs" || script === "start-web.mjs" || script === "test-all.mjs") {
+    return join(workspace, "system", "compat", script);
+  }
+  return rootScript;
 }
 
 function resolveWorkspace(args) {
@@ -174,7 +185,7 @@ function run(command, args) {
   const finalArgs = spec.alwaysDefaults
     ? [...spec.defaults, ...forwarded]
     : forwarded.length ? forwarded : spec.defaults;
-  const script = join(workspace, spec.script);
+  const script = workspaceScript(workspace, spec.script);
   if (!existsSync(script)) fail(`工作区缺少 ${spec.script}，请重新安装或更新择程AI。`);
   const result = spawnSync(process.execPath, [script, ...finalArgs], { cwd: workspace, stdio: "inherit" });
   if (result.error) fail(result.error.message);
@@ -182,7 +193,7 @@ function run(command, args) {
   if (status !== 0) process.exit(status);
 
   if (shouldAutoOpenWeb(command, finalArgs, disabledByFlag)) {
-    const webScript = join(workspace, "start-web.mjs");
+    const webScript = workspaceScript(workspace, "start-web.mjs");
     const page = autoWebPage(finalArgs);
     if (!existsSync(webScript)) {
       console.warn(`择程AI：任务已保存，但工作区缺少 start-web.mjs。请手动打开 http://localhost:3301${page}`);

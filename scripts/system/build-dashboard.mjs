@@ -7,14 +7,18 @@
 // dashboard/career-dashboard on Unix, dashboard/career-dashboard.exe on Windows.
 
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const out = process.platform === 'win32' ? 'career-dashboard.exe' : 'career-dashboard';
+const dashboardDir = existsSync(join(root, 'system', 'dashboard'))
+  ? join(root, 'system', 'dashboard')
+  : join(root, 'dashboard');
 
 const result = spawnSync('go', ['build', '-o', out, '.'], {
-  cwd: join(root, 'dashboard'),
+  cwd: dashboardDir,
   stdio: 'inherit',
 });
 
@@ -31,4 +35,4 @@ if (result.status !== 0) {
   process.exit(result.status ?? 1);
 }
 
-console.log(`Built dashboard/${out} — run it with: npm run serve:dashboard (or dashboard/${out} --path .)`);
+console.log(`Built ${dashboardDir}/${out} — run it with: npm run serve:dashboard`);

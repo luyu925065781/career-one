@@ -18,7 +18,7 @@
  *  - Least-privilege ctx is a CONVENIENCE, not a sandbox. Plain ESM can't
  *    VM-isolate a module's imports without a build step (forbidden). Containment
  *    is code review (bundled plugins, same gate as providers/) + user trust
- *    (plugins.local/). See docs/PLUGINS.md for the trust model.
+ *    (plugins.local/). See system/docs/PLUGINS.md for the trust model.
  *
  * Pure + side-effect-free so scan.mjs, plugins.mjs, doctor.mjs and test-all.mjs
  * all reuse it with no prod-vs-test drift.

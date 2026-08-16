@@ -14,7 +14,7 @@ import {
 } from "../scripts/system/release.mjs";
 
 test("仓库根目录只保留稳定的系统入口脚本", () => {
-  const allowed = ["career-one.mjs", "doctor.mjs", "start-web.mjs", "test-all.mjs", "update-system.mjs"];
+  const allowed = ["career-one.mjs", "update-system.mjs"];
   const actual = readdirSync(new URL("../", import.meta.url))
     .filter((name) => name.endsWith(".mjs"))
     .sort();
@@ -22,7 +22,7 @@ test("仓库根目录只保留稳定的系统入口脚本", () => {
 });
 
 test("仓库根目录只保留 README 与 Agent 自动发现文档", () => {
-  const allowed = ["AGENTS.md", "CLAUDE.md", "CODEX.md", "GEMINI.md", "KIMI.md", "OPENCODE.md", "README.md"];
+  const allowed = ["AGENTS.md", "CLAUDE.md", "README.md"];
   const repoRoot = new URL("../", import.meta.url);
   const actual = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], { cwd: repoRoot, encoding: "utf8" })
     .split("\0")
@@ -38,17 +38,17 @@ test("说明文档保持最小集合，不重新引入旧项目资料", () => {
     .filter((name) => name && existsSync(new URL(name, repoRoot)));
 
   const allowedDocs = [
-    "docs/DATA_CONTRACT.md",
-    "docs/DESIGN.md",
-    "docs/DESIGN_SYSTEM.md",
-    "docs/LEGAL_DISCLAIMER.md",
-    "docs/PLUGINS.md",
-    "docs/PRIVACY.md",
-    "docs/RELEASES.md",
-    "docs/TERMS.md",
+    "system/docs/DATA_CONTRACT.md",
+    "system/docs/DESIGN.md",
+    "system/docs/DESIGN_SYSTEM.md",
+    "system/docs/LEGAL_DISCLAIMER.md",
+    "system/docs/PLUGINS.md",
+    "system/docs/PRIVACY.md",
+    "system/docs/RELEASES.md",
+    "system/docs/TERMS.md",
   ];
   assert.deepEqual(
-    tracked.filter((name) => name.startsWith("docs/")).sort(),
+    tracked.filter((name) => name.startsWith("system/docs/")).sort(),
     allowedDocs,
     "docs/ 只保留仍有明确运行、治理或发布责任的文档",
   );
@@ -56,7 +56,7 @@ test("说明文档保持最小集合，不重新引入旧项目资料", () => {
   const allowedReadmes = [
     "README.md",
     "plugins/_template/README.md",
-    "scaffolder/README.md",
+    "system/scaffolder/README.md",
   ];
   assert.deepEqual(
     tracked.filter((name) => /(^|\/)(README|CHANGELOG)\.md$/.test(name)).sort(),
@@ -66,7 +66,7 @@ test("说明文档保持最小集合，不重新引入旧项目资料", () => {
 
   assert.equal(tracked.includes("CITATION.cff"), false, "不保留未进入产品使用链路的引用元数据");
   assert.deepEqual(
-    tracked.filter((name) => name.startsWith("examples/") && name.endsWith(".md")),
+    tracked.filter((name) => name.startsWith("system/examples/") && name.endsWith(".md")),
     [],
     "旧项目示例文档不得继续随源码维护",
   );
@@ -136,8 +136,8 @@ test("Release workflow 执行完整门禁并发布校验和", () => {
     conditionalStarts.length,
     "Release shell conditionals must be closed before publish",
   );
-  assert.match(workflow, /run:\s*node test-all\.mjs\s*$/m);
-  assert.doesNotMatch(workflow, /node test-all\.mjs --quick/);
+  assert.match(workflow, /run:\s*npm test\s*$/m);
+  assert.doesNotMatch(workflow, /npm test -- --quick/);
   assert.match(workflow, /run:\s*npm ci --ignore-scripts\s*$/m);
   assert.doesNotMatch(workflow, /run:\s*npm install --ignore-scripts\s*$/m);
   assert.match(workflow, /npm audit --omit=dev --audit-level=high/);
@@ -171,7 +171,7 @@ test("测试用户帮助入口不指向缺失的支持或商标政策", () => {
     "utf8",
   );
   const labeler = readFileSync(new URL("../.github/labeler.yml", import.meta.url), "utf8");
-  const disclaimer = readFileSync(new URL("../docs/LEGAL_DISCLAIMER.md", import.meta.url), "utf8");
+  const disclaimer = readFileSync(new URL("../system/docs/LEGAL_DISCLAIMER.md", import.meta.url), "utf8");
   assert.match(welcome, /career-one#快速开始/);
   assert.doesNotMatch(welcome, /SUPPORT\.md/);
   assert.doesNotMatch(labeler, /SUPPORT\.md/);
@@ -180,7 +180,7 @@ test("测试用户帮助入口不指向缺失的支持或商标政策", () => {
 
 test("公开 Codex 插件声明稳定的身份、政策页面和 starter prompts", () => {
   const manifest = JSON.parse(
-    readFileSync(new URL("../packages/codex-plugin/career-one/.codex-plugin/plugin.json", import.meta.url), "utf8"),
+    readFileSync(new URL("../system/packages/codex-plugin/career-one/.codex-plugin/plugin.json", import.meta.url), "utf8"),
   );
   assert.equal(manifest.author.name, "NumberX");
   assert.equal(manifest.homepage, "https://github.com/luyu925065781/career-one");
@@ -188,17 +188,17 @@ test("公开 Codex 插件声明稳定的身份、政策页面和 starter prompts
   assert.equal(manifest.license, "MIT");
   assert.equal(
     manifest.interface.privacyPolicyURL,
-    "https://github.com/luyu925065781/career-one/blob/develop/docs/PRIVACY.md",
+    "https://github.com/luyu925065781/career-one/blob/develop/system/docs/PRIVACY.md",
   );
   assert.equal(
     manifest.interface.termsOfServiceURL,
-    "https://github.com/luyu925065781/career-one/blob/develop/docs/TERMS.md",
+    "https://github.com/luyu925065781/career-one/blob/develop/system/docs/TERMS.md",
   );
   assert.ok(Array.isArray(manifest.interface.defaultPrompt));
   assert.ok(manifest.interface.defaultPrompt.length >= 1 && manifest.interface.defaultPrompt.length <= 3);
   for (const prompt of manifest.interface.defaultPrompt) assert.ok(prompt.length <= 128);
-  assert.match(readFileSync(new URL("../docs/PRIVACY.md", import.meta.url), "utf8"), /本地|local/i);
-  assert.match(readFileSync(new URL("../docs/TERMS.md", import.meta.url), "utf8"), /用户|user/i);
+  assert.match(readFileSync(new URL("../system/docs/PRIVACY.md", import.meta.url), "utf8"), /本地|local/i);
+  assert.match(readFileSync(new URL("../system/docs/TERMS.md", import.meta.url), "utf8"), /用户|user/i);
 });
 
 test("npm 发布工作流使用 OIDC，并严格区分 next 与 latest", () => {
@@ -210,7 +210,7 @@ test("npm 发布工作流使用 OIDC，并严格区分 next 与 latest", () => {
   assert.match(workflow, /id-token:\s*write/);
   assert.match(workflow, /actions\/setup-node@v6/);
   assert.match(workflow, /node-version:\s*24/);
-  assert.match(workflow, /working-directory:\s*scaffolder/);
+  assert.match(workflow, /working-directory:\s*system\/scaffolder/);
   assert.match(workflow, /npm publish --access public --tag next/);
   assert.match(workflow, /npm publish --access public --tag latest/);
   assert.match(workflow, /npm pack --dry-run/);
@@ -218,7 +218,7 @@ test("npm 发布工作流使用 OIDC，并严格区分 next 与 latest", () => {
 
 test("公开插件提交材料包含正反测试并且不会打入插件源码目录", () => {
   const cases = JSON.parse(
-    readFileSync(new URL("../packages/codex-plugin/submission/test-cases.json", import.meta.url), "utf8"),
+    readFileSync(new URL("../system/packages/codex-plugin/submission/test-cases.json", import.meta.url), "utf8"),
   );
   assert.equal(cases.positive.length, 5);
   assert.equal(cases.negative.length, 3);
@@ -234,7 +234,7 @@ test("公开插件提交材料包含正反测试并且不会打入插件源码�
     assert.ok(item.rationale);
   }
   assert.doesNotMatch(
-    readFileSync(new URL("../distribution/build-packages.mjs", import.meta.url), "utf8"),
+    readFileSync(new URL("../system/distribution/build-packages.mjs", import.meta.url), "utf8"),
     /submission\/test-cases\.json/,
   );
 });
@@ -243,7 +243,7 @@ test("保留的公开与模板 README 以中文为主", () => {
   const expectedTitles = new Map([
     ["README.md", "# 择程AI"],
     ["plugins/_template/README.md", "# {{NAME}}：career-one 插件"],
-    ["scaffolder/README.md", "# career-one 安装器"],
+    ["system/scaffolder/README.md", "# career-one 安装器"],
   ]);
 
   for (const [relative, expectedTitle] of expectedTitles) {
@@ -257,13 +257,13 @@ test("prepare 同步所有版本文件且保留功能分级", () => {
   const root = mkdtempSync(join(tmpdir(), "career-one-release-"));
   try {
     mkdirSync(join(root, "web"), { recursive: true });
-    mkdirSync(join(root, "scaffolder"), { recursive: true });
+    mkdirSync(join(root, "system", "scaffolder"), { recursive: true });
     mkdirSync(
-      join(root, "packages", "codex-plugin", "career-one", ".codex-plugin"),
+      join(root, "system", "packages", "codex-plugin", "career-one", ".codex-plugin"),
       { recursive: true },
     );
     writeFileSync(
-      join(root, "release.config.json"),
+      join(root, "system", "release.config.json"),
       `${JSON.stringify(
         {
           version: "1.0.0",
@@ -290,7 +290,7 @@ test("prepare 同步所有版本文件且保留功能分级", () => {
     for (const relative of [
       "package.json",
       "web/package.json",
-      "scaffolder/package.json",
+      "system/scaffolder/package.json",
     ]) {
       writeFileSync(join(root, relative), '{"name":"test","version":"1.0.0"}\n');
     }
@@ -301,7 +301,7 @@ test("prepare 同步所有版本文件且保留功能分级", () => {
       );
     }
     writeFileSync(
-      join(root, "packages", "codex-plugin", "career-one", ".codex-plugin", "plugin.json"),
+      join(root, "system", "packages", "codex-plugin", "career-one", ".codex-plugin", "plugin.json"),
       '{"name":"career-one","version":"1.0.0"}\n',
     );
 
@@ -313,7 +313,7 @@ test("prepare 同步所有版本文件且保留功能分级", () => {
     });
     assert.equal(result.ok, true, result.errors.join("\n"));
     assert.match(readFileSync(join(root, "VERSION"), "utf8"), /^1\.1\.0-beta\.1 /);
-    const config = JSON.parse(readFileSync(join(root, "release.config.json"), "utf8"));
+    const config = JSON.parse(readFileSync(join(root, "system", "release.config.json"), "utf8"));
     assert.equal(config.features.analytics, "development");
     assert.deepEqual(
       JSON.parse(readFileSync(join(root, "web", "release.config.json"), "utf8")),
@@ -324,7 +324,7 @@ test("prepare 同步所有版本文件且保留功能分级", () => {
       "package-lock.json",
       "web/package.json",
       "web/package-lock.json",
-      "scaffolder/package.json",
+      "system/scaffolder/package.json",
     ]) {
       const manifest = JSON.parse(readFileSync(join(root, relative), "utf8"));
       assert.equal(manifest.version, "1.1.0-beta.1", `${relative} top-level version`);
@@ -335,7 +335,7 @@ test("prepare 同步所有版本文件且保留功能分级", () => {
     assert.equal(
       JSON.parse(
         readFileSync(
-          join(root, "packages", "codex-plugin", "career-one", ".codex-plugin", "plugin.json"),
+          join(root, "system", "packages", "codex-plugin", "career-one", ".codex-plugin", "plugin.json"),
           "utf8",
         ),
       ).version,

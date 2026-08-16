@@ -12,7 +12,7 @@
  *   node update-system.mjs rollback   # Rollback last update
  *   node update-system.mjs dismiss    # Dismiss update check
  *
- * See docs/DATA_CONTRACT.md for the full system/user layer definitions.
+ * See system/docs/DATA_CONTRACT.md for the full system/user layer definitions.
  */
 
 import { execFile, execFileSync, execSync } from 'child_process';
@@ -20,11 +20,12 @@ import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync } from 'fs'
 import { join, dirname, posix as pathPosix } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import {
+  ensureCompatibilityEntrypoints,
   ensureSkillEntrypoints,
   materializeSkillEntrypoints,
-} from './scaffolder/bin/skill-entrypoints.mjs';
+} from './system/scaffolder/bin/skill-entrypoints.mjs';
 
-export { materializeSkillEntrypoints, ensureSkillEntrypoints };
+export { ensureCompatibilityEntrypoints, materializeSkillEntrypoints, ensureSkillEntrypoints };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -81,7 +82,6 @@ const SYSTEM_PATHS = [
   'modes/offer-prep.md',
   'modes/interview-prep.md',
   'modes/interview/',
-  'interview-prep/sessions/.gitkeep',
   'modes/patterns.md',
   'modes/titles.md',
   'modes/update.md',
@@ -109,15 +109,9 @@ const SYSTEM_PATHS = [
   'modes/regional/',
   'modes/zh/',
   'CLAUDE.md',
-  'CODEX.md',
-  'OPENCODE.md',
   'AGENTS.md',
-  'GEMINI.md',
-  'KIMI.md',
   'career-one.mjs',
   'scripts/',
-  'start-web.mjs',
-  '启动择程AI.command',
   'web/src/',
   'web/public/',
   'web/package.json',
@@ -126,80 +120,100 @@ const SYSTEM_PATHS = [
   'web/next.config.mjs',
   'web/postcss.config.mjs',
   'web/tsconfig.json',
-  'config/tracker-aliases.json',
   'update-system.mjs',
   'providers/',
-  'seeds/',
   'tests/',
-  'doctor.mjs',
-  'test-all.mjs',
-  'batch/batch-prompt.md',
-  'batch/batch-runner.sh',
-  'dashboard/',
-  'templates/',
-  'fonts/',
-  'examples/dual-track-engineer-instructor/profile.yml',
-  'config/profile.example.yml',
-  '.env.example',
-  '.editorconfig',
   '.agents/',
-  'distribution/',
-  'packages/codex-plugin/',
-  '.claude/skills/',
-  '.opencode/skills/',
-  '.opencode/commands/',
-  '.claude-plugin/',
-  '.qwen/',
-  '.antigravitycli/skills/',
-  '.grok/skills/',
-  '.kimi/skills/',
-  '.trae/skills/',
-  'docs/',
-  'release.config.json',
+  'system/',
   'VERSION',
   'README.md',
   'LICENSE',
-  '.editorconfig',
   '.github/',
+  '.gitignore',
+  '.dockerignore',
   'package.json',
   'package-lock.json',
-  'scaffolder/',
-  'Dockerfile',
-  'docker-compose.yml',
-  '.dockerignore',
-  'career-one-docker',
   'plugins/',
-  'plugins-registry/',
   'plugins-registry.json',
-  'config/plugins.example.yml',
 ];
 
 const BOOTSTRAP_PATHS = [
   '.agents/',
   'career-one.mjs',
+  'update-system.mjs',
   'scripts/',
   'tests/',
-  'distribution/',
-  'packages/codex-plugin/',
-  '.opencode/skills/',
-  '.antigravitycli/skills/',
-  '.grok/skills/',
-  '.kimi/skills/',
-  '.trae/skills/',
   'providers/',
-  'config/tracker-aliases.json',
-  'scaffolder/',
   'plugins/',
-  'plugins-registry/',
-  'plugins-registry.json',
-  'config/plugins.example.yml',
-  'release.config.json',
+  'system/',
+  '.gitignore',
+  'package.json',
+  'package-lock.json',
 ];
 
 // Explicitly system-owned legacy files removed by the grouped scripts/tests
 // layout. The updater may delete only these tracked paths, and only when the
 // fetched target no longer contains them.
 const OBSOLETE_SYSTEM_PATHS = [
+  // Compact-source migration: these paths are now sourced from system/ or
+  // generated locally after each install/update. User-owned files inside
+  // config/, batch/, data/, reports/, output/, jds/ and interview-prep/
+  // are intentionally absent from this list.
+  'CODEX.md',
+  'GEMINI.md',
+  'KIMI.md',
+  'OPENCODE.md',
+  'doctor.mjs',
+  'start-web.mjs',
+  'test-all.mjs',
+  '启动择程AI.command',
+  '.claude/skills/career-one/SKILL.md',
+  '.opencode/skills/career-one/SKILL.md',
+  '.qwen/skills/career-one/SKILL.md',
+  '.antigravitycli/skills/career-one/SKILL.md',
+  '.grok/skills/career-one/SKILL.md',
+  '.kimi/skills/career-one/SKILL.md',
+  '.trae/skills/career-one/SKILL.md',
+  '.claude-plugin/',
+  '.coderabbit.yaml',
+  '.editorconfig',
+  '.env.example',
+  '.envrc',
+  '.npmignore',
+  '.release-please-manifest.json',
+  'release-please-config.json',
+  'release.config.json',
+  'renovate.json',
+  'Dockerfile',
+  'docker-compose.yml',
+  'career-one-docker',
+  'flake.lock',
+  'flake.nix',
+  'config/plugins.example.yml',
+  'config/profile.example.yml',
+  'config/tracker-aliases.json',
+  'batch/batch-prompt.md',
+  'batch/batch-runner.sh',
+  'batch/logs/.gitkeep',
+  'batch/tracker-additions/.gitkeep',
+  'data/.gitkeep',
+  'data/offers/.gitkeep',
+  'data/parser-output/.gitkeep',
+  'reports/.gitkeep',
+  'output/.gitkeep',
+  'jds/.gitkeep',
+  'interview-prep/.gitkeep',
+  'interview-prep/sessions/.gitkeep',
+  'dashboard/',
+  'distribution/',
+  'docs/',
+  'examples/',
+  'fonts/',
+  'packages/',
+  'plugins-registry/',
+  'scaffolder/',
+  'seeds/',
+  'templates/',
   'add-entry.mjs',
   'agent-inbox-tests.mjs',
   'agent-inbox.mjs',
@@ -409,7 +423,7 @@ function configuredReleaseChannel() {
   const override = process.env.CAREER_ONE_UPDATE_CHANNEL;
   if (['stable', 'beta', 'development'].includes(override)) return override;
   try {
-    const config = JSON.parse(readFileSync(join(ROOT, 'release.config.json'), 'utf8'));
+    const config = JSON.parse(readFileSync(join(ROOT, 'system', 'release.config.json'), 'utf8'));
     if (['stable', 'beta', 'development'].includes(config.channel)) return config.channel;
   } catch {
     // Older installations predate release.config.json and are stable by default.
@@ -536,7 +550,7 @@ function mergePathLists(...lists) {
 // loads without a missing-module crash. Today this is the entry plus its only
 // local import; resolveReexecCheckout derives the real set from the fetched
 // source, so this is only a defensive fallback if parsing ever misses one.
-const REEXEC_FALLBACK_FILES = ['update-system.mjs', 'scaffolder/bin/skill-entrypoints.mjs'];
+const REEXEC_FALLBACK_FILES = ['update-system.mjs', 'system/scaffolder/bin/skill-entrypoints.mjs'];
 
 // Extracts static relative import/export specifiers ('./x.mjs', '../y.mjs')
 // from ESM source. Bare ('node:fs') and package ('js-yaml') specifiers are
@@ -625,14 +639,21 @@ export function prepareMaterializedSkillEntrypointsForStage(paths, root = ROOT) 
   for (const path of paths) {
     const entry = gitIn(root, 'ls-files', '-s', '--', path);
     if (!entry) continue;
-
-    const mode = entry.split(/\s+/, 1)[0];
-    if (mode === '120000') {
-      gitIn(root, 'rm', '--cached', '-f', '--', path);
-    }
+    gitIn(root, 'rm', '-r', '--cached', '-f', '--', path);
     prepared.push(path);
   }
   return prepared;
+}
+
+export function hideGeneratedEntrypointsForCommit(paths, root = ROOT) {
+  const hidden = [];
+  for (const path of paths) {
+    const absolute = repoPath(root, path);
+    if (!existsSync(absolute)) continue;
+    rmSync(absolute, { recursive: true, force: true });
+    if (!existsSync(absolute)) hidden.push(path);
+  }
+  return hidden;
 }
 
 function revertPaths(paths) {
@@ -667,10 +688,10 @@ function addPaths(paths) {
 
 function dashboardGoSourcesChanged() {
   try {
-    const changed = git('diff', '--name-only', 'HEAD', '--', 'dashboard');
+    const changed = git('diff', '--name-only', 'HEAD', '--', 'system/dashboard');
     return changed
       .split('\n')
-      .some(path => path.startsWith('dashboard/') && path.endsWith('.go'));
+      .some(path => path.startsWith('system/dashboard/') && path.endsWith('.go'));
   } catch {
     return false;
   }
@@ -681,13 +702,13 @@ function rebuildDashboardBinaryIfNeeded() {
 
   try {
     execFileSync('go', ['build', '-o', 'career-dashboard', '.'], {
-      cwd: join(ROOT, 'dashboard'),
+      cwd: join(ROOT, 'system', 'dashboard'),
       timeout: DASHBOARD_REBUILD_TIMEOUT_MS,
       stdio: 'pipe',
     });
     console.log('dashboard binary rebuilt');
   } catch {
-    console.log('dashboard binary rebuild skipped -- run: cd dashboard && go build -o career-dashboard . manually');
+    console.log('dashboard binary rebuild skipped -- run: cd system/dashboard && go build -o career-dashboard . manually');
   }
 }
 
@@ -960,6 +981,11 @@ async function apply() {
       console.error(`Stale-test prune step failed: ${err.message}`);
     }
 
+    const materializedCompatibilityEntrypoints = ensureCompatibilityEntrypoints(ROOT);
+    if (materializedCompatibilityEntrypoints.length > 0) {
+      console.log(`Materialized ${materializedCompatibilityEntrypoints.length} root compatibility entrypoint(s)`);
+    }
+
     const materializedSkillEntrypoints = ensureSkillEntrypoints(ROOT);
     if (materializedSkillEntrypoints.length > 0) {
       for (const path of materializedSkillEntrypoints) {
@@ -1067,13 +1093,25 @@ async function apply() {
         unlinkSync(dismissFile);
         pathsToStage.push('.update-dismissed');
       }
-      prepareMaterializedSkillEntrypointsForStage(materializedSkillEntrypoints);
-      addPaths(pathsToStage);
-      // Scope the commit to only the staged update paths (#915 bug 2).
-      // A bare `git commit` would sweep any unrelated pre-staged files into
-      // the update commit. Passing the explicit pathspec list constrains the
-      // commit to exactly the files this update touched.
-      git('commit', '-m', `chore: auto-update system files to v${remote}`, '--', ...pathsToStage);
+      const generatedEntrypoints = prepareMaterializedSkillEntrypointsForStage([
+        ...materializedCompatibilityEntrypoints,
+        ...materializedSkillEntrypoints,
+      ]);
+      hideGeneratedEntrypointsForCommit(generatedEntrypoints);
+      const addablePaths = pathsToStage.filter((path) => !generatedEntrypoints.some(
+        (generated) => path === generated || path.startsWith(`${generated.replace(/\/$/, '')}/`),
+      ));
+      try {
+        addPaths(addablePaths);
+        // Scope the commit to only the staged update paths (#915 bug 2).
+        // Generated compatibility files are temporarily absent here so a
+        // path-scoped commit records their source deletion instead of reading
+        // their materialized working-tree content back into the commit.
+        git('commit', '-m', `chore: auto-update system files to v${remote}`, '--', ...pathsToStage);
+      } finally {
+        ensureCompatibilityEntrypoints(ROOT);
+        ensureSkillEntrypoints(ROOT);
+      }
     } catch {
       // Nothing to commit (already up to date)
     }

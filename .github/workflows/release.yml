@@ -38,7 +38,7 @@ jobs:
       - name: Verify release channel and synchronized versions
         run: npm run release:verify -- --channel "${{ inputs.channel }}"
       - name: Verify system contracts
-        run: node test-all.mjs
+        run: npm test
       - name: Verify web application
         working-directory: web
         run: |

@@ -40,13 +40,13 @@ jobs:
       - name: Verify installer contracts
         run: node --test tests/scaffolder.test.mjs
       - name: Inspect npm package contents
-        working-directory: scaffolder
+        working-directory: system/scaffolder
         run: npm pack --dry-run
       - name: Publish prerelease to next
         if: ${{ inputs.publish && inputs.channel == 'beta' }}
-        working-directory: scaffolder
+        working-directory: system/scaffolder
         run: npm publish --access public --tag next
       - name: Publish stable release to latest
         if: ${{ inputs.publish && inputs.channel == 'stable' }}
-        working-directory: scaffolder
+        working-directory: system/scaffolder
         run: npm publish --access public --tag latest

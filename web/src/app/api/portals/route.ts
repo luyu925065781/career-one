@@ -76,7 +76,11 @@ function loadDocument(root: string): Record<string, unknown> {
     return parsed;
   }
   try {
-    const parsed = yaml.load(fs.readFileSync(path.join(root, "templates", "portals.example.yml"), "utf8"));
+    const systemExample = path.join(root, "system", "templates", "portals.example.yml");
+    const examplePath = fs.existsSync(systemExample)
+      ? systemExample
+      : path.join(root, "templates", "portals.example.yml");
+    const parsed = yaml.load(fs.readFileSync(examplePath, "utf8"));
     return isObj(parsed) ? parsed : {};
   } catch {
     return {};

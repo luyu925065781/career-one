@@ -1,6 +1,6 @@
 // @ts-check
 // {{NAME}} — a career-one plugin.
-// Guide: https://github.com/luyu925065781/career-one/blob/main/docs/PLUGINS.md
+// Guide: https://github.com/luyu925065781/career-one/blob/main/system/docs/PLUGINS.md
 //
 // Rules the engine enforces for you:
 //  - Egress ONLY through ctx.fetch / ctx.fetchJson / ctx.fetchText (your manifest

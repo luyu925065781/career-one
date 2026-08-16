@@ -39,7 +39,11 @@ import lever from '../../providers/lever.mjs';
 import ashby from '../../providers/ashby.mjs';
 import workday from '../../providers/workday.mjs';
 import { buildTitleFilter, buildLocationFilter, loadSeenUrls, appendToPipeline, appendToScanHistory } from './scan.mjs';
-import { SEED_SOURCES, toPortalEntry } from '../../seeds/vc-portfolios.mjs';
+const systemSeedsUrl = new URL('../../system/seeds/vc-portfolios.mjs', import.meta.url);
+const seedsUrl = existsSync(systemSeedsUrl)
+  ? systemSeedsUrl
+  : new URL('../../seeds/vc-portfolios.mjs', import.meta.url);
+const { SEED_SOURCES, toPortalEntry } = await import(seedsUrl.href);
 
 // ── Config ──────────────────────────────────────────────────────────
 
