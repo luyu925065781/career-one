@@ -12,6 +12,8 @@ import {
   useJobs,
 } from "@/components/jobs/job-store";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useExplore } from "./explore-provider";
 
 function freshness(postedAt: string): string {
@@ -110,22 +112,24 @@ export function DiscoveryCard({ offer, inPipeline, evaluatedN }: { offer: Discov
           rel="noopener noreferrer"
           title="打开岗位页面"
           aria-label="打开岗位页面"
-          className="-m-1 inline-flex shrink-0 items-center justify-center rounded p-1 text-faint transition-colors hover:text-foreground max-sm:min-h-[44px] max-sm:min-w-[44px]"
+          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "-m-1 shrink-0 text-faint")}
         >
           <ExternalLink className="size-4" />
         </a>
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-        <span className="rounded border border-border px-1.5 py-0.5 font-medium text-muted">{ATS_LABEL[offer.ats as AtsSource] ?? offer.ats}</span>
+        <Badge tone="muted" size="sm" className="font-medium">{ATS_LABEL[offer.ats as AtsSource] ?? offer.ats}</Badge>
         {fresh && <span className="text-faint">{fresh}</span>}
         {unverified && (
-          <span
-            className="inline-flex items-center gap-1 rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 font-medium text-amber-600 dark:text-amber-300"
+          <Badge
+            tone="warn"
+            size="sm"
+            className="gap-1 font-medium"
             title="Agent 从公开信息中发现该岗位，评估时会通过真实浏览器确认岗位是否仍有效"
           >
             <ShieldQuestion className="size-3" /> 未验证
-          </span>
+          </Badge>
         )}
         {offer.matchedKeyword && (
           <span className="text-faint" title="仅为关键词匹配，评估后才能得到 A–F 匹配度评分">
@@ -145,7 +149,7 @@ export function DiscoveryCard({ offer, inPipeline, evaluatedN }: { offer: Discov
         {evaluatedN || doneEval ? (
           <a
             href={evaluatedN ? `/pipeline/${evaluatedN}` : job ? `/jobs/${job.id}` : "/pipeline"}
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-button bg-brand-soft px-2.5 py-2 text-xs font-medium text-brand max-sm:min-h-[44px]"
+            className={cn(buttonVariants({ variant: "tertiary", size: "sm" }), "w-full text-brand")}
           >
             <Check className="size-3.5" /> 已评估 · 查看报告
           </a>
@@ -156,30 +160,34 @@ export function DiscoveryCard({ offer, inPipeline, evaluatedN }: { offer: Discov
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="tertiary"
+              size="sm"
               disabled={isAdded || isAdding}
               onClick={() => addToPipeline([offer])}
               className={cn(
-                "inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-2 text-xs font-medium transition-colors max-sm:min-h-[44px]",
-                isAdded ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-surface-hover text-foreground hover:bg-brand-soft hover:text-brand",
+                "flex-1 whitespace-nowrap",
+                isAdded && "text-success",
               )}
             >
               {isAdding ? <Loader2 className="size-3.5 animate-spin" /> : isAdded ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
               {isAdded ? "已加入" : "加入求职进度"}
-            </button>
-            <button
+            </Button>
+            <Button
               ref={triggerRef}
               type="button"
+              variant="tertiary"
+              size="sm"
               onClick={evaluate}
               aria-haspopup="dialog"
               aria-expanded={handoffOpen}
               title={retrying ? "继续原任务并重新评估" : unverified ? "交给 Agent 验证岗位有效性并完成评估" : "交给 Agent 完成岗位评估"}
-              className="inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-button border border-outline-border bg-outline-bg px-2.5 py-2 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px]"
+              className="flex-1 whitespace-nowrap"
             >
               <Bot className="size-3.5 text-icon-brand" aria-hidden="true" />
               {job?.runStatus === "queued" ? "等待 Agent 评估" : retrying ? "重新交给 Agent 评估" : "交给 Agent 评估"}
-            </button>
+            </Button>
           </div>
         )}
       </div>

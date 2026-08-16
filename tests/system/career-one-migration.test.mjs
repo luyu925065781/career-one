@@ -424,8 +424,13 @@ assert.match(webIcon, /fill="url\(#brand-gradient\)"/, "择程AI图标背景必�
 const portalsView = read("web/src/components/portals-view.tsx");
 assert.match(
   portalsView,
-  /absolute left-0\.5 top-0\.5 size-5/,
-  "岗位来源开关圆点必须有明确的水平锚点，避免开启状态移出轨道",
+  /data-ui-structural="switch-track"[\s\S]{0,260}data-ui-switch-thumb className="absolute left-0 top-0\.5 size-5/,
+  "岗位来源开关必须使用共享轨道，并为圆点保留明确的水平锚点",
+);
+assert.match(
+  globalStyles,
+  /\[data-ui-switch-thumb\][\s\S]{0,220}transform:\s*translateX\(0\.125rem\)[\s\S]{0,280}aria-checked="true"[\s\S]{0,160}translateX\(1\.25rem\)/,
+  "共享开关圆点必须在关闭和开启状态下保持在轨道内",
 );
 
 const navItems = read("web/src/lib/nav-items.ts");
@@ -702,7 +707,8 @@ assert.match(patternAnalyzer, /levelResponsibilityRegex/, "历史分析器必须
 assert.match(patternAnalyzer, /legacyRedFlagsRegex/, "历史分析器必须保留旧报告风险分的兼容解析");
 
 const explorerView = read("web/src/components/explore/explorer-view.tsx");
-assert.match(explorerView, /function ScreenshotEvaluate[\s\S]{0,9000}bg-brand[^"]*hover:bg-brand-200/, "截图评估主按钮 hover 必须复用加深的品牌色");
+assert.match(explorerView, /function ScreenshotEvaluate[\s\S]{0,12000}<Button\s+[\s\S]{0,120}ref=\{triggerRef\}/, "截图评估主动作必须复用共享 Button");
+assert.match(buttonSource, /primary:\s*"[^"]*bg-brand[^"]*hover:bg-brand-200/, "共享主按钮 hover 必须复用加深的品牌色");
 assert.doesNotMatch(explorerView, /function ScreenshotEvaluate[\s\S]{0,9000}hover:brightness-110/, "截图评估主按钮 hover 不得通过提高亮度变浅");
 assert.match(explorerView, /function SearchKeywordsCard/, "发现岗位必须展示已确认的搜索标签");
 assert.match(explorerView, /selectTargetRoleTags\(filters\.positive, MAX_TARGET_ROLE_TAGS\)/, "发现岗位必须从画像筛选目标岗位标签");

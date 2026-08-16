@@ -8,7 +8,7 @@ import {
   type AgentTaskHandoff,
   useJobs,
 } from "@/components/jobs/job-store";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 type SetupAction = {
@@ -187,17 +187,19 @@ export function ProfileAgentAction({
 
   return (
     <>
-      <button
+      <Button
         ref={triggerRef}
         type="button"
+        variant={variant}
+        size="sm"
         onClick={showHandoff}
         aria-haspopup="dialog"
         aria-expanded={handoffOpen}
-        className={cn(buttonVariants({ variant, size: "sm" }), className)}
+        className={className}
       >
         <Bot className="size-4" aria-hidden="true" />
         {currentLabel}
-      </button>
+      </Button>
       <AgentTaskHandoffDialog
         handoff={handoff}
         open={handoffOpen}

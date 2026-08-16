@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Upload, FileText, Loader2, Check, AlertTriangle, Lock, ArrowRight, RotateCcw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { cvReadiness, parseCvStream } from "@/lib/cv/quality";
 
@@ -173,8 +175,9 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
             const f = e.dataTransfer.files?.[0];
             if (f) ingestFile(f);
           }}
-        >
+          >
           <textarea
+            data-ui-control="unstyled"
             value={paste}
             onChange={(e) => setPaste(e.target.value)}
             onKeyDown={(e) => {
@@ -184,38 +187,39 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
             className="h-32 w-full resize-none bg-transparent text-[14px] leading-relaxed outline-none placeholder:text-faint"
           />
           <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3">
-            <button
+            <Button
               type="button"
+              variant="tertiary"
+              size="sm"
               onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-button border border-outline-border bg-outline-bg px-3 py-1.5 text-xs font-medium text-outline-text transition hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px] max-sm:px-4"
             >
               <Upload className="size-3.5" /> 上传 PDF / 文件
-            </button>
+            </Button>
             <input ref={fileRef} type="file" accept=".pdf,.md,.markdown,.txt,.docx" hidden onChange={(e) => e.target.files?.[0] && ingestFile(e.target.files[0])} />
             <span className="inline-flex items-center gap-1 text-[11px] text-faint">
               <Lock className="size-3" /> 文件保留在本机，由你自己的 Agent 解析。
             </span>
-            <button
+            <Button
               type="button"
               disabled={!paste.trim()}
               onClick={() => ingestText(paste.trim())}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-button bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-sm transition hover:brightness-110 disabled:opacity-50 max-sm:min-h-[44px]"
+              className="ml-auto"
             >
               读取简历 <ArrowRight className="size-4" />
-            </button>
+            </Button>
           </div>
         </div>
         {phase === "error" &&
           (err === "needs-cli" ? (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-[13px] text-amber-700 dark:text-amber-300">
+            <div data-ui-feedback="inline" data-tone="warning" role="alert" className="flex flex-wrap items-center gap-2 px-3 py-2.5 text-[13px]">
               <AlertTriangle className="size-3.5 shrink-0" />
               <span>读取 PDF 需要连接 Agent CLI，也可以直接在上方粘贴简历文字。</span>
-              <Link href="/config" className="ml-auto inline-flex items-center gap-1 rounded-button bg-amber-500/20 px-2.5 py-1 font-medium text-amber-700 transition hover:bg-amber-500/30 dark:text-amber-200">
+              <Link href="/config" className={cn(buttonVariants({ variant: "tertiary", size: "sm" }), "ml-auto")}>
                 连接 Agent CLI <ArrowRight className="size-3.5" />
               </Link>
             </div>
           ) : (
-            <p className="flex items-center gap-1.5 text-[13px] text-amber-600 dark:text-amber-400">
+            <p data-ui-feedback="inline" data-tone="warning" role="alert" className="flex items-center gap-1.5 px-3 py-2 text-[13px]">
               <AlertTriangle className="size-3.5 shrink-0" /> {err}
             </p>
           ))}
@@ -232,9 +236,9 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
           <Loader2 className="size-4 animate-spin text-icon-brand" />
           <span className={`font-display text-lg text-foreground`}>{trace || "正在读取简历…"}</span>
         </div>
-        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-          <span className="size-1.5 rounded-full bg-emerald-500" /> 0 tokens · ¥0.00 · 本地
-        </div>
+        <Badge tone="good" size="sm" className="mt-3 gap-1.5 px-2.5 py-1 text-[11px]">
+          <span className="size-1.5 rounded-full bg-success-solid" /> 0 tokens · ¥0.00 · 本地
+        </Badge>
         {md && <div className="co-cvtrace mt-4 max-h-40 overflow-hidden rounded-lg border border-border bg-surface/40 p-3 text-[11px] text-faint">{md.slice(0, 400)}…</div>}
       </div>
     );
@@ -248,25 +252,21 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
         <FileText className="size-4 text-icon-brand" />
         <h3 className={`font-display text-lg text-foreground`}>简历已整理，请检查后保存</h3>
         {readiness && (
-          <span
-            className={cn(
-              "ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-              readiness.scoreable ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-            )}
-          >
+          <Badge tone={readiness.scoreable ? "good" : "warn"} size="sm" className="ml-auto gap-1 px-2 text-[11px] font-medium">
             {readiness.scoreable ? <Check className="size-3" /> : <AlertTriangle className="size-3" />}
             {readiness.scoreable ? "可以开始匹配" : "内容还需补充"}
-          </span>
+          </Badge>
         )}
       </div>
-      {readiness?.hint && <p className="mb-2 text-[12px] text-amber-600 dark:text-amber-400">{readiness.hint}</p>}
+      {readiness?.hint && <p className="mb-2 text-[12px] text-warning">{readiness.hint}</p>}
       {saveErr && (
-        <p className="mb-2 flex items-center gap-1.5 text-[12px] text-red-500">
+        <p className="mb-2 flex items-center gap-1.5 text-[12px] text-danger" role="alert">
           <AlertTriangle className="size-3.5 shrink-0" /> {saveErr}
         </p>
       )}
       <div className="grid gap-3 md:grid-cols-2">
         <textarea
+          data-ui-control
           value={md}
           onChange={(e) => setMd(e.target.value)}
           className="h-72 w-full resize-none rounded-lg border border-border bg-surface/40 p-3 font-mono text-[12px] leading-relaxed outline-none focus:border-brand/40"
@@ -276,25 +276,27 @@ export function CvIngest({ onSaved }: { onSaved?: () => void }) {
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
+        <Button
           type="button"
+          size="lg"
           onClick={save}
           disabled={phase === "saving"}
-          className="inline-flex items-center gap-2 rounded-button bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:brightness-110 disabled:opacity-60"
         >
           {phase === "saving" ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
           保存并完善求职画像
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => {
             setMd("");
             setPhase("input");
           }}
-          className="inline-flex items-center gap-1.5 text-[13px] text-muted transition hover:text-foreground"
+          className="text-muted"
         >
           <RotateCcw className="size-3.5" /> 重新开始
-        </button>
+        </Button>
         <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-faint">
           <Lock className="size-3" /> 本地保存至 cv.md
         </span>

@@ -227,7 +227,8 @@ test("interview page hands story optimization to the user's Agent and keeps manu
   assert.match(manager, /AgentTaskHandoffDialog/);
   assert.doesNotMatch(manager, /co-assistant/);
   assert.doesNotMatch(manager, /liquid-glass-control/);
-  assert.match(manager, /border-outline-border bg-outline-bg/);
+  assert.match(manager, /Button, buttonVariants/);
+  assert.match(manager, /variant="tertiary"/);
 });
 
 test("an empty story bank starts only after the profile step", () => {

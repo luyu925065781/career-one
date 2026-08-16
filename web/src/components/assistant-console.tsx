@@ -11,6 +11,7 @@ import { useJobs } from "@/components/jobs/job-store";
 import { usePipeline } from "@/components/pipeline/pipeline-provider";
 import { useApply } from "@/components/apply/apply-provider";
 import { WorkerCard } from "@/components/jobs/worker-card";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { dispatch, type ActionCtx, type DoneInfo } from "@/app/actions/registry";
 import { scoreNum } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -480,14 +481,15 @@ export function AssistantConsole() {
   return (
     <>
       {!open && (
-        <button
+        <Button
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-50 flex items-center justify-center gap-2 rounded-full border border-border bg-surface/90 py-1.5 pl-1.5 pr-4 shadow-lg backdrop-blur transition-colors hover:bg-surface-hover max-sm:min-h-[44px]"
+          variant="secondary"
+          className="fixed bottom-5 right-5 z-50 py-1.5 pl-1.5 pr-4 shadow-floating"
           aria-label="打开求职助手"
         >
           <CoMark size={26} />
           <span className="text-sm font-medium">问助手</span>
-        </button>
+        </Button>
       )}
 
       {open && (
@@ -498,12 +500,12 @@ export function AssistantConsole() {
               <div className="text-sm font-semibold tracking-tight">求职助手</div>
               <div className="text-xs text-faint">{cliId ? `通过 ${cliId}` : "尚未配置 Agent"}</div>
             </div>
-            <button onClick={resetChat} className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-foreground" aria-label="新对话" title="新对话">
+            <Button onClick={resetChat} variant="ghost" size="icon-sm" className="text-icon-muted" aria-label="新对话" title="新对话">
               <RotateCcw className="size-4" />
-            </button>
-            <button onClick={() => setOpen(false)} className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-foreground" aria-label="关闭助手">
+            </Button>
+            <Button onClick={() => setOpen(false)} variant="ghost" size="icon-sm" className="text-icon-muted" aria-label="关闭助手">
               <X className="size-4" />
-            </button>
+            </Button>
           </header>
 
           <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
@@ -539,14 +541,16 @@ export function AssistantConsole() {
           {cliId && !busy && suggestions.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-3 pb-1 pt-0.5">
               {suggestions.map((s, i) => (
-                <button
+                <Button
                   key={i}
                   onClick={() => send(s.send)}
-                  className="inline-flex items-center gap-1 rounded-full border border-outline-border bg-outline-bg px-2.5 py-1 text-xs text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover"
+                  variant="tertiary"
+                  size="sm"
+                  className="gap-1 px-2.5"
                 >
                   <Sparkles className="size-3 text-icon-brand" />
                   {s.label}
-                </button>
+                </Button>
               ))}
             </div>
           )}
@@ -555,7 +559,7 @@ export function AssistantConsole() {
             <Link
               href="/config"
               onClick={() => setOpen(false)}
-              className="mx-4 mb-2 flex items-center gap-2 rounded-button border border-border bg-surface/50 px-3 py-2 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+              className={cn(buttonVariants({ variant: "tertiary", size: "sm" }), "mx-4 mb-2 justify-start")}
             >
               <Settings className="size-3.5" /> 请先在设置中选择 Agent →
             </Link>
@@ -564,6 +568,7 @@ export function AssistantConsole() {
           <div className="border-t border-border p-3">
             <div className="flex items-end gap-2">
               <textarea
+                data-ui-control
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -577,14 +582,15 @@ export function AssistantConsole() {
                 disabled={!cliId}
                 className="max-h-32 flex-1 resize-none rounded-xl border border-border bg-surface/60 px-3 py-2 text-sm outline-none transition-colors placeholder:text-faint focus:border-brand/50 disabled:opacity-50"
               />
-              <button
+              <Button
                 onClick={() => send()}
                 disabled={busy || !input.trim() || !cliId}
-                className="rounded-xl bg-brand p-2 text-brand-foreground transition-colors hover:bg-brand-200 disabled:opacity-40"
+                size="icon"
+                className="shrink-0 disabled:opacity-40"
                 aria-label="发送"
               >
                 {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -628,7 +634,7 @@ function PartView({
         job={job}
         variant="inline"
           trailing={
-          <Link href={`/jobs/${job.id}`} className="text-faint transition-colors hover:text-brand" aria-label="打开 Agent 任务">
+          <Link href={`/jobs/${job.id}`} className="text-faint transition-colors hover:text-interactive-hover" aria-label="打开 Agent 任务">
             <ArrowUpRight className="size-3.5" />
           </Link>
         }
@@ -654,7 +660,7 @@ function PartView({
               job={j!}
               variant="inline"
               trailing={
-                <Link href={`/jobs/${j!.id}`} className="text-faint transition-colors hover:text-brand" aria-label="打开 Agent 任务">
+                <Link href={`/jobs/${j!.id}`} className="text-faint transition-colors hover:text-interactive-hover" aria-label="打开 Agent 任务">
                   <ArrowUpRight className="size-3.5" />
                 </Link>
               }
@@ -680,18 +686,19 @@ function PartView({
         )}
         {part.state === "pending" ? (
           <div className="mt-2 flex gap-2">
-            <button
+            <Button
               onClick={() => onConfirm(part.cid, true)}
-              className="rounded-full bg-brand px-3 py-1 text-xs font-medium text-brand-foreground transition-colors hover:bg-brand-200"
+              size="sm"
             >
               确认
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => onConfirm(part.cid, false)}
-              className="rounded-full border border-border px-3 py-1 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+              variant="tertiary"
+              size="sm"
             >
               取消
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="mt-1 text-xs text-faint">{part.state === "done" ? "✓ 已开始" : "已取消"}</div>

@@ -5,6 +5,7 @@ import type { AtsSource } from "@/lib/explore";
 import { ATS_LABEL } from "@/lib/explore";
 import { FRESHNESS_WINDOWS, SENIORITY_LABEL, type Seniority } from "@/lib/inbox";
 import { CostBadge } from "@/components/cost/cost-badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 // Free, client-side facets over the raw firehose — 0 tokens, instant. Mirrors the
@@ -52,6 +53,8 @@ export function FacetChips({
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-icon-muted" />
           <input
+            data-ui-control
+            data-density="compact"
             value={kw}
             onChange={(e) => setKw(e.target.value)}
             placeholder="按公司或岗位筛选…"
@@ -72,11 +75,11 @@ export function FacetChips({
             <button
               key={w.days}
               type="button"
+              data-button-shape="container"
+              data-ui-structural="segment"
+              aria-pressed={within === w.days}
               onClick={() => setWithin(within === w.days ? null : w.days)}
-              className={cn(
-                "rounded-md px-2.5 text-xs font-medium transition-colors max-sm:min-h-[44px]",
-                within === w.days ? "bg-brand-soft text-brand" : "text-muted hover:text-foreground",
-              )}
+              className="rounded-md px-2.5 text-xs font-medium max-sm:min-h-[44px]"
             >
               {w.label}
             </button>
@@ -97,6 +100,8 @@ export function FacetChips({
 
         {/* location contains */}
         <input
+          data-ui-control
+          data-density="compact"
           value={locQ}
           onChange={(e) => setLocQ(e.target.value)}
           placeholder="地区…"
@@ -104,13 +109,15 @@ export function FacetChips({
         />
 
         {anyActive && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={onClear}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 text-xs text-faint transition-colors hover:text-foreground max-sm:min-h-[44px]"
+            className="shrink-0 text-faint"
           >
             <X className="size-3" /> 清除
-          </button>
+          </Button>
         )}
       </div>
 
@@ -128,11 +135,11 @@ function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; chi
   return (
     <button
       type="button"
+      data-button-shape="container"
+      data-ui-structural="chip"
+      aria-pressed={on}
       onClick={onClick}
-      className={cn(
-        "shrink-0 rounded-full border px-2.5 text-xs font-medium transition-colors max-sm:min-h-[44px]",
-        on ? "border-brand/40 bg-brand-soft text-brand" : "border-border text-muted hover:text-foreground",
-      )}
+      className="shrink-0 rounded-full border px-2.5 text-xs font-medium max-sm:min-h-[44px]"
     >
       {children}
     </button>

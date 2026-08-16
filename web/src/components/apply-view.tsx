@@ -3,6 +3,8 @@
 import { Loader2, Wand2, Asterisk, Paperclip, Sparkles, ArrowUpRight, ShieldCheck, RotateCcw, FileCheck2, AlertTriangle, Terminal, Check, ScanLine, PenLine, CheckCircle2, Info, ExternalLink, MousePointerClick } from "lucide-react";
 import type { ApplyIssue, DriveStep } from "@/lib/apply/issue";
 import { useApply } from "@/components/apply/apply-provider";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { ApplyField } from "@/lib/apply/extract";
 import { cn } from "@/lib/cn";
 import { Fragment, useEffect, useRef, useState } from "react";
@@ -36,25 +38,27 @@ export function ApplyView() {
       <div>
         <div className="flex w-full items-center gap-2 rounded-full border border-border bg-surface/70 py-1.5 pl-4 pr-1.5 shadow-sm transition focus-within:border-brand/50">
           <input
+            data-ui-control="unstyled"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && a.open(input.trim())}
             placeholder="粘贴投递表单网址（Ashby、Lever、Greenhouse 等）"
             className="min-w-0 flex-1 bg-transparent py-1.5 text-sm outline-none placeholder:text-faint"
           />
-          <button
+          <Button
             onClick={() => a.open(input.trim())}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-1.5 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-200"
+            size="sm"
+            className="shrink-0 px-4"
           >
             <Wand2 className="size-4" /> 读取表单
-          </button>
+          </Button>
         </div>
         {a.error && (
-          <div className="mt-4 w-full rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3.5">
+          <div data-ui-feedback="callout" data-tone="warning" role="alert" className="mt-4 w-full px-4 py-3.5">
             <div className="flex items-start gap-2.5">
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-icon-warning" />
               <div className="min-w-0">
-                <p className="text-sm text-amber-800 dark:text-amber-300">{a.error}</p>
+                <p className="text-sm">{a.error}</p>
                 {a.url && /^https?:\/\//.test(a.url) && (
                   <a href={a.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
                     直接打开表单 <ExternalLink className="size-3" />
@@ -86,9 +90,9 @@ export function ApplyView() {
       {!busy && (
         <div className="co-rise mb-4 flex items-baseline justify-between gap-3">
           <h2 className="font-display text-xl text-landing drop-shadow-sm">{a.title || "岗位申请"}</h2>
-          <button onClick={a.reset} className="inline-flex items-center gap-1 text-xs text-faint transition-colors hover:text-foreground">
+          <Button variant="ghost" size="sm" onClick={a.reset} className="gap-1 text-faint">
             <RotateCcw className="size-3" /> 新建
-          </button>
+          </Button>
         </div>
       )}
 
@@ -104,7 +108,7 @@ export function ApplyView() {
       {driving && <DrivePanel steps={a.driveSteps} />}
 
       {a.error && (
-        <p className="co-rise mb-3 flex items-start gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 backdrop-blur-sm dark:text-amber-400">
+        <p data-ui-feedback="inline" data-tone="warning" role="alert" className="co-rise mb-3 flex items-start gap-1.5 px-3 py-2 text-sm">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" /> {a.error}
         </p>
       )}
@@ -128,14 +132,16 @@ export function ApplyView() {
           )}
 
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <button
+            <Button
               onClick={a.prefill}
               disabled={prefilling || filling}
-              className="inline-flex items-center gap-1.5 rounded-full border border-outline-border bg-outline-bg px-3.5 py-1.5 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover disabled:opacity-50"
+              variant="tertiary"
+              size="sm"
+              className="px-3.5 text-sm"
             >
               {prefilling ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
               {prefilling ? "正在根据简历起草…" : "根据简历预填"}
-            </button>
+            </Button>
             <span className="text-xs text-muted">也可以让右下角助手撰写或修改任一回答。</span>
           </div>
 
@@ -149,7 +155,7 @@ export function ApplyView() {
               <div className="max-h-52 overflow-y-auto border-t border-border px-3 py-2">
                 <ol className="space-y-0.5 font-mono text-[11px] leading-relaxed text-muted">
                   {a.prefillLog.map((l, i) => (
-                    <li key={i} className={l.startsWith("✗") ? "text-amber-600 dark:text-amber-400" : ""}>
+                    <li key={i} className={l.startsWith("✗") ? "text-warning" : ""}>
                       {l}
                     </li>
                   ))}
@@ -177,22 +183,24 @@ export function ApplyView() {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button
+            <Button
               onClick={a.fill}
               disabled={filling || prefilling}
-              className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-brand-foreground shadow-lg shadow-brand/25 transition-all hover:bg-brand-200 hover:shadow-brand/40 disabled:opacity-50"
+              size="lg"
             >
               {filling ? <Loader2 className="size-4 animate-spin" /> : <ArrowUpRight className="size-4" />}
               {filling ? "正在填写真实表单…" : "填写真实表单并检查"}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={a.agentFill}
               disabled={filling || prefilling}
               title="让 Agent 逐项填写复杂或多步骤表单，但绝不会自动提交"
-              className="inline-flex items-center gap-1.5 rounded-full border border-outline-border bg-outline-bg px-4 py-2.5 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover disabled:opacity-50"
+              variant="tertiary"
+              size="lg"
+              className="px-4"
             >
               <MousePointerClick className="size-4" /> 让 Agent 填写
-            </button>
+            </Button>
             <p className="inline-flex items-center gap-1.5 text-xs text-muted">
               <ShieldCheck className="size-3.5 text-icon-success" /> 不会自动提交，最终由你本人确认。
             </p>
@@ -213,17 +221,17 @@ export function ApplyView() {
                     ) : (
                       <div className="flex h-24 w-36 items-center justify-center rounded-md border border-dashed border-border text-faint">…</div>
                     )}
-                    <figcaption className={cn("mt-1 w-36 truncate text-[10px]", s.ok ? "text-faint" : "text-amber-500")}>{s.label || "字段"}</figcaption>
+                    <figcaption className={cn("mt-1 w-36 truncate text-[10px]", s.ok ? "text-faint" : "text-warning")}>{s.label || "字段"}</figcaption>
                   </figure>
                 ))}
               </div>
             </div>
           )}
           {done && (
-            <div className="co-rise mt-4 flex items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm backdrop-blur-sm">
+            <div data-ui-feedback="callout" data-tone="success" role="status" className="co-rise mt-4 flex items-start gap-2.5 px-4 py-3 text-sm">
               <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-icon-success" />
               <div>
-                <span className="font-medium text-emerald-700 dark:text-emerald-400">真实申请表已打开并完成预填。</span>{" "}
+                <span className="font-medium">真实申请表已打开并完成预填。</span>{" "}
                 <span className="text-muted">请逐项核对并由你本人点击提交，择程AI不会代替你提交。</span>
               </div>
             </div>
@@ -262,7 +270,7 @@ function DrivePanel({ steps, filling }: { steps: DriveStep[]; filling?: boolean 
               <span className="grid size-5 shrink-0 place-items-center rounded-full bg-brand-soft text-[10px] font-semibold text-brand">{s.turn}</span>
               <span className="shrink-0 font-medium">{DRIVE_VERB[s.action] ?? s.action}</span>
               <span className="truncate text-faint">{s.detail}</span>
-              {s.note && <span className="shrink-0 text-amber-500">· {s.note}</span>}
+              {s.note && <span className="shrink-0 text-warning">· {s.note}</span>}
             </li>
           ))}
         </ol>
@@ -279,14 +287,14 @@ function ApplyIssues({ issues }: { issues: ApplyIssue[] }) {
   return (
     <div className="mb-4 space-y-2">
       {warns.length > 0 && (
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 backdrop-blur-sm">
-          <div className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-400">
+        <div data-ui-feedback="callout" data-tone="warning" className="px-4 py-3">
+          <div className="mb-1.5 flex items-center gap-1.5 text-sm font-medium">
             <AlertTriangle className="size-4" /> 需要你检查的内容
           </div>
-          <ul className="space-y-1 text-xs text-amber-800/90 dark:text-amber-300/90">
+          <ul className="space-y-1 text-xs">
             {warns.map((i, k) => (
               <li key={k} className="flex gap-1.5">
-                <span className="mt-px text-amber-500">•</span> {i.message}
+                <span className="mt-px text-warning-solid">•</span> {i.message}
               </li>
             ))}
           </ul>
@@ -419,10 +427,7 @@ function FieldRow({
     prev.current = value;
   }, [value]);
 
-  const base = cn(
-    "w-full rounded-lg border bg-surface/60 px-3 py-2 text-sm outline-none transition focus:border-brand/60",
-    needs ? "border-amber-500/50" : "border-border",
-  );
+  const base = "w-full rounded-lg border border-border bg-surface/60 px-3 py-2 text-sm outline-none transition focus:border-brand/60";
   // While the planner is drafting, an empty answer shimmers like it's being
   // written; it flashes into the real value the instant the draft lands.
   const writing = drafting && !value && f.type !== "file";
@@ -431,14 +436,14 @@ function FieldRow({
       <label className="mb-1.5 flex items-center gap-1 text-sm font-medium">
         {f.label || <span className="text-faint">未命名字段</span>}
         {f.required && <Asterisk className="size-3 text-icon-brand" />}
-        {needs && <span className="ml-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">需要确认</span>}
+        {needs && <Badge tone="warn" size="sm" className="ml-1">需要确认</Badge>}
       </label>
       {writing ? (
         <div className={cn("co-skel", f.type === "textarea" ? "h-[68px]" : "h-9")} />
       ) : f.type === "textarea" ? (
-        <textarea rows={3} maxLength={f.maxLength} value={value} onChange={(e) => onChange(e.target.value)} placeholder={needs ? "请由你填写此项。" : "…"} className={cn(base, "resize-none")} />
+        <textarea data-ui-control data-state={needs ? "warning" : undefined} rows={3} maxLength={f.maxLength} value={value} onChange={(e) => onChange(e.target.value)} placeholder={needs ? "请由你填写此项。" : "…"} className={cn(base, "resize-none")} />
       ) : (f.type === "select" || f.type === "radio") && f.options && f.options.length > 0 ? (
-        <select value={value} onChange={(e) => onChange(e.target.value)} className={base}>
+        <select data-ui-control data-state={needs ? "warning" : undefined} value={value} onChange={(e) => onChange(e.target.value)} className={base}>
           <option value="">请选择…</option>
           {f.options.map((o, i) => (
             <option key={i} value={o}>
@@ -452,7 +457,7 @@ function FieldRow({
         </label>
       ) : f.type === "file" ? (
         /resume|résumé|\bcv\b|curriculum|currículum|lebenslauf/i.test(f.label || "") ? (
-          <div className="flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400">
+          <div data-ui-feedback="inline" data-tone="success" className="flex items-center gap-2 px-3 py-2 text-sm">
             <FileCheck2 className="size-4 shrink-0" /> 将自动附上定制简历 PDF，你可以在真实表单中替换。
           </div>
         ) : (
@@ -461,7 +466,7 @@ function FieldRow({
           </div>
         )
       ) : (
-        <input type={["email", "tel", "url", "number", "date"].includes(f.type) ? f.type : "text"} maxLength={f.maxLength} value={value} onChange={(e) => onChange(e.target.value)} placeholder={needs ? "请由你填写此项。" : "…"} className={base} />
+        <input data-ui-control data-state={needs ? "warning" : undefined} type={["email", "tel", "url", "number", "date"].includes(f.type) ? f.type : "text"} maxLength={f.maxLength} value={value} onChange={(e) => onChange(e.target.value)} placeholder={needs ? "请由你填写此项。" : "…"} className={base} />
       )}
     </div>
   );

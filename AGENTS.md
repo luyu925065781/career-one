@@ -441,3 +441,20 @@ Write one TSV file per evaluation to `batch/tracker-additions/{num}-{company-slu
 - No markdown bold (`**`) in status field
 - No dates in status field (use the date column)
 - No extra text (use the notes column)
+
+## Frontend Visual Verification
+
+For changes limited to frontend visual presentation, such as layout, spacing, colors, typography, icons, animation, and styling:
+
+- Do not perform agent-driven visual verification.
+- Do not use Playwright, browser automation, Computer Use, screenshots, pixel comparison, or visual regression testing solely to inspect the appearance.
+- Do not start a development server solely for visual review.
+- The user will manually inspect and approve the final visual result.
+
+Continue to perform applicable non-visual engineering checks, such as formatting, linting, type checking, compilation, and relevant unit tests.
+
+If a change affects functionality, interaction behavior, data flow, routing, accessibility, or runtime correctness, verify those non-visual aspects as appropriate.
+
+In the final response, explicitly state that visual verification was not performed because it is reserved for manual user review.
+
+This rule overrides any default instruction requiring agent-performed screenshots, browser-based visual inspection, or visual approval for purely presentational frontend changes.

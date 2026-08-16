@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Check, Clock, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { CompanyLogo } from "@/components/company-logo";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { resolveCompanyIdentity } from "@/lib/company";
 
@@ -48,22 +48,24 @@ export function FollowUpCard({ followup, onLogged }: { followup: FollowUp; onLog
         </div>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-2">
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           disabled={state === "logging"}
           onClick={log}
-          className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "whitespace-nowrap")}
+          className="whitespace-nowrap"
         >
           {state === "logging" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} <span className="hidden sm:inline">标记已跟进</span><span className="sm:hidden">已跟进</span>
-        </button>
+        </Button>
         {followup.num != null && (
-          <a href={`/pipeline/${followup.num}?view=report`} title="打开报告" className="inline-flex shrink-0 items-center justify-center rounded p-1 text-faint transition hover:text-brand max-sm:min-h-[44px] max-sm:min-w-[44px]">
+          <a href={`/pipeline/${followup.num}?view=report`} title="打开报告" aria-label="打开报告" className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "shrink-0 text-faint")}>
             <FileText className="size-4" />
           </a>
         )}
-        <button type="button" onClick={() => setState("snoozed")} className="inline-flex shrink-0 items-center justify-center text-[11px] text-faint transition hover:text-foreground max-sm:min-h-[44px] max-sm:min-w-[44px]">
+        <Button type="button" variant="ghost" size="sm" onClick={() => setState("snoozed")} className="shrink-0 text-faint">
           稍后提醒
-        </button>
+        </Button>
       </div>
     </Card>
   );

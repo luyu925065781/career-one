@@ -30,6 +30,7 @@ import { HeroGlow } from "@/components/hero-glow";
 import { isInvalidJob, type Job, type JobArtifact, useJobs } from "@/components/jobs/job-store";
 import { WorkerCard } from "@/components/jobs/worker-card";
 import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 const STATUS_LABEL: Record<Job["status"], string> = {
@@ -326,17 +327,18 @@ export function ClearFinishedButton() {
   }
 
   const trigger = (
-    <button
+    <Button
       ref={triggerRef}
       type="button"
+      variant="danger-ghost"
+      size="sm"
       onClick={() => setOpen(true)}
       aria-haspopup="dialog"
       aria-expanded={open}
-      className="inline-flex min-h-10 items-center gap-1.5 rounded-button border border-border bg-surface/60 px-3 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-border-hover focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
           <Trash2 className="size-3.5 text-icon-danger" aria-hidden="true" />
           清除历史任务
-    </button>
+    </Button>
   );
 
   return (
@@ -371,22 +373,22 @@ export function ClearFinishedButton() {
               </div>
             </div>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
+              <Button
                 ref={cancelRef}
                 type="button"
+                variant="tertiary"
                 onClick={closeDialog}
-                className="inline-flex min-h-10 items-center justify-center rounded-button border border-outline-border bg-outline-bg px-4 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-border-hover focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               >
                 取消
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="danger"
                 onClick={confirmClear}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-button bg-icon-danger px-4 text-sm font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-icon-danger focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               >
                 <Trash2 className="size-4" aria-hidden="true" />
                 确认清除
-              </button>
+              </Button>
             </div>
           </div>
         </div>,
@@ -450,7 +452,7 @@ export function WorkerPills() {
         <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">Agent 任务</span>
         {running > 0 && <span className="text-[10px] tabular-nums text-brand">{running} 个运行中</span>}
         {running === 0 && waiting > 0 && <span className="text-[10px] tabular-nums text-icon-warning">{waiting} 个待处理</span>}
-        <Link href="/jobs" className="ml-auto text-faint transition-colors hover:text-foreground" title="历史记录" aria-label="Agent 任务历史">
+        <Link href="/jobs" className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "ml-auto text-faint")} title="历史记录" aria-label="Agent 任务历史">
           <History className="size-3.5" />
         </Link>
       </div>

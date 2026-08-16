@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, Check, Copy, ExternalLink, ImageUp, Search, ShieldCheck, UploadCloud, X } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { formatJobSearchKeywords, selectTargetRoleTags, type ExploreFilters } from "@/lib/explore";
 import { AgentTaskHandoffDialog } from "@/components/generate-pdf-button";
@@ -76,7 +77,7 @@ export function ExplorerView({
                 href={source.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-button border border-outline-border bg-outline-bg px-3 py-2 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover"
+                className={buttonVariants({ variant: "tertiary" })}
               >
                 {source.name}
                 <ExternalLink className="size-3.5 text-icon-muted" aria-hidden="true" />
@@ -294,9 +295,9 @@ export function ScreenshotEvaluate({ page = "/cn-diagnose" }: { page?: string })
               <img src={screenshot.dataUrl} alt={`招聘截图 ${index + 1}：${screenshot.name}`} className="aspect-[4/3] w-full object-contain" />
               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-background/90 px-1.5 py-1 text-[10px] text-muted backdrop-blur-sm">
                 <span className="min-w-0 truncate">{index + 1}. {screenshot.name}</span>
-                <button type="button" onClick={() => setScreenshots((current) => current.filter((item) => item.id !== screenshot.id))} className="grid size-5 shrink-0 place-items-center rounded text-icon-muted hover:bg-surface-hover hover:text-foreground" aria-label={`移除招聘截图 ${index + 1}`}>
+                <Button type="button" variant="ghost" size="icon-sm" onClick={() => setScreenshots((current) => current.filter((item) => item.id !== screenshot.id))} className="shrink-0 text-icon-muted" aria-label={`移除招聘截图 ${index + 1}`}>
                   <X className="size-3" aria-hidden="true" />
-                </button>
+                </Button>
               </div>
             </div>
           ))}
@@ -304,18 +305,17 @@ export function ScreenshotEvaluate({ page = "/cn-diagnose" }: { page?: string })
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
+        <Button
           ref={triggerRef}
           type="button"
           disabled={!screenshots.length || isSaving}
           onClick={() => void beginHandoff()}
           aria-haspopup="dialog"
           aria-expanded={handoffOpen}
-          className="inline-flex min-h-10 items-center gap-2 rounded-button bg-brand px-4 text-sm font-semibold text-brand-foreground transition-colors hover:bg-brand-200 disabled:cursor-not-allowed disabled:opacity-45"
         >
           <Bot className="size-4" aria-hidden="true" />
           {isSaving ? "正在保存到本地…" : job?.artifacts?.some((artifact) => artifact.path.startsWith("data/task-attachments/")) ? "查看 Agent 指令" : "保存并交给 Agent 评估"}
-        </button>
+        </Button>
         <span className="text-xs leading-5 text-faint">本地保存位置：data/task-attachments/&lt;任务ID&gt;/；评估报告会保留截图和路径。</span>
       </div>
       {error && <p className="mt-2 text-xs text-danger">{error}</p>}
@@ -372,17 +372,19 @@ export function CopyTagValuesButton({ label, values }: { label: string; values: 
   };
 
   return (
-    <button
+    <Button
       type="button"
+      variant="tertiary"
+      size="sm"
       onClick={() => void copy()}
       disabled={values.length === 0}
-      className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-button border border-outline-border bg-outline-bg px-2.5 py-1 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover disabled:cursor-not-allowed disabled:opacity-40 max-sm:min-h-11"
+      className="shrink-0"
       aria-label={`复制${label}`}
       title={`复制${label}，可粘贴到招聘平台搜索`}
     >
       {copied ? <Check className="size-3.5 text-icon-success" aria-hidden="true" /> : <Copy className="size-3.5" aria-hidden="true" />}
       {copied ? "已复制" : "复制"}
-    </button>
+    </Button>
   );
 }
 

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Bug, X, ShieldCheck, ThumbsUp, Search, Loader2 } from "lucide-react";
 import { collect, fingerprint, issueBody, issueUrl, type Diag } from "@/lib/report/report";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
 import "@/lib/report/logbuf"; // install the client error ring-buffer (side-effect)
 
 type SimilarIssue = { number: number; title: string; url: string };
@@ -90,13 +92,15 @@ export function BetaBanner() {
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="secondary"
+        size="sm"
         onClick={openReport}
-        className="fixed bottom-3 right-3 z-[70] inline-flex items-center justify-center gap-1 rounded-full border border-brand/30 bg-surface/90 px-3 py-1.5 text-xs font-medium text-brand-text shadow-lg backdrop-blur-md transition-colors hover:bg-brand-soft max-sm:min-h-[44px] max-sm:px-4"
+        className="fixed bottom-3 right-3 z-[70] shadow-lg"
       >
         <Bug className="size-3" /> 反馈问题
-      </button>
+      </Button>
 
       {open && diag && (
         <div className="fixed inset-0 z-[96] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="反馈问题" onClick={() => setOpen(false)}>
@@ -104,11 +108,12 @@ export function BetaBanner() {
             <div className="mb-3 flex items-center gap-2">
               <Bug className="size-4 text-icon-brand" />
               <h2 className="text-sm font-semibold text-foreground">反馈问题 · {diag.channel}</h2>
-              <button onClick={() => setOpen(false)} aria-label="关闭" className="ml-auto text-faint transition-colors hover:text-foreground">
+              <Button type="button" variant="ghost" size="icon-sm" onClick={() => setOpen(false)} aria-label="关闭" className="ml-auto text-faint">
                 <X className="size-4" />
-              </button>
+              </Button>
             </div>
             <textarea
+              data-ui-control
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               rows={4}
@@ -117,25 +122,28 @@ export function BetaBanner() {
               className="w-full resize-none rounded-lg border border-border bg-surface/60 px-3 py-2 text-sm outline-none transition focus:border-brand/50"
             />
             {desc.trim().split(/\s+/).length >= 3 && (
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={checkExisting}
                 disabled={searching}
-                className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-brand disabled:opacity-60"
+                className="mt-2 text-muted"
               >
                 {searching ? <Loader2 className="size-3 animate-spin" /> : <Search className="size-3" />} 先查找相似反馈
-              </button>
+              </Button>
             )}
             <details className="mt-3 rounded-lg border border-border bg-surface/40">
               <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-muted">查看将要附带的诊断信息，提交前可检查 ↓</summary>
               <pre className="max-h-52 overflow-auto whitespace-pre-wrap border-t border-border px-3 py-2 font-mono text-[11px] leading-relaxed text-muted">{issueBody(diag, desc)}</pre>
             </details>
             {similar.length > 0 && (
-              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-                <p className="text-xs font-medium text-amber-700 dark:text-amber-400">可能已有相同问题，优先为现有 issue 点赞：</p>
+              <div data-ui-feedback="inline" data-tone="warning" className="mt-3 px-3 py-2">
+                <p className="text-xs font-medium">可能已有相同问题，优先为现有 issue 点赞：</p>
                 <ul className="mt-1.5 space-y-1">
                   {similar.map((s) => (
                     <li key={s.number}>
-                      <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-foreground underline-offset-2 transition-colors hover:text-brand hover:underline">
+                      <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-foreground underline-offset-2 transition-colors hover:text-interactive-hover hover:underline">
                         <ThumbsUp className="size-3 shrink-0 text-icon-warning" />
                         <span className="font-mono">#{s.number}</span> {s.title.slice(0, 60)}
                       </a>
@@ -148,15 +156,15 @@ export function BetaBanner() {
               <ShieldCheck className="mt-px size-3.5 shrink-0 text-icon-success" /> 你确认后才会打开 GitHub issue；点击前不会发送任何内容，也不会包含简历、个人配置、投递回答或岗位网址。
             </p>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setOpen(false)} className="rounded-full px-4 py-2 text-sm text-muted transition-colors hover:text-foreground">
+              <Button type="button" variant="tertiary" onClick={() => setOpen(false)}>
                 取消
-              </button>
+              </Button>
               <a
                 href={issueUrl(diag, desc)}
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => setOpen(false)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-200"
+                className={cn(buttonVariants({ variant: "primary" }))}
               >
                 <Bug className="size-4" /> 打开 GitHub issue
               </a>

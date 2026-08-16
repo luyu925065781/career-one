@@ -31,12 +31,18 @@
   --color-background: var(--bg);
   --color-surface: var(--surface);
   --color-surface-hover: var(--surface-hover);
+  --color-glass-surface: var(--glass-surface);
+  --color-glass-surface-raised: var(--glass-surface-raised);
+  --color-glass-border: var(--glass-border);
+  --color-glass-highlight: var(--glass-highlight);
   --color-border: var(--border);
   --color-foreground: var(--fg);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-landing: var(--landing);
   --color-brand-text: var(--brand-text);
+  --color-switch-thumb: var(--switch-thumb);
+  --color-interactive-hover: var(--interactive-hover);
   --color-accent-yellow: var(--accent-yellow);
   --color-accent-orange: var(--accent-orange);
   --color-accent-red: var(--accent-red);
@@ -60,6 +66,8 @@
   --color-action-secondary: var(--action-secondary);
   --color-action-secondary-hover: var(--action-secondary-hover);
   --color-action-secondary-active: var(--action-secondary-active);
+  --color-action-secondary-border: var(--action-secondary-border);
+  --color-action-secondary-border-hover: var(--action-secondary-border-hover);
   --color-action-secondary-foreground: var(--action-secondary-foreground);
   --color-outline-bg: var(--outline-bg);
   --color-outline-bg-hover: var(--outline-bg-hover);
@@ -89,6 +97,8 @@
 
 :root {
   --layout-page-max: 72rem;
+  --control-height-comfortable: 2.75rem;
+  --control-height-compact: 2.25rem;
   --gradient-primary: linear-gradient(135deg, #facc15 0%, #fde047 100%);
   --gradient-primary-hover: linear-gradient(135deg, #fbbf24 0%, #facc15 100%);
   --gradient-primary-active: linear-gradient(135deg, #d97706 0%, #eab308 100%);
@@ -97,12 +107,19 @@
   --bg: #f7f6f3; /* warm off-white (docs stone tone) */
   --surface: #ffffff;
   --surface-hover: #f3f4f6;
+  --glass-surface: rgb(255 255 255 / 0.56);
+  --glass-surface-raised: rgb(255 255 255 / 0.72);
+  --glass-border: rgb(17 24 39 / 0.1);
+  --glass-highlight: rgb(255 255 255 / 0.9);
+  --glass-blur: 12px;
   --border: #e5e7eb;
   --fg: #111827;
   --muted: #4b5563;
   --faint: #6b7280;
   --landing: #111827;
   --brand-text: #111827;
+  --switch-thumb: #ffffff;
+  --interactive-hover: #1d4ed8;
   --brand-accent-text: #ca8a04;
   --accent-yellow: #facc15;
   --accent-orange: #f59e0b;
@@ -110,15 +127,17 @@
   --accent-green: #22c55e;
   --accent-blue: #3b82f6;
   --accent-purple: #4d44d6;
-  --metric-brand: #b48300;
+  --metric-brand: #e07900;
   --metric-warning: #ea580c;
   --metric-info: #2563eb;
   --metric-success: #059669;
   --metric-danger: #e11d48;
   --metric-purple: #4d44d6;
-  --action-secondary: #f3f4f6;
-  --action-secondary-hover: #e5e7eb;
-  --action-secondary-active: #d1d5db;
+  --action-secondary: rgb(255 255 255 / 0.64);
+  --action-secondary-hover: rgb(17 24 39 / 0.07);
+  --action-secondary-active: rgb(17 24 39 / 0.11);
+  --action-secondary-border: rgb(17 24 39 / 0.14);
+  --action-secondary-border-hover: rgb(17 24 39 / 0.28);
   --action-secondary-foreground: #111827;
   --icon-default: #374151;
   --icon-muted: #6b7280;
@@ -161,22 +180,30 @@
   --bg: #0a0a0a;
   --surface: #161616;
   --surface-hover: #232323;
+  --glass-surface: rgb(255 255 255 / 0.055);
+  --glass-surface-raised: rgb(255 255 255 / 0.1);
+  --glass-border: rgb(255 255 255 / 0.12);
+  --glass-highlight: rgb(255 255 255 / 0.16);
   --border: #262626;
   --fg: #ffffff;
   --muted: #9ca3af;
   --faint: #9ca3af;
   --landing: #ffffff;
   --brand-text: #ffffff;
+  --switch-thumb: #f9fafb;
+  --interactive-hover: #60a5fa;
   --brand-accent-text: #facc15;
-  --metric-brand: #facc15;
+  --metric-brand: #fbbf24;
   --metric-warning: #fb923c;
   --metric-info: #60a5fa;
   --metric-success: #10b981;
   --metric-danger: #fb7185;
   --metric-purple: #a5b4fc;
-  --action-secondary: rgb(255 255 255 / 0.12);
-  --action-secondary-hover: rgb(255 255 255 / 0.18);
-  --action-secondary-active: rgb(255 255 255 / 0.24);
+  --action-secondary: rgb(255 255 255 / 0.07);
+  --action-secondary-hover: rgb(255 255 255 / 0.14);
+  --action-secondary-active: rgb(255 255 255 / 0.2);
+  --action-secondary-border: rgb(255 255 255 / 0.16);
+  --action-secondary-border-hover: rgb(255 255 255 / 0.42);
   --action-secondary-foreground: #ffffff;
   --icon-default: #d1d5db;
   --icon-muted: #9ca3af;
@@ -222,15 +249,228 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Action controls have one product-wide silhouette. Disclosure rows and tabs
-   own their container/selection geometry, so neither inherits the action-button
+/* Action controls have one product-wide silhouette. Disclosure rows, tabs, and
+   switches own their container/selection geometry, so none inherits the action-button
    pill. !important prevents other page-local radius utilities from drifting
    ordinary action buttons away from the semantic token. */
-button:not([data-button-shape="container"]):not([role="tab"]),
+button:not([data-button-shape="container"]):not([role="tab"]):not([role="switch"]),
 input[type="submit"],
 input[type="button"],
 input[type="reset"] {
   border-radius: var(--radius-button) !important;
+}
+
+/* Structural controls are stateful containers rather than action buttons. Their
+   shape stays local to the declared appearance, while semantic ARIA state owns
+   color, hover, focus, disabled feedback, and switch-track movement globally. */
+button[data-ui-structural] {
+  outline: none;
+  transition-property: color, background-color, border-color, box-shadow, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: ease;
+}
+
+:where(button[data-ui-structural]:not([data-ui-structural="switch-track"])) {
+  min-height: var(--control-height-compact);
+}
+
+button[data-ui-structural][data-density="comfortable"] {
+  min-height: var(--control-height-comfortable);
+}
+
+button[data-ui-structural][data-density="spacious"] {
+  min-height: 3.5rem;
+}
+
+button[data-ui-structural]:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+button[data-ui-structural]:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+button[data-ui-structural="tab-line"] {
+  border-bottom-color: transparent;
+  color: var(--muted);
+}
+
+button[data-ui-structural="tab-line"]:is([aria-selected="true"], [aria-pressed="true"]) {
+  border-bottom-color: var(--color-brand);
+  color: var(--fg);
+}
+
+button[data-ui-structural="tab-line"]:is([aria-selected="false"], [aria-pressed="false"]):hover {
+  background: var(--surface-hover);
+  color: var(--interactive-hover);
+}
+
+button[data-ui-structural="segment"] {
+  color: var(--muted);
+}
+
+button[data-ui-structural="segment"]:is([aria-selected="true"], [aria-pressed="true"]) {
+  background: var(--color-brand-soft);
+  color: var(--brand-text);
+}
+
+button[data-ui-structural="segment"]:is([aria-selected="false"], [aria-pressed="false"]):hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+button[data-ui-structural="chip"] {
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+button[data-ui-structural="chip"][aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--color-brand) 44%, var(--border));
+  background: var(--color-brand-soft);
+  color: var(--brand-text);
+}
+
+button[data-ui-structural="chip"][aria-pressed="false"]:hover {
+  border-color: var(--outline-border-hover);
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+button[data-ui-structural="choice-card"] {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface) 50%, transparent);
+  color: var(--muted);
+}
+
+button[data-ui-structural="choice-card"][aria-pressed="true"],
+[data-ui-choice-shell]:has(> button[data-ui-structural="choice-card"][aria-pressed="true"]) {
+  border-color: color-mix(in srgb, var(--color-brand) 50%, var(--border));
+  background: var(--color-brand-soft);
+  color: var(--fg);
+}
+
+button[data-ui-structural="choice-card"][aria-pressed="false"]:not(:disabled):hover {
+  border-color: var(--outline-border-hover);
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+[data-ui-choice-shell] > button[data-ui-structural="choice-card"] {
+  border: 0;
+  background: transparent;
+}
+
+[data-ui-choice-shell]:has(> button[data-ui-structural="choice-card"]:focus-visible) {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+[data-ui-choice-shell] > button[data-ui-structural="choice-card"]:focus-visible {
+  outline: none;
+}
+
+button[data-ui-structural="switch-track"],
+button[data-ui-structural="switch-row"] [data-ui-switch-track] {
+  border-color: var(--border);
+  background: var(--surface-hover);
+}
+
+button[data-ui-structural="switch-row"] {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface) 50%, transparent);
+}
+
+button[data-ui-structural="switch-track"][aria-checked="true"],
+button[data-ui-structural="switch-row"][aria-checked="true"] [data-ui-switch-track] {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+}
+
+button[data-ui-structural="switch-track"]:hover,
+button[data-ui-structural="switch-row"]:hover {
+  border-color: var(--outline-border-hover);
+}
+
+button[data-ui-structural="switch-row"]:hover {
+  background: var(--surface-hover);
+}
+
+button[data-ui-structural] [data-ui-switch-thumb] {
+  background: var(--switch-thumb);
+  box-shadow: var(--elevation-raised);
+  transform: translateX(0.125rem);
+  transition: transform 160ms ease;
+}
+
+button[data-ui-structural][aria-checked="true"] [data-ui-switch-thumb] {
+  transform: translateX(1.25rem);
+}
+
+button[data-ui-structural="disclosure-inline"] {
+  color: var(--muted);
+}
+
+button[data-ui-structural="disclosure-inline"]:hover {
+  color: var(--interactive-hover);
+}
+
+button[data-ui-structural="disclosure-row"]:hover {
+  background: var(--surface-hover);
+}
+
+@media (max-width: 639px) {
+  :where(button[data-ui-structural]:not([data-ui-structural="switch-track"])) {
+    min-height: var(--control-height-comfortable);
+  }
+}
+
+/* Feedback containers share visual hierarchy without inventing accessibility
+   semantics. Pages choose alert/status only for messages that are actually
+   inserted or updated; static guidance can use the same surface without a live
+   region. Layout remains local while tone, border, surface, and radius stay
+   product-owned here. */
+[data-ui-feedback] {
+  --feedback-border: var(--state-info-border);
+  --feedback-surface: var(--state-info-surface);
+  --feedback-foreground: var(--state-info);
+  border: 1px solid;
+  border-color: var(--feedback-border);
+  background: var(--feedback-surface);
+  color: var(--feedback-foreground);
+}
+
+[data-ui-feedback="inline"] {
+  border-radius: var(--radius-control);
+}
+
+[data-ui-feedback="callout"] {
+  border-radius: var(--radius-card);
+}
+
+[data-ui-feedback][data-tone="info"] {
+  --feedback-border: var(--state-info-border);
+  --feedback-surface: var(--state-info-surface);
+  --feedback-foreground: var(--state-info);
+}
+
+[data-ui-feedback][data-tone="success"] {
+  --feedback-border: var(--state-success-border);
+  --feedback-surface: var(--state-success-surface);
+  --feedback-foreground: var(--state-success);
+}
+
+[data-ui-feedback][data-tone="warning"] {
+  --feedback-border: var(--state-warning-border);
+  --feedback-surface: var(--state-warning-surface);
+  --feedback-foreground: var(--state-warning);
+}
+
+[data-ui-feedback][data-tone="danger"] {
+  --feedback-border: var(--state-danger-border);
+  --feedback-surface: var(--state-danger-surface);
+  --feedback-foreground: var(--state-danger);
 }
 
 /* Form controls use a border-only focus treatment. This deliberately removes
@@ -241,6 +481,68 @@ textarea:focus,
 select:focus,
 [contenteditable="true"]:focus {
   box-shadow: none !important;
+}
+
+/* Native form elements opt into one shared contract without requiring a
+   framework wrapper. Layout utilities may still set width, padding, font or
+   textarea height; visual states and density remain product-owned here. */
+[data-ui-control]:not([data-ui-control="unstyled"]) {
+  min-height: var(--control-height-comfortable);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--fg);
+  outline: none;
+  transition: border-color 150ms ease, background-color 150ms ease, opacity 150ms ease;
+}
+
+:is(input, select)[data-ui-control]:not([data-ui-control="unstyled"]) {
+  height: var(--control-height-comfortable);
+}
+
+[data-ui-control]:not([data-ui-control="unstyled"])::placeholder {
+  color: var(--faint);
+}
+
+[data-ui-control]:not([data-ui-control="unstyled"]):hover:not(:disabled) {
+  border-color: var(--outline-border-hover);
+}
+
+[data-ui-control]:not([data-ui-control="unstyled"]):focus {
+  border-color: var(--outline-border-hover);
+}
+
+[data-ui-control]:not([data-ui-control="unstyled"]):disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+[data-ui-control][data-density="compact"],
+[data-density="compact"] [data-ui-control]:not([data-ui-control="unstyled"]) {
+  min-height: var(--control-height-compact);
+}
+
+:is(input, select)[data-ui-control][data-density="compact"],
+[data-density="compact"] :is(input, select)[data-ui-control]:not([data-ui-control="unstyled"]) {
+  height: var(--control-height-compact);
+}
+
+[data-ui-control][data-state="warning"] {
+  border-color: var(--state-warning-border);
+}
+
+[data-ui-control][aria-invalid="true"] {
+  border-color: var(--state-danger-border);
+}
+
+@media (max-width: 639px) {
+  [data-ui-control]:not([data-ui-control="unstyled"]) {
+    min-height: var(--control-height-comfortable);
+  }
+
+  :is(input, select)[data-ui-control]:not([data-ui-control="unstyled"]) {
+    height: var(--control-height-comfortable);
+  }
 }
 
 /* Native scrollbar thumbs derive their length from each engine and OS. Hide
@@ -316,6 +618,46 @@ select:focus,
   }
 }
 
+/* Shared glass actions: neutral translucent fill, a restrained hairline and a
+   soft radial hover wash. Keep text and icons above the effect through the
+   isolated stacking context; no page-local color or blur values are needed. */
+.glass-secondary {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--action-secondary);
+  border: 1px solid var(--action-secondary-border);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(118%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(118%);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.glass-secondary::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: -1;
+  width: 150%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--action-secondary-hover);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1), opacity 120ms ease;
+}
+.glass-secondary:hover {
+  border-color: var(--action-secondary-border-hover);
+}
+.glass-secondary:hover::after {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.glass-secondary:active::after {
+  background: var(--action-secondary-active);
+}
+
 /* Component-level hero atmosphere. Keep these selectors outside Tailwind's
    utility layer so development and production builds both emit them eagerly. */
 .hero-glow-ambient {
@@ -332,9 +674,10 @@ select:focus,
     );
 }
 .hero-glow-glass {
-  background: color-mix(in srgb, var(--surface) 48%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(125%);
-  backdrop-filter: blur(16px) saturate(125%);
+  background: linear-gradient(135deg, var(--glass-surface-raised), var(--glass-surface));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(118%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(118%);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
 }
 .dark .hero-glow-ambient {
   background-image:
@@ -349,10 +692,6 @@ select:focus,
       transparent 70%
     );
 }
-.dark .hero-glow-glass {
-  background: color-mix(in srgb, var(--bg) 45%, transparent);
-}
-
 /* ── Animations ported from the docs home ───────────────────────────────── */
 @keyframes cli-cursor-pulse {
   0%, 50% { opacity: 1; }
@@ -384,7 +723,8 @@ select:focus,
 @media (prefers-reduced-motion: reduce) {
   .cli-cursor,
   .animate-terminal-popup,
-  .liquid-glass-control {
+  .glass-secondary,
+  .glass-secondary::after {
     animation: none;
     transition: none;
   }

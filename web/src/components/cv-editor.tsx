@@ -16,9 +16,9 @@ import type { InterviewStory } from "@/lib/career-one";
 import { cn } from "@/lib/cn";
 import { PRIMARY_NAV_ITEMS } from "@/lib/nav-items";
 import { parseStoryBank, serializeStoryMarkdown } from "@/lib/story-bank.mjs";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 
-const STORY_ACTION_CLASS = "group inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-outline-border bg-outline-bg px-3 py-1 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-border-hover focus-visible:ring-offset-2 focus-visible:ring-offset-surface max-sm:min-h-11";
+const STORY_ACTION_CLASS = cn(buttonVariants({ variant: "tertiary", size: "sm" }), "group");
 const PageIcon = PRIMARY_NAV_ITEMS.cv.icon;
 const JourneyCvIcon = PRIMARY_NAV_ITEMS.cv.icon;
 const JourneyProfileIcon = UserRound;
@@ -83,20 +83,15 @@ export function CvEditor({
             )}
           </p>
         </div>
-        <button
+        <Button
           type="button"
+          variant={dirty ? "primary" : "tertiary"}
           onClick={save}
           disabled={saving || !dirty}
-          className={cn(
-            "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-medium transition-colors max-sm:min-h-[44px]",
-            dirty
-              ? "bg-brand text-brand-foreground hover:bg-brand-200"
-              : "border border-border bg-surface text-muted",
-          )}
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : saved ? <Check className="size-4" /> : null}
           {saved ? "已保存" : "保存"}
-        </button>
+        </Button>
       </div>
 
       {!exists && loaded && <CvAgentOnboarding />}
@@ -434,7 +429,7 @@ function QueuedAgentTaskAction({
     return (
       <Link
         href={`/jobs/${job.id}`}
-        className={cn(buttonVariants({ variant: "tertiary" }), "min-h-11 rounded-full px-5 py-2")}
+        className={cn(buttonVariants({ variant: "tertiary" }), "min-h-11 px-5 py-2")}
       >
         <Bot className="size-4 text-icon-brand" aria-hidden="true" />
         {job.runStatus === "waiting_approval" ? labels.waitingApproval : labels.done}
@@ -444,15 +439,15 @@ function QueuedAgentTaskAction({
 
   return (
     <>
-      <button
+      <Button
         ref={triggerRef}
         type="button"
+        size="lg"
         onClick={job?.runStatus === "queued" || job?.status === "running" || job?.status === "error"
           ? showExistingHandoff
           : beginAgentHandoff}
         aria-haspopup="dialog"
         aria-expanded={handoffOpen}
-        className={cn(buttonVariants({ variant: "primary" }), "min-h-11 rounded-full px-5 py-2")}
       >
         {job?.status === "running" ? (
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -468,7 +463,7 @@ function QueuedAgentTaskAction({
             : job?.status === "error"
               ? "回到 Agent 重试"
               : labels.idle}
-      </button>
+      </Button>
       <AgentTaskHandoffDialog
         handoff={handoff}
         open={handoffOpen}
@@ -616,13 +611,15 @@ export function StoryActions({ story }: { story: InterviewStory }) {
             Agent 正在优化…
           </Link>
         ) : (
-          <button
+          <Button
             ref={agentTriggerRef}
             type="button"
+            variant="tertiary"
+            size="sm"
             onClick={job?.runStatus === "queued" || job?.status === "error" ? showExistingHandoff : beginAgentHandoff}
             aria-haspopup="dialog"
             aria-expanded={handoffOpen}
-            className={STORY_ACTION_CLASS}
+            className="group"
             title="由你的 Codex、WorkBuddy 或其他 Agent 优化这条面试故事"
           >
             {job?.status === "error" ? (
@@ -635,16 +632,18 @@ export function StoryActions({ story }: { story: InterviewStory }) {
               : job?.status === "error"
                 ? "回到 Agent 重试"
                 : "在 Agent 中优化"}
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="button"
+          variant="tertiary"
+          size="sm"
           onClick={openManualEditor}
-          className={STORY_ACTION_CLASS}
+          className="group"
         >
           <PencilLine className="size-3.5 text-icon-muted transition-colors group-hover:text-icon-brand" />
           手动维护
-        </button>
+        </Button>
       </div>
 
       <AgentTaskHandoffDialog
@@ -677,15 +676,17 @@ export function StoryActions({ story }: { story: InterviewStory }) {
                   本次只会更新这一条故事；其他故事保持原样，内容仍保存在 <code className="font-mono text-foreground">interview-prep/story-bank.md</code>。
                 </p>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setManualOpen(false)}
                 disabled={saving}
-                className="rounded-full p-2 text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-50"
+                className="text-muted"
                 aria-label="关闭手动编辑"
               >
                 <X className="size-5" />
-              </button>
+              </Button>
             </header>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
@@ -710,15 +711,15 @@ export function StoryActions({ story }: { story: InterviewStory }) {
 
             <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-6">
               <p className="text-xs leading-5 text-faint">保存时会校验故事格式、检查版本冲突，并为旧内容创建本地备份。</p>
-              <button
+              <Button
                 type="button"
+                size="lg"
                 onClick={saveStory}
                 disabled={!loaded || !dirty || saving || !baseHash}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-200 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {saving ? <Loader2 className="size-4 animate-spin" /> : saved ? <Check className="size-4" /> : null}
                 {saving ? "正在保存" : saved ? "已保存" : "确认并保存"}
-              </button>
+              </Button>
             </footer>
           </section>
         </div>
@@ -743,6 +744,7 @@ function MarkdownWorkspace({
   return (
     <div className={cn("grid gap-4 lg:grid-cols-2", className)}>
       <textarea
+        data-ui-control
         value={content}
         onChange={(event) => onChange(event.target.value)}
         spellCheck={false}

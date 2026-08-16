@@ -6,6 +6,8 @@ import { Sparkles, X, FileText, ScanSearch, ShieldCheck, Coins } from "lucide-re
 import { cn } from "@/lib/cn";
 import { parseReport, scoreTone, legitimacyTone } from "@/lib/format";
 import { useJobs, type Job } from "@/components/jobs/job-store";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const SEEN_KEY = "career-one:first-score-seen";
 const LEGACY_SEEN_KEY = "career-one:first-score-seen";
@@ -120,9 +122,9 @@ export function FirstScoreView() {
       <style>{STYLE}</style>
       <div ref={panelRef} className="co-aha__card" onClick={(e) => e.stopPropagation()}>
         <div className="co-aha__glow" />
-        <button onClick={close} aria-label="关闭" className="absolute right-3 top-3 z-10 rounded-md p-1.5 text-faint transition hover:text-foreground">
+        <Button type="button" variant="ghost" size="icon-sm" onClick={close} aria-label="关闭" className="absolute right-3 top-3 z-10 text-faint">
           <X className="size-4" />
-        </button>
+        </Button>
 
         <div className="relative px-7 pb-7 pt-8">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-brand">
@@ -139,7 +141,7 @@ export function FirstScoreView() {
                 <div
                   className={cn(
                     "co-aha__grade text-5xl font-semibold",
-                    tone === "good" ? "text-emerald-500" : tone === "warn" ? "text-amber-500" : tone === "bad" ? "text-red-400" : "text-muted",
+                    tone === "good" ? "text-metric-success" : tone === "warn" ? "text-metric-warning" : tone === "bad" ? "text-metric-danger" : "text-muted",
                   )}
                 >
                   {score}
@@ -155,14 +157,9 @@ export function FirstScoreView() {
           </blockquote>
 
           {legit && (
-            <div
-              className={cn(
-                "mt-4 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
-                legitimacyTone(legit) === "good" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-              )}
-            >
+            <Badge tone={legitimacyTone(legit) === "good" ? "good" : "warn"} size="sm" className="mt-4 gap-1.5 px-2.5 py-1 text-[11px] font-medium">
               <ShieldCheck className="size-3" /> 岗位真实性：{legit}
-            </div>
+            </Badge>
           )}
 
           <p className="mt-5 flex items-center gap-1.5 text-[12px] text-faint">
@@ -170,24 +167,25 @@ export function FirstScoreView() {
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <button
+            <Button
+              type="button"
               onClick={() => {
                 close();
                 router.push("/pipeline?tab=EVALUATED");
               }}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:brightness-110"
             >
               <FileText className="size-4" /> 查看完整报告
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant="tertiary"
               onClick={() => {
                 close();
                 router.push("/cn-diagnose");
               }}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-outline-border bg-outline-bg px-4 py-2.5 text-sm font-medium text-outline-text transition hover:border-outline-border-hover hover:bg-outline-bg-hover"
             >
               <ScanSearch className="size-4" /> 评估另一个岗位
-            </button>
+            </Button>
           </div>
         </div>
       </div>

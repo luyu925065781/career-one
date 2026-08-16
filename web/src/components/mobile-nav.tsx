@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { CoMark } from "@/components/co-mark";
+import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { WorkerPills } from "@/components/jobs/worker-pills";
 import { NAV_ITEMS, isActivePath } from "@/lib/nav-items";
@@ -109,16 +110,18 @@ export function MobileNav() {
         </Link>
         <div className="ml-auto flex items-center gap-0.5">
           <ThemeToggle />
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setOpen(true)}
             aria-label="打开菜单"
             aria-expanded={open}
-            className="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2 text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+            className="relative text-muted"
           >
             <Menu className="size-5" />
             {running > 0 && <span aria-hidden className="co-pulse absolute right-1.5 top-1.5 size-2 rounded-full bg-brand ring-2 ring-surface" />}
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -137,14 +140,16 @@ export function MobileNav() {
       >
         <div className="flex items-center justify-between px-4 py-3">
           <span className={`font-display text-lg text-landing`}>菜单</span>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setOpen(false)}
             aria-label="关闭菜单"
-            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+            className="text-muted"
           >
             <X className="size-5" />
-          </button>
+          </Button>
         </div>
 
         <nav className="flex flex-col gap-1 px-3">

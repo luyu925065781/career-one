@@ -11,6 +11,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
 
 type Cli = {
   id: string;
@@ -154,13 +155,10 @@ export function ConfigForm() {
                   return (
                     <div
                       key={c.id}
+                      data-ui-choice-shell
                       className={cn(
                         "flex items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors",
-                        selected
-                          ? "border-brand/50 bg-brand-soft"
-                          : c.installed
-                            ? "border-border bg-surface/50"
-                            : "border-border/60 bg-surface/20",
+                        c.installed ? "border-border bg-surface/50" : "border-border/60 bg-surface/20",
                       )}
                     >
                       {c.installed ? (
@@ -170,6 +168,9 @@ export function ConfigForm() {
                       )}
                       <button
                         type="button"
+                        data-button-shape="container"
+                        data-ui-structural="choice-card"
+                        aria-pressed={selected}
                         disabled={!c.installed}
                         onClick={() => selectCli(c.id)}
                         className={cn(
@@ -229,13 +230,11 @@ export function ConfigForm() {
                   <button
                     key={p.id}
                     type="button"
+                    data-button-shape="container"
+                    data-ui-structural="choice-card"
+                    aria-pressed={provider === p.id}
                     onClick={() => setProvider(p.id)}
-                    className={cn(
-                      "rounded-xl border px-4 py-2.5 text-left text-sm transition-colors",
-                      provider === p.id
-                        ? "border-brand/50 bg-brand-soft text-foreground"
-                        : "border-border bg-surface/50 text-muted hover:bg-surface-hover hover:text-foreground",
-                    )}
+                    className="rounded-xl border px-4 py-2.5 text-left text-sm"
                   >
                     {p.label}
                   </button>
@@ -248,6 +247,7 @@ export function ConfigForm() {
               </label>
               <p className="mb-2 text-xs text-faint">使用 OpenAI、Anthropic 等服务商的 Key。</p>
               <input
+                data-ui-control
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
@@ -275,9 +275,11 @@ export function ConfigForm() {
       </label>
       <button
         type="button"
-        data-button-shape="container"
+        role="switch"
+        data-ui-structural="switch-row"
+        aria-checked={logos}
         onClick={() => setLogos((v) => !v)}
-        className="flex w-full items-center justify-between gap-4 rounded-xl border border-border bg-surface/50 px-4 py-3 text-left transition-colors hover:bg-surface-hover"
+        className="flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left"
       >
         <span className="min-w-0">
           <span className="block text-sm font-medium text-foreground">公司 Logo</span>
@@ -286,29 +288,24 @@ export function ConfigForm() {
           </span>
         </span>
         <span
-          className={cn(
-            "relative h-6 w-11 shrink-0 rounded-full transition-colors",
-            logos ? "bg-brand" : "bg-surface-hover",
-          )}
+          data-ui-switch-track
+          className="relative h-6 w-11 shrink-0 rounded-full border"
         >
           <span
-            className={cn(
-              "absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform",
-              logos ? "translate-x-[1.375rem]" : "translate-x-0.5",
-            )}
+            data-ui-switch-thumb
+            className="absolute left-0 top-0.5 size-5 rounded-full"
           />
         </span>
       </button>
 
       <div className="mt-8 flex items-center gap-3">
-        <button
+        <Button
           type="button"
           onClick={save}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-200 max-sm:min-h-[44px]"
         >
           {saved ? <Check className="size-4" /> : null}
           {saved ? "已保存" : "保存设置"}
-        </button>
+        </Button>
         <span className="text-xs text-faint">本地优先 · 持续完善中</span>
       </div>
     </div>
@@ -333,16 +330,12 @@ function ModeCard({
   return (
     <button
       type="button"
+      data-button-shape="container"
+      data-ui-structural="choice-card"
+      aria-pressed={active}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
-      className={cn(
-        "flex flex-col gap-1.5 rounded-xl border px-4 py-3 text-left transition-colors",
-        disabled
-          ? "cursor-not-allowed border-border bg-surface/30 opacity-55"
-          : active
-            ? "border-brand/50 bg-brand-soft"
-            : "border-border bg-surface/50 hover:bg-surface-hover",
-      )}
+      className="flex flex-col gap-1.5 rounded-xl border px-4 py-3 text-left"
     >
       <Icon className={cn("size-4", active && !disabled ? "text-icon-brand" : "text-icon-muted")} />
       <span className="text-sm font-medium text-foreground">{title}</span>

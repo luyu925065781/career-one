@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { CompanyLogo } from "@/components/company-logo";
 import { useJobs, type Job } from "@/components/jobs/job-store";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 type TabId = "platforms" | "companies" | "rules";
@@ -190,7 +192,7 @@ export function PortalsView() {
   }
 
   if (!data) {
-    return <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error || "岗位来源配置不可用"}</div>;
+    return <div data-ui-feedback="inline" data-tone="danger" role="alert" className="px-4 py-3 text-sm">{error || "岗位来源配置不可用"}</div>;
   }
 
   const savePlatforms = () => mutate(
@@ -250,22 +252,25 @@ export function PortalsView() {
             key={id}
             type="button"
             role="tab"
+            data-ui-structural="tab-line"
+            data-density="comfortable"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={cn(
-              "relative flex min-h-12 items-center justify-center gap-2 px-3 text-sm font-medium transition-colors",
-              tab === id ? "text-brand" : "text-muted hover:text-foreground",
-            )}
+            className="relative flex items-center justify-center gap-2 border-b-2 px-3 text-sm font-medium"
           >
             <Icon className="size-4" />
             {label}
-            {tab === id && <span className="absolute inset-x-0 -bottom-px h-0.5 bg-brand" />}
           </button>
         ))}
       </div>
 
       {(notice || error) && (
-        <div className={cn("mt-4 flex items-start gap-2 rounded-md border px-3 py-2.5 text-sm", error ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400")}>
+        <div
+          data-ui-feedback="inline"
+          data-tone={error ? "danger" : "success"}
+          role={error ? "alert" : "status"}
+          className="mt-4 flex items-start gap-2 px-3 py-2.5 text-sm"
+        >
           {error ? <AlertCircle className="mt-0.5 size-4 shrink-0" /> : <CheckCircle2 className="mt-0.5 size-4 shrink-0" />}
           {error || notice}
         </div>
@@ -344,7 +349,7 @@ function PlatformPanel({ platforms, saving, onToggle, onSave }: { platforms: Pla
               </div>
               <p className="mt-0.5 text-xs leading-relaxed text-muted">{platform.description}</p>
             </div>
-            <a href={platform.url} target="_blank" rel="noreferrer" aria-label={`打开${platform.name}`} title={`打开${platform.name}`} className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-button text-muted transition-colors hover:bg-surface-hover hover:text-brand">
+            <a href={platform.url} target="_blank" rel="noreferrer" aria-label={`打开${platform.name}`} title={`打开${platform.name}`} className={buttonVariants({ variant: "ghost", size: "icon" })}>
               <ExternalLink className="size-4" />
             </a>
             <Toggle checked={platform.enabled} label={`${platform.name}${platform.enabled ? "已启用" : "已停用"}`} onClick={() => onToggle(platform.id)} />
@@ -352,9 +357,9 @@ function PlatformPanel({ platforms, saving, onToggle, onSave }: { platforms: Pla
         ))}
       </div>
 
-      <button type="button" onClick={onSave} disabled={saving} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition hover:brightness-110 disabled:opacity-50">
+      <Button type="button" onClick={onSave} disabled={saving} className="mt-5 px-4 font-semibold">
         {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} 保存平台设置
-      </button>
+      </Button>
     </section>
   );
 }
@@ -407,12 +412,12 @@ function CompanyPanel({
           <h2 id="companies-title" className="text-lg font-semibold text-foreground">我的目标公司</h2>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">根据目标岗位优先推荐中国 AI Native、企业 AI 与协作软件公司。列表保存在本机，可随时启停、添加或移除。</p>
         </div>
-        <button type="button" onClick={onHealth} disabled={healthLoading} className="inline-flex min-h-10 items-center gap-2 rounded-md border border-outline-border bg-outline-bg px-3 py-2 text-sm text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover disabled:opacity-50">
+        <Button type="button" onClick={onHealth} disabled={healthLoading} variant="tertiary">
           {healthLoading ? <Loader2 className="size-4 animate-spin" /> : <Radar className="size-4" />} 检查招聘官网
-        </button>
+        </Button>
       </div>
 
-      {health && !health.available && <p className="mt-4 text-sm text-amber-700 dark:text-amber-400">当前工作区缺少招聘官网检查脚本，Agent 搜索模式仍可使用。</p>}
+      {health && !health.available && <p data-ui-feedback="inline" data-tone="warning" role="status" className="mt-4 px-3 py-2 text-sm">当前工作区缺少招聘官网检查脚本，Agent 搜索模式仍可使用。</p>}
 
       <div className="mt-5 divide-y divide-border border-y border-border">
         {companies.length === 0 && <p className="py-8 text-center text-sm text-muted">还没有目标公司，可以从下方推荐中添加。</p>}
@@ -430,9 +435,9 @@ function CompanyPanel({
               </div>
               {state?.status === "broken" && company.scanMethod !== "websearch" && <FixAffordance company={company.name} job={fixByCompany.get(company.name)} onFix={() => onFix(company.name)} />}
               <Toggle checked={company.enabled} label={`${company.name}${company.enabled ? "已启用" : "已停用"}`} onClick={() => onToggle(company)} disabled={saving === `toggle:${company.name}`} />
-              <button type="button" onClick={() => onRemove(company)} disabled={saving === `remove:${company.name}`} aria-label={`移除${company.name}`} title={`移除${company.name}`} className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md text-faint transition-colors hover:bg-red-500/10 hover:text-red-600 disabled:opacity-50">
+              <Button type="button" onClick={() => onRemove(company)} disabled={saving === `remove:${company.name}`} aria-label={`移除${company.name}`} title={`移除${company.name}`} variant="danger-ghost" size="icon">
                 {saving === `remove:${company.name}` ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-              </button>
+              </Button>
             </div>
           );
         })}
@@ -452,9 +457,9 @@ function CompanyPanel({
                   <h4 className="font-medium text-foreground">{company.name}</h4>
                   <p className="text-xs text-muted">{company.industry}</p>
                 </div>
-                <button type="button" onClick={() => onAdd(company)} disabled={saving === `add:${company.name}`} aria-label={`添加${company.name}`} title={`添加${company.name}`} className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md bg-brand-soft text-brand transition hover:bg-brand/15 disabled:opacity-50">
+                <Button type="button" onClick={() => onAdd(company)} disabled={saving === `add:${company.name}`} aria-label={`添加${company.name}`} title={`添加${company.name}`} variant="secondary" size="icon">
                   {saving === `add:${company.name}` ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-                </button>
+                </Button>
               </div>
               <p className="mt-3 text-xs leading-relaxed text-muted">{company.reason}</p>
             </article>
@@ -466,18 +471,18 @@ function CompanyPanel({
         <h3 className="text-sm font-semibold text-foreground">添加自定义公司</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="text-xs font-medium text-muted">公司名称
-            <input required value={companyName} onChange={(event) => onCompanyName(event.target.value)} placeholder="例如：某家 AI 创业公司" className="mt-1.5 w-full rounded-md border border-border bg-surface/40 px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-faint focus:border-brand/50" />
+            <input data-ui-control required value={companyName} onChange={(event) => onCompanyName(event.target.value)} placeholder="例如：某家 AI 创业公司" className="mt-1.5 w-full rounded-md border border-border bg-surface/40 px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-faint focus:border-brand/50" />
           </label>
           <label className="text-xs font-medium text-muted">行业方向
-            <input value={companyIndustry} onChange={(event) => onCompanyIndustry(event.target.value)} placeholder="例如：企业 AI / 智能体" className="mt-1.5 w-full rounded-md border border-border bg-surface/40 px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-faint focus:border-brand/50" />
+            <input data-ui-control value={companyIndustry} onChange={(event) => onCompanyIndustry(event.target.value)} placeholder="例如：企业 AI / 智能体" className="mt-1.5 w-full rounded-md border border-border bg-surface/40 px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-faint focus:border-brand/50" />
           </label>
         </div>
         <label className="mt-3 block text-xs font-medium text-muted">招聘官网（选填）
-          <input type="url" value={companyUrl} onChange={(event) => onCompanyUrl(event.target.value)} placeholder="https://…；留空则使用 Agent 公开搜索" className="mt-1.5 w-full rounded-md border border-border bg-surface/40 px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-faint focus:border-brand/50" />
+          <input data-ui-control type="url" value={companyUrl} onChange={(event) => onCompanyUrl(event.target.value)} placeholder="https://…；留空则使用 Agent 公开搜索" className="mt-1.5 w-full rounded-md border border-border bg-surface/40 px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-faint focus:border-brand/50" />
         </label>
-        <button type="submit" disabled={!companyName.trim() || saving === `add:${companyName}`} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition hover:brightness-110 disabled:opacity-50">
+        <Button type="submit" disabled={!companyName.trim() || saving === `add:${companyName}`} className="mt-4 px-4 font-semibold">
           {saving === `add:${companyName}` ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} 添加公司
-        </button>
+        </Button>
       </form>
     </section>
   );
@@ -493,7 +498,7 @@ function RulesPanel({ ruleText, onRuleText, queries, onQueries, meta, saving, on
           <h2 id="rules-title" className="text-lg font-semibold text-foreground">搜索与筛选规则</h2>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">这些规则已经由扫描内核使用。修改后会影响算法扫描、Agent 搜索和目标公司岗位筛选。</p>
         </div>
-        <span className="rounded bg-emerald-500/10 px-2 py-1 text-xs text-emerald-700 dark:text-emerald-400">已接入扫描内核</span>
+        <Badge tone="good" className="px-2 py-1">已接入扫描内核</Badge>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -519,13 +524,13 @@ function RulesPanel({ ruleText, onRuleText, queries, onQueries, meta, saving, on
           {queries.map((query, index) => (
             <div key={`${query.name}-${index}`} className="grid gap-2 border-b border-border pb-3 sm:grid-cols-[auto_11rem_1fr_auto] sm:items-center">
               <input type="checkbox" checked={query.enabled} onChange={(event) => patchQuery(index, { enabled: event.target.checked })} aria-label={`${query.name || "搜索规则"}是否启用`} className="size-4 accent-brand" />
-              <input value={query.name} onChange={(event) => patchQuery(index, { name: event.target.value })} placeholder="规则名称" className="rounded-md border border-border bg-surface/40 px-2.5 py-2 text-sm outline-none focus:border-brand/50" />
-              <input value={query.query} onChange={(event) => patchQuery(index, { query: event.target.value })} placeholder="搜索表达式" className="min-w-0 rounded-md border border-border bg-surface/40 px-2.5 py-2 font-mono text-xs outline-none focus:border-brand/50" />
-              <button type="button" onClick={() => onQueries(queries.filter((_, position) => position !== index))} aria-label={`删除${query.name || "搜索规则"}`} title="删除搜索规则" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md text-faint hover:bg-red-500/10 hover:text-red-600"><Trash2 className="size-4" /></button>
+              <input data-ui-control data-density="compact" value={query.name} onChange={(event) => patchQuery(index, { name: event.target.value })} placeholder="规则名称" className="rounded-md border border-border bg-surface/40 px-2.5 py-2 text-sm outline-none focus:border-brand/50" />
+              <input data-ui-control data-density="compact" value={query.query} onChange={(event) => patchQuery(index, { query: event.target.value })} placeholder="搜索表达式" className="min-w-0 rounded-md border border-border bg-surface/40 px-2.5 py-2 font-mono text-xs outline-none focus:border-brand/50" />
+              <Button type="button" onClick={() => onQueries(queries.filter((_, position) => position !== index))} aria-label={`删除${query.name || "搜索规则"}`} title="删除搜索规则" variant="danger-ghost" size="icon"><Trash2 className="size-4" /></Button>
             </div>
           ))}
         </div>
-        <button type="button" onClick={() => onQueries([...queries, { name: "", query: "", enabled: true }])} className="mt-3 inline-flex min-h-10 items-center gap-1.5 text-sm text-brand hover:underline"><Plus className="size-4" /> 添加搜索查询</button>
+        <Button type="button" onClick={() => onQueries([...queries, { name: "", query: "", enabled: true }])} variant="ghost" size="sm" className="mt-3 text-sm"><Plus className="size-4" /> 添加搜索查询</Button>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-y border-border py-3 text-xs text-muted">
@@ -534,9 +539,9 @@ function RulesPanel({ ruleText, onRuleText, queries, onQueries, meta, saving, on
         <span>高级内容过滤继续保存在 portals.yml 中</span>
       </div>
 
-      <button type="button" onClick={onSave} disabled={saving || parseList(ruleText.positive).length === 0} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition hover:brightness-110 disabled:opacity-50">
+      <Button type="button" onClick={onSave} disabled={saving || parseList(ruleText.positive).length === 0} className="mt-5 px-4 font-semibold">
         {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} 保存搜索规则
-      </button>
+      </Button>
     </section>
   );
 }
@@ -545,29 +550,29 @@ function ListEditor({ label, hint, value, onChange, placeholder, compact = false
   return (
     <label className="block text-xs font-medium text-muted">
       <span className="flex items-baseline justify-between gap-2"><span>{label}</span>{hint && <span className="font-normal text-faint">{hint}</span>}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={compact ? 4 : 6} placeholder={placeholder} className="mt-1.5 w-full resize-y rounded-md border border-border bg-surface/40 px-3 py-2.5 text-sm leading-relaxed text-foreground outline-none placeholder:text-faint focus:border-brand/50" />
+      <textarea data-ui-control data-density={compact ? "compact" : undefined} value={value} onChange={(event) => onChange(event.target.value)} rows={compact ? 4 : 6} placeholder={placeholder} className="mt-1.5 w-full resize-y rounded-md border border-border bg-surface/40 px-3 py-2.5 text-sm leading-relaxed text-foreground outline-none placeholder:text-faint focus:border-brand/50" />
     </label>
   );
 }
 
 function Toggle({ checked, label, onClick, disabled = false }: { checked: boolean; label: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <button type="button" role="switch" aria-checked={checked} aria-label={label} title={label} onClick={onClick} disabled={disabled} className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50", checked ? "bg-brand" : "bg-surface-hover ring-1 ring-border")}>
-      <span className={cn("absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform", checked && "translate-x-5")} />
+    <button type="button" role="switch" data-ui-structural="switch-track" aria-checked={checked} aria-label={label} title={label} onClick={onClick} disabled={disabled} className="relative h-6 w-11 shrink-0 rounded-full border">
+      <span data-ui-switch-thumb className="absolute left-0 top-0.5 size-5 rounded-full" />
     </button>
   );
 }
 
 function CompanyStatus({ company, health }: { company: Company; health?: HealthCompany }) {
-  if (company.scanMethod === "websearch") return <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-medium text-brand">Agent 搜索</span>;
-  if (!health) return <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-muted">待检查</span>;
-  const tone = health.status === "live" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : health.status === "empty" ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : health.status === "broken" ? "bg-red-500/10 text-red-700 dark:text-red-400" : "bg-surface-hover text-muted";
+  if (company.scanMethod === "websearch") return <Badge tone="info" size="sm">Agent 搜索</Badge>;
+  if (!health) return <Badge tone="muted" size="sm">待检查</Badge>;
+  const tone = health.status === "live" ? "good" : health.status === "empty" ? "warn" : health.status === "broken" ? "bad" : "muted";
   const label = health.status === "live" ? "ATS 可用" : health.status === "empty" ? "暂无岗位" : health.status === "broken" ? "招聘源异常" : "需 Agent 检查";
-  return <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", tone)} title={health.detail}>{label}</span>;
+  return <Badge tone={tone} size="sm" title={health.detail}>{label}</Badge>;
 }
 
 function FixAffordance({ company, job, onFix }: { company: string; job?: Job; onFix: () => void }) {
   if (job?.status === "running") return <Link href={`/jobs/${job.id}`} className="inline-flex min-h-10 items-center gap-1 text-xs font-medium text-brand"><Loader2 className="size-3 animate-spin text-icon-brand" /> 修复中</Link>;
-  if (job?.status === "done") return <Link href={`/jobs/${job.id}`} className="text-xs font-medium text-emerald-600 dark:text-emerald-400">已修复</Link>;
-  return <button type="button" onClick={onFix} title={`让 Agent 修复 ${company} 的招聘源`} className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md border border-outline-border bg-outline-bg text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover"><Wrench className="size-3.5" /></button>;
+  if (job?.status === "done") return <Link href={`/jobs/${job.id}`} className="text-xs font-medium text-success">已修复</Link>;
+  return <Button type="button" onClick={onFix} title={`让 Agent 修复 ${company} 的招聘源`} variant="tertiary" size="icon"><Wrench className="size-3.5" /></Button>;
 }

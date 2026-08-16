@@ -19,8 +19,7 @@ const STYLE = `
 .co-disc__skel{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:.7rem;width:100%;max-width:46rem;margin-top:.5rem}
 .co-disc__skelcard{height:4.4rem;border-radius:.8rem;border:1px solid var(--border,hsl(0 0% 50% / .15));background:color-mix(in srgb, var(--bg) 60%, transparent);overflow:hidden;position:relative}
 .co-disc__skelcard::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,color-mix(in srgb, var(--fg) 8%, transparent),transparent);transform:translateX(-100%);animation:co-shimmer 1.5s infinite}
-.co-ledger{display:inline-flex;align-items:center;gap:.5rem;border-radius:999px;border:1px solid hsl(160 64% 46% / .3);background:hsl(160 64% 46% / .1);color:hsl(160 60% 40%);padding:.35rem .85rem;font-size:12.5px;font-weight:600}
-html.dark .co-ledger{color:hsl(158 64% 62%)}
+.co-ledger{display:inline-flex;align-items:center;gap:.5rem;border-radius:999px;border:1px solid var(--state-success-border);background:var(--state-success-surface);color:var(--state-success);padding:.35rem .85rem;font-size:12.5px;font-weight:600}
 @keyframes co-orb{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--color-brand) 50%,transparent)}70%{box-shadow:0 0 0 .5rem transparent}100%{box-shadow:0 0 0 0 transparent}}
 @keyframes co-shimmer{100%{transform:translateX(100%)}}
 @media (prefers-reduced-motion: reduce){.co-src__orb,.co-disc__skelcard::after{animation:none}}
@@ -79,7 +78,7 @@ export function DiscoveringState() {
         <style>{STYLE}</style>
 
         <div className="co-ledger">
-          <span className="size-1.5 rounded-full bg-emerald-500" />
+          <span className="size-1.5 rounded-full bg-success-solid" />
           0 tokens · ¥0.00 {companies > 0 && <span className="opacity-70">· {companies.toLocaleString()} 家公司</span>}
         </div>
 

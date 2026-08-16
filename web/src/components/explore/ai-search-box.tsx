@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Bot, Loader2, Sparkles } from "lucide-react";
 import { CostBadge } from "@/components/cost/cost-badge";
 import { AgentTaskHandoffDialog } from "@/components/generate-pdf-button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   buildQueuedTaskInstruction,
   type AgentTaskHandoff,
@@ -114,6 +115,7 @@ export function AiSearchBox({
           告诉 Agent 你想找什么岗位
         </div>
         <textarea
+          data-ui-control="unstyled"
           ref={ref}
           aria-label="目标岗位描述"
           rows={2}
@@ -138,7 +140,7 @@ export function AiSearchBox({
           {completed || waitingApproval ? (
             <Link
               href={`/jobs/${job.id}`}
-              className="inline-flex min-h-10 items-center gap-2 rounded-button border border-outline-border bg-outline-bg px-4 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover"
+              className={buttonVariants({ variant: "tertiary" })}
             >
               <Bot className="size-4 text-icon-brand" aria-hidden="true" />
               {waitingApproval ? "查看待确认结果" : "查看搜索结果"}
@@ -147,20 +149,19 @@ export function AiSearchBox({
           ) : job?.status === "running" ? (
             <Link
               href={`/jobs/${job.id}`}
-              className="inline-flex min-h-10 items-center gap-2 rounded-button border border-outline-border bg-outline-bg px-4 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover"
+              className={buttonVariants({ variant: "tertiary" })}
             >
               <Loader2 className="size-4 animate-spin text-icon-brand" aria-hidden="true" />
               Agent 正在搜索
             </Link>
           ) : (
-            <button
+            <Button
               ref={triggerRef}
               type="button"
               disabled={!normalizedIntent}
               onClick={beginAgentHandoff}
               aria-haspopup="dialog"
               aria-expanded={handoffOpen}
-              className="inline-flex min-h-10 items-center gap-2 rounded-button bg-brand px-4 text-sm font-semibold text-brand-foreground shadow-sm transition hover:brightness-110 disabled:opacity-50"
             >
               <Bot className="size-4" aria-hidden="true" />
               {job?.runStatus === "queued"
@@ -176,25 +177,27 @@ export function AiSearchBox({
                 />
               )}
               <ArrowRight className="size-4" aria-hidden="true" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {EXAMPLES.map((ex) => (
-          <button
+          <Button
             key={ex}
             type="button"
+            variant="tertiary"
+            size="sm"
             onClick={() => onIntent(ex)}
-            className="rounded-full border border-border bg-surface/40 px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+            className="text-muted"
           >
             {ex}
-          </button>
+          </Button>
         ))}
-        <button type="button" onClick={onRunScan} className="ml-auto inline-flex items-center gap-1 text-[12px] text-faint transition hover:text-foreground">
+        <Button type="button" variant="ghost" size="sm" onClick={onRunScan} className="ml-auto text-faint">
           或改用算法扫描 →
-        </button>
+        </Button>
       </div>
       <AgentTaskHandoffDialog
         handoff={handoff}
