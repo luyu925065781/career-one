@@ -91,7 +91,7 @@ function StoryCard({ story }: { story: InterviewStory }) {
   const assessment = assessStoryReadiness(story);
   const completed = assessment.ready;
   return (
-    <article className="relative rounded-card border border-border bg-surface">
+    <article data-ui-card="solid" className="relative">
       <div className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
@@ -287,7 +287,7 @@ function StoryLines({ lines, className }: { lines: string[]; className?: string 
 
 function EmptyBank({ profileReady }: { profileReady: boolean }) {
   return (
-    <div className="mt-8 border-y border-dashed border-border py-14 text-center">
+    <div data-ui-empty-state="section" className="mt-8 py-14 text-center">
       <BookOpenCheck className="mx-auto size-8 text-icon-muted" />
       <h2 className="mt-4 text-lg font-semibold text-foreground">故事库还是空的</h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">

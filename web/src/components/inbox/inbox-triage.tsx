@@ -244,7 +244,7 @@ export function InboxTriage({ inbox }: { inbox: InboxJob[] }) {
           ))}
         </ul>
       ) : (
-        <div className="mt-3 rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-10 text-center">
+        <div data-ui-empty-state="panel" className="mt-3 px-6 py-10 text-center">
           <p className="font-display text-lg">没有匹配结果</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted">请放宽筛选条件，查看更多待处理岗位。</p>
         </div>

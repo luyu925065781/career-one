@@ -93,9 +93,11 @@ function EvaluationReportCard({ report }: { report: EvaluationReportRecord }) {
   return (
     <Link
       data-evaluation-report-card
+      data-ui-card="subtle"
+      data-card-interactive="true"
       href={report.href}
       aria-label={`打开评估报告：${report.title}`}
-      className="group flex min-h-28 items-center gap-5 rounded-2xl border border-border bg-surface/50 px-5 py-5 transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-border-hover focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-6"
+      className="group flex min-h-28 items-center gap-5 px-5 py-5 sm:px-6"
     >
       <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-icon-brand">
         <FileText className="size-5" aria-hidden="true" />
@@ -187,7 +189,7 @@ export function CnDiagnoseView({
               <p className="text-sm text-muted">正在加载岗位评估记录…</p>
             </Card>
           ) : reportRecords.length === 0 ? (
-            <div className="mt-4 rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-12 text-center">
+            <div data-ui-empty-state="panel" className="mt-4 px-6 py-12 text-center">
               <FileText className="mx-auto size-5 text-icon-muted" aria-hidden="true" />
               <p className="mt-3 text-sm font-medium text-foreground">还没有正式评估报告</p>
               <p className="mt-1 text-sm text-muted">评估成功并生成正式报告后，报告会自动出现在这里。</p>

@@ -63,7 +63,7 @@ export function FirstScoreView() {
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
-    const t = window.setTimeout(() => panelRef.current?.querySelector<HTMLElement>("a, button")?.focus(), 40);
+    const t = window.setTimeout(() => panelRef.current?.focus(), 40);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         try {
@@ -80,7 +80,7 @@ export function FirstScoreView() {
         if (!f.length) return;
         const first = f[0];
         const last = f[f.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) {
           e.preventDefault();
           last.focus();
         } else if (!e.shiftKey && document.activeElement === last) {
@@ -120,7 +120,7 @@ export function FirstScoreView() {
   return (
     <div className="co-aha" role="dialog" aria-modal="true" aria-label="首次岗位评分" onClick={close}>
       <style>{STYLE}</style>
-      <div ref={panelRef} className="co-aha__card" onClick={(e) => e.stopPropagation()}>
+      <div ref={panelRef} tabIndex={-1} className="co-aha__card focus:outline-none" onClick={(e) => e.stopPropagation()}>
         <div className="co-aha__glow" />
         <Button type="button" variant="ghost" size="icon-sm" onClick={close} aria-label="关闭" className="absolute right-3 top-3 z-10 text-faint">
           <X className="size-4" />

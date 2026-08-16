@@ -399,7 +399,7 @@ export function ApplicationProgressDetail({
         </Card>
       </div>
 
-      <section className="mt-5 grid gap-3 rounded-card border border-border bg-surface/35 p-5 sm:grid-cols-3">
+      <section data-ui-card="quiet" className="mt-5 grid gap-3 p-5 sm:grid-cols-3">
         <div>
           <p className="text-xs text-faint">评估分数</p>
           <div className="mt-2">{app.score ? <Badge tone={scoreTone(app.score)}>{app.score}</Badge> : <span className="text-sm text-muted">—</span>}</div>
@@ -521,8 +521,8 @@ export function PipelineView({
 
   return (
     <div className="page-shell py-8 max-sm:pb-24">
-      <div className="flex items-end justify-between gap-4">
-        <div className="min-w-0 flex-1">
+      <div data-ui-page-header>
+        <div className="min-w-0">
           <div className="flex items-center gap-3">
             <PageIcon className="size-6 shrink-0 text-icon-brand" aria-hidden="true" />
             <h1 className="page-title">求职进度</h1>
@@ -655,7 +655,7 @@ export function PipelineView({
           </table>
         </div>
       ) : (
-        <div className="mt-4 rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-12 text-center">
+        <div data-ui-empty-state="panel" className="mt-4 px-6 py-12 text-center">
           <p className="font-display text-lg">没有匹配结果</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted">请切换分类或清除搜索条件。</p>
         </div>
@@ -669,7 +669,7 @@ export function PipelineView({
 function InboxEmpty({ count, filtered }: { count: number; filtered: boolean }) {
   if (filtered) {
     return (
-      <div className="mt-4 rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-12 text-center">
+      <div data-ui-empty-state="panel" className="mt-4 px-6 py-12 text-center">
         <p className="font-display text-lg">没有匹配结果</p>
         <p className="mx-auto mt-1 max-w-sm text-sm text-muted">清除搜索条件后查看全部待评估岗位。</p>
       </div>

@@ -112,6 +112,7 @@
   --glass-border: rgb(17 24 39 / 0.1);
   --glass-highlight: rgb(255 255 255 / 0.9);
   --glass-blur: 12px;
+  --dialog-backdrop: rgb(17 24 39 / 0.56);
   --border: #e5e7eb;
   --fg: #111827;
   --muted: #4b5563;
@@ -184,6 +185,7 @@
   --glass-surface-raised: rgb(255 255 255 / 0.1);
   --glass-border: rgb(255 255 255 / 0.12);
   --glass-highlight: rgb(255 255 255 / 0.16);
+  --dialog-backdrop: rgb(0 0 0 / 0.68);
   --border: #262626;
   --fg: #ffffff;
   --muted: #9ca3af;
@@ -473,6 +475,95 @@ button[data-ui-structural="disclosure-row"]:hover {
   --feedback-foreground: var(--state-danger);
 }
 
+/* Content cards can be sections, articles, links, or list items, so their
+   visual contract is element-agnostic. The page owns content layout and
+   padding; this contract owns the borderless surface, radius, elevation, and
+   the presence (or absence) of whole-card interaction feedback. */
+[data-ui-card] {
+  border: 0;
+  border-radius: var(--radius-card);
+}
+
+[data-ui-card="quiet"],
+[data-ui-card="subtle"] {
+  background-color: var(--surface);
+}
+
+@supports (color: color-mix(in lab, red, red)) {
+  [data-ui-card="quiet"] {
+    background-color: color-mix(in srgb, var(--surface) 35%, transparent);
+  }
+
+  [data-ui-card="subtle"] {
+    background-color: color-mix(in srgb, var(--surface) 50%, transparent);
+  }
+}
+
+[data-ui-card="solid"] {
+  background-color: var(--surface);
+}
+
+[data-ui-card][data-card-elevation="raised"] {
+  box-shadow: var(--elevation-raised);
+}
+
+[data-ui-card][data-card-interactive="true"] {
+  transition: background-color 150ms ease;
+}
+
+[data-ui-card][data-card-interactive="true"]:hover {
+  background-color: var(--surface-hover);
+}
+
+[data-ui-card][data-card-interactive="true"]:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Empty states stay in the space where content would normally appear. The
+   shell owns only hierarchy and default legibility; pages still own the copy,
+   action, icon, alignment, and spacing appropriate to each missing-data case. */
+[data-ui-empty-state] {
+  color: var(--muted);
+}
+
+[data-ui-empty-state="panel"] {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-card);
+  background-color: var(--surface);
+}
+
+@supports (color: color-mix(in lab, red, red)) {
+  [data-ui-empty-state="panel"] {
+    background-color: color-mix(in srgb, var(--surface) 30%, transparent);
+  }
+}
+
+[data-ui-empty-state="section"] {
+  border-block: 1px dashed var(--border);
+}
+
+/* Standard centered dialogs share one backdrop and panel hierarchy. Pages keep
+   ownership of stacking order, dimensions, scrolling, content, and behavior. */
+[data-ui-dialog-backdrop] {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--dialog-backdrop);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+[data-ui-dialog="standard"] {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--elevation-overlay);
+}
+
 /* Form controls use a border-only focus treatment. This deliberately removes
    yellow rings/glows while preserving the visible focus border each component
    already declares. Button and link keyboard focus indicators stay intact. */
@@ -581,6 +672,33 @@ select:focus,
   color: var(--landing);
 }
 
+/* Top-level pages with a title and a separate action or search region share
+   one responsive shell. The page owns the content; this contract prevents
+   fixed-width controls from collapsing the title on narrow viewports. */
+[data-ui-page-header] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 1rem;
+}
+
+[data-ui-page-header] > * {
+  min-width: 0;
+}
+
+@media (max-width: 639px) {
+  [data-ui-page-header] {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  [data-ui-page-header] > :last-child {
+    width: 100%;
+    max-width: none;
+  }
+}
+
 @layer utilities {
   /* Shared application canvas. All user-facing pages align to the same
      72rem width and 1.5rem gutter as 求职进度 and 我的简历. */
@@ -622,7 +740,6 @@ select:focus,
    soft radial hover wash. Keep text and icons above the effect through the
    isolated stacking context; no page-local color or blur values are needed. */
 .glass-secondary {
-  position: relative;
   isolation: isolate;
   overflow: hidden;
   background: var(--action-secondary);
@@ -631,6 +748,10 @@ select:focus,
   backdrop-filter: blur(var(--glass-blur)) saturate(118%);
   box-shadow: inset 0 1px 0 var(--glass-highlight);
   transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.glass-secondary:not([class~="fixed"]):not([class~="absolute"]):not([class~="sticky"]) {
+  position: relative;
 }
 .glass-secondary::after {
   content: "";

@@ -103,8 +103,8 @@ export function BetaBanner() {
       </Button>
 
       {open && diag && (
-        <div className="fixed inset-0 z-[96] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="反馈问题" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-lg rounded-2xl border border-border bg-[var(--bg)] p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div data-ui-dialog-backdrop className="z-[96]" role="dialog" aria-modal="true" aria-label="反馈问题" onClick={() => setOpen(false)}>
+          <div data-ui-dialog="standard" className="w-full max-w-lg p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center gap-2">
               <Bug className="size-4 text-icon-brand" />
               <h2 className="text-sm font-semibold text-foreground">反馈问题 · {diag.channel}</h2>

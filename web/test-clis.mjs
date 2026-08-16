@@ -849,17 +849,31 @@ test("evaluation reports exclude resume generation while Agent history keeps eve
   assert.match(jobsPageSource, /\{filteredJobs\.map\(\(job\) =>/);
 });
 
-test("Agent task page header follows the pipeline page layout", () => {
-  const sharedHeaderClass = /<div className="flex items-end justify-between gap-4">/;
-  assert.match(pipelineViewSource, sharedHeaderClass);
-  assert.match(jobsPageSource, sharedHeaderClass);
+test("action page headers share one responsive title and controls layout", () => {
+  const globalsSource = readSource("./src/app/globals.css");
+  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const desktopRule = globalsSource.match(/\[data-ui-page-header\]\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+
+  assert.match(desktopRule, /display:\s*grid;/);
+  assert.match(desktopRule, /grid-template-columns:\s*minmax\(0,\s*1fr\) auto;/);
+  assert.match(desktopRule, /align-items:\s*end;/);
+  assert.match(
+    globalsSource,
+    /@media \(max-width: 639px\)\s*\{\s*\[data-ui-page-header\]\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\);[\s\S]*?\}\s*\[data-ui-page-header\] > :last-child\s*\{[\s\S]*?width:\s*100%;[\s\S]*?max-width:\s*none;/,
+  );
+
+  for (const source of [pipelineViewSource, jobsPageSource, cvEditorSource, profilePageSource]) {
+    assert.equal((source.match(/data-ui-page-header/g) ?? []).length, 1);
+    assert.doesNotMatch(source, /(?:flex items-end|flex flex-wrap items-start) justify-between gap-[45]/);
+  }
   assert.match(jobsPageSource, /<div className="page-shell py-8 max-sm:pb-24"[^>]*>/);
 
-  const headerPosition = jobsPageSource.indexOf('<div className="flex items-end justify-between gap-4">');
+  const headerPosition = jobsPageSource.indexOf("data-ui-page-header");
   const taskListPosition = jobsPageSource.indexOf('role="tablist"');
   assert.ok(headerPosition >= 0, "missing standalone Agent task page header");
   assert.ok(taskListPosition > headerPosition, "Agent task list must render below the standalone page header");
   assert.doesNotMatch(jobsPageSource, /<section[^>]*>\s*<header/);
+  assert.match(designSystemSource, /data-ui-page-header/);
 });
 
 test("evaluation report returns to its actual previous entry point", () => {
@@ -1293,6 +1307,10 @@ test("failed evaluation handoffs use explicit retry wording", () => {
 });
 
 test("new users get one full-width responsive five-step progress indicator inside the Dashboard", () => {
+  assert.match(todayDashboardSource, />新用户教程</);
+  assert.doesNotMatch(todayDashboardSource, /新手流程/);
+  assert.match(cvEditorSource, /新用户教程 · \{content\.eyebrow\}/);
+  assert.doesNotMatch(cvEditorSource, /新手流程/);
   assert.match(homePageSource, /readStoryBank/);
   assert.doesNotMatch(homePageSource, /assessStoryReadiness|readyStoryCount/);
   assert.match(homePageSource, /hasCv=\{hasCv\}/);
@@ -1321,7 +1339,11 @@ test("new users get one full-width responsive five-step progress indicator insid
   assert.match(todayDashboardSource, /aria-current=\{current \? "step" : undefined\}/);
   assert.match(todayDashboardSource, /const guideComplete =/);
   assert.match(todayDashboardSource, /<GettingStartedCard[\s\S]{0,180}setupMissing=\{profileSetupMissing\}/);
-  assert.doesNotMatch(todayDashboardSource, /\{!guideComplete && <GettingStartedCard/);
+  assert.match(
+    todayDashboardSource,
+    /\{!guideComplete && \(\s*<GettingStartedCard[\s\S]*?<\/GettingStartedCard>\s*\)\}/,
+    "the completed tutorial must leave the Dashboard entirely",
+  );
   assert.match(todayDashboardSource, /complete \? "求职流程已完成" : "完成你的求职闭环"/);
   assert.match(todayDashboardSource, /complete:\s*storyCount > 0/);
   assert.doesNotMatch(todayDashboardSource, /readyStoryCount|STORY_READY_TARGET/);
@@ -1384,8 +1406,9 @@ test("career-one semantic tokens own status, radius, elevation, and controls", (
     assert.match(globalsSource, new RegExp(`--shadow-${token}:`), `missing semantic elevation token ${token}`);
   }
   assert.match(buttonSource, /rounded-button/);
-  assert.match(cardSource, /rounded-card/);
-  assert.match(cardSource, /shadow-raised/);
+  assert.match(cardSource, /data-ui-card=\{surface\}/);
+  assert.match(globalsSource, /\[data-ui-card\][\s\S]*?border-radius:\s*var\(--radius-card\)/);
+  assert.match(globalsSource, /\[data-ui-card\]\[data-card-elevation="raised"\][\s\S]*?var\(--elevation-raised\)/);
 });
 
 test("native form fields opt into one density-aware visual contract", () => {
@@ -1548,6 +1571,30 @@ test("dashboard metrics use vivid dedicated semantic tokens", () => {
     todayDashboardSource.match(/const STAT_TONE_CLASSES[\s\S]*?\n\};/)?.[0] ?? "",
     /value: "text-(?:brand|icon-)/,
   );
+  const statToneContract = todayDashboardSource.match(/const STAT_TONE_CLASSES[\s\S]*?\n\};/)?.[0] ?? "";
+  assert.match(statToneContract, /brand: \{ card: "border-brand\/30 bg-brand-soft"/);
+  for (const tone of ["info", "success", "warning", "danger"]) {
+    assert.match(
+      statToneContract,
+      new RegExp(`${tone}: \\{ card: "border-${tone}-border bg-${tone}-surface"`),
+      `${tone} metric card must reuse the matching semantic surface and border pair`,
+    );
+  }
+  assert.doesNotMatch(
+    statToneContract,
+    /bg-(?:brand-soft\/40|icon-(?:info|success|warning|danger)\/\[0\.06\])|border-icon-/,
+    "metric cards must not dilute the brand surface or stretch icon colors across large backgrounds",
+  );
+  const statComponentContract = todayDashboardSource.slice(
+    todayDashboardSource.indexOf("function Stat("),
+    todayDashboardSource.indexOf("function AnalyticsSection("),
+  );
+  assert.match(
+    statComponentContract,
+    /aria-hidden className=\{cn\("mb-3 block h-1 w-8 rounded-full", colors\.value, "bg-current"\)\}/,
+    "the metric accent bar must inherit the exact semantic color used by the numeric value",
+  );
+  assert.doesNotMatch(statComponentContract, /BAR_TONE_CLASSES\[tone\]/);
   assert.equal((todayDashboardSource.match(/text-metric-brand tabular-nums/g) ?? []).length, 2);
   assert.match(designSystemSource, /大号指标强调色/);
   assert.match(designSystemSource, /仅用于 24px 及以上的大号数字/);
@@ -1610,7 +1657,7 @@ test("multi-hue accent tokens preserve yellow as the brand and keep status alias
 test("only whole-card interactions receive a card hover state", () => {
   assert.match(cardSource, /interactive\?: boolean/);
   assert.match(cardSource, /compact\?: boolean/);
-  assert.match(cardSource, /interactive && "transition-colors duration-150 hover:bg-surface-hover"/);
+  assert.match(cardSource, /data-card-interactive=\{interactive \|\| undefined\}/);
   assert.match(cardSource, /compact \? "p-4" : "p-5"/);
 
   for (const source of [followUpCardSource, decisionCardSource, discoveryCardSource]) {
@@ -1624,7 +1671,8 @@ test("only whole-card interactions receive a card hover state", () => {
   assert.doesNotMatch(discoveryCardSource, /hover:-translate-y|hover:shadow/);
   assert.match(statCardSource, /<Link/);
   assert.doesNotMatch(statCardSource, /group-hover:from-brand/);
-  assert.match(statCardSource, /hover:bg-surface-hover/);
+  assert.match(statCardSource, /data-card-interactive="true"/);
+  assert.doesNotMatch(statCardSource, /hover:bg-surface-hover/);
 
   for (const source of [
     followUpCardSource,
@@ -1636,6 +1684,175 @@ test("only whole-card interactions receive a card hover state", () => {
   ]) {
     assert.doesNotMatch(source, /hover:border-brand/);
   }
+});
+
+test("semantic card surfaces share one cross-element visual contract", () => {
+  const globalsSource = readSource("./src/app/globals.css");
+  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+
+  assert.match(
+    globalsSource,
+    /\[data-ui-card\]\s*\{[\s\S]*?border:\s*0;[\s\S]*?border-radius:\s*var\(--radius-card\)/,
+    "semantic cards must share one borderless surface and radius contract regardless of their HTML element",
+  );
+  for (const surface of ["quiet", "subtle", "solid"]) {
+    assert.match(globalsSource, new RegExp(`\\[data-ui-card="${surface}"\\]`));
+  }
+  assert.match(globalsSource, /\[data-ui-card\]\[data-card-elevation="raised"\][\s\S]*?var\(--elevation-raised\)/);
+  assert.match(globalsSource, /\[data-ui-card\]\[data-card-interactive="true"\]:hover[\s\S]*?var\(--surface-hover\)/);
+  assert.match(cardSource, /data-ui-card=\{surface\}/);
+  assert.match(cardSource, /data-card-elevation=\{elevated \? "raised" : undefined\}/);
+  assert.match(cardSource, /data-card-interactive=\{interactive \|\| undefined\}/);
+  assert.doesNotMatch(cardSource, /rounded-card border border-border bg-surface/);
+  assert.match(statCardSource, /data-ui-card="subtle"/);
+  assert.match(statCardSource, /data-card-elevation="raised"/);
+  assert.match(statCardSource, /data-card-interactive="true"/);
+  assert.match(
+    diagnosisViewSource,
+    /data-evaluation-report-card[\s\S]*?data-ui-card="subtle"[\s\S]*?data-card-interactive="true"/,
+  );
+  assert.doesNotMatch(
+    diagnosisViewSource,
+    /data-evaluation-report-card[\s\S]*?className="[^"]*\bborder(?:-|\b)[^"]*"/,
+    "evaluation report cards must not rebuild a local border outside the semantic card contract",
+  );
+
+  assert.equal((profilePageSource.match(/data-ui-card="solid"/g) ?? []).length, 5);
+  assert.match(interviewPageSource, /function StoryCard[\s\S]*?<article data-ui-card="solid"/);
+  assert.match(cvEditorSource, /data-journey-handoff=\{stage\}[\s\S]*?data-ui-card="solid"/);
+  assert.match(pipelineViewSource, /<section data-ui-card="quiet" className="mt-5 grid gap-3 p-5 sm:grid-cols-3"/);
+  assert.match(onboardingBannerSource, /<article key=\{action\.id\} data-ui-card="solid" className="p-4"/);
+  assert.match(explorerViewSource, /<li key=\{number\} data-ui-card="quiet" className="relative p-4"/);
+  assert.match(jobDetailSource, /function ProposalReview[\s\S]*?<article data-ui-card="subtle"/);
+  assert.match(designSystemShowcaseSource, /<article[\s\S]*?data-ui-card="solid"[\s\S]*?style=\{\{ boxShadow: value \}\}/);
+  assert.match(designSystemSource, /data-ui-card="quiet\|subtle\|solid"/);
+  assert.match(designSystemSource, /普通内容卡片不使用描边/);
+
+  const specializedCardPaint = readWebSources()
+    .map(({ path, source }) => ({
+      path,
+      count: (source.match(/rounded-card border border-border bg-surface/g) ?? []).length,
+    }))
+    .filter(({ count }) => count > 0)
+    .sort((left, right) => left.path.localeCompare(right.path));
+  assert.deepEqual(
+    specializedCardPaint,
+    [
+      { path: "app/interview/page.tsx", count: 1 },
+      { path: "components/explore/explorer-view.tsx", count: 1 },
+    ],
+    "only the floating help overlay and composite input may keep specialized card paint",
+  );
+});
+
+test("empty states share one placement-aware visual contract", () => {
+  const globalsSource = readSource("./src/app/globals.css");
+  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+
+  assert.match(
+    globalsSource,
+    /\[data-ui-empty-state\]\s*\{[\s\S]*?color:\s*var\(--muted\)/,
+    "all empty states need one semantic foreground contract",
+  );
+  assert.match(
+    globalsSource,
+    /\[data-ui-empty-state="panel"\]\s*\{[\s\S]*?border:\s*1px dashed var\(--border\);[\s\S]*?border-radius:\s*var\(--radius-card\)/,
+    "panel empty states need one edge and radius contract",
+  );
+  assert.match(globalsSource, /\[data-ui-empty-state="section"\][\s\S]*?border-block:\s*1px dashed var\(--border\)/);
+  assert.match(designSystemSource, /data-ui-empty-state="panel\|section"/);
+
+  assert.equal((jobsPageSource.match(/data-ui-empty-state="panel"/g) ?? []).length, 1);
+  assert.equal((pipelineViewSource.match(/data-ui-empty-state="panel"/g) ?? []).length, 2);
+  assert.equal((configFormSource.match(/data-ui-empty-state="panel"/g) ?? []).length, 3);
+  for (const source of [reportViewSource, profilePageSource, diagnosisViewSource, inboxTriageSource]) {
+    assert.equal((source.match(/data-ui-empty-state="panel"/g) ?? []).length, 1);
+  }
+  assert.equal((interviewPageSource.match(/data-ui-empty-state="section"/g) ?? []).length, 1);
+
+  const duplicatedEmptyPaint = readWebSources().flatMap(({ path, source }) =>
+    [...source.matchAll(/rounded(?:-card|-2xl|-xl) border border-dashed border-border bg-surface\/(?:30|40)/g)]
+      .map(() => path),
+  );
+  assert.deepEqual(duplicatedEmptyPaint, [], "semantic empty states must not rebuild their shell locally");
+  assert.doesNotMatch(interviewPageSource, /border-y border-dashed border-border/);
+
+  const specializedDashedSurfaces = readWebSources()
+    .filter(({ path }) => path.endsWith(".tsx"))
+    .map(({ path, source }) => ({
+      path,
+      count: (source.match(/border-dashed|border(?:-style)?:[^;\n]*dashed/g) ?? []).length,
+    }))
+    .filter(({ count }) => count > 0)
+    .sort((left, right) => left.path.localeCompare(right.path));
+  assert.deepEqual(
+    specializedDashedSurfaces,
+    [
+      { path: "components/apply-view.tsx", count: 2 },
+      { path: "components/cv/cv-ingest.tsx", count: 1 },
+      { path: "components/explore/discovering-state.tsx", count: 1 },
+      { path: "components/explore/explorer-view.tsx", count: 1 },
+    ],
+    "only upload, media placeholder, and queued-state structures may keep specialized dashed paint",
+  );
+});
+
+test("standard dialogs share one backdrop and surface contract", () => {
+  const globalsSource = readSource("./src/app/globals.css");
+  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+
+  assert.match(
+    globalsSource,
+    /\[data-ui-dialog-backdrop\]\s*\{[\s\S]*?position:\s*fixed;[\s\S]*?inset:\s*0;[\s\S]*?background:\s*var\(--dialog-backdrop\);[\s\S]*?backdrop-filter:\s*blur\(8px\)/,
+  );
+  assert.match(
+    globalsSource,
+    /\[data-ui-dialog="standard"\]\s*\{[\s\S]*?border:\s*1px solid var\(--border\);[\s\S]*?border-radius:\s*var\(--radius-panel\);[\s\S]*?background:\s*var\(--surface\);[\s\S]*?box-shadow:\s*var\(--elevation-overlay\)/,
+  );
+  assert.match(designSystemSource, /data-ui-dialog="standard"/);
+  assert.match(designSystemSource, /data-ui-dialog-backdrop/);
+
+  const standardDialogUsage = readWebSources()
+    .filter(({ path }) => path.endsWith(".tsx"))
+    .map(({ path, source }) => ({
+      path,
+      backdrops: (source.match(/data-ui-dialog-backdrop/g) ?? []).length,
+      panels: (source.match(/data-ui-dialog="standard"/g) ?? []).length,
+    }))
+    .filter(({ backdrops, panels }) => backdrops > 0 || panels > 0)
+    .sort((left, right) => left.path.localeCompare(right.path));
+  assert.deepEqual(standardDialogUsage, [
+    { path: "app/jobs/[id]/page.tsx", backdrops: 1, panels: 1 },
+    { path: "components/beta/beta-banner.tsx", backdrops: 1, panels: 1 },
+    { path: "components/cv-editor.tsx", backdrops: 1, panels: 1 },
+    { path: "components/generate-pdf-button.tsx", backdrops: 1, panels: 1 },
+    { path: "components/jobs/worker-pills.tsx", backdrops: 1, panels: 1 },
+  ]);
+
+  for (const { source } of readWebSources().filter(({ path }) => standardDialogUsage.some((item) => item.path === path))) {
+    assert.doesNotMatch(source, /data-ui-dialog-backdrop[^>]*className="[^"]*(?:fixed|inset-0|bg-(?:background|black)|backdrop-blur|p-4)/);
+    assert.doesNotMatch(source, /data-ui-dialog="standard"[^>]*className="[^"]*(?:rounded-(?:panel|2xl)|border-border|bg-(?:surface|\[var)|shadow-(?:overlay|2xl))/);
+  }
+
+  const mobileNavSource = readSource("./src/components/mobile-nav.tsx");
+  const firstScoreSource = readSource("./src/components/explore/first-score-view.tsx");
+  assert.match(mobileNavSource, /className=\{cn\("co-mdrawer/);
+  assert.match(firstScoreSource, /className="co-aha__card\b/);
+  assert.doesNotMatch(`${mobileNavSource}\n${firstScoreSource}`, /data-ui-dialog="standard"/);
+});
+
+test("the first-score dialog does not autofocus the close button", () => {
+  const firstScoreSource = readSource("./src/components/explore/first-score-view.tsx");
+
+  assert.match(firstScoreSource, /panelRef\.current\?\.focus\(\)/);
+  assert.match(firstScoreSource, /ref=\{panelRef\}[\s\S]{0,120}tabIndex=\{-1\}/);
+  assert.match(firstScoreSource, /className="co-aha__card focus:outline-none"/);
+  assert.match(
+    firstScoreSource,
+    /e\.shiftKey && \(document\.activeElement === first \|\| document\.activeElement === panelRef\.current\)/,
+  );
+  assert.doesNotMatch(firstScoreSource, /querySelector<HTMLElement>\("a, button"\)\?\.focus\(\)/);
+  assert.match(firstScoreSource, /aria-label="关闭"[\s\S]{0,160}<X className="size-4"/);
 });
 
 test("shared status UI consumes career-one semantic tokens instead of palette colors", () => {
@@ -1731,6 +1948,12 @@ test("buttons expose one shared three-level action hierarchy", () => {
 
   assert.match(buttonSource, /primary:\s*"[^"]*\bbg-brand\b[^"]*"/);
   assert.match(buttonSource, /secondary:\s*"[^"]*\bglass-secondary\b[^"]*"/);
+  const glassSecondaryRule = globalsSource.match(/\.glass-secondary\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+  assert.doesNotMatch(glassSecondaryRule, /position:\s*relative;/);
+  assert.match(
+    globalsSource,
+    /\.glass-secondary:not\(\[class~="fixed"\]\):not\(\[class~="absolute"\]\):not\(\[class~="sticky"\]\)\s*\{\s*position:\s*relative;/,
+  );
   assert.match(globalsSource, /\.glass-secondary\s*\{[\s\S]*?background:\s*var\(--action-secondary\);[\s\S]*?border:\s*1px solid var\(--action-secondary-border\);[\s\S]*?backdrop-filter:\s*blur\(var\(--glass-blur\)\)/);
   assert.match(globalsSource, /\.glass-secondary::after\s*\{[\s\S]*?background:\s*var\(--action-secondary-hover\);[\s\S]*?transform:\s*translate\(-50%, -50%\) scale\(0\)/);
   assert.match(globalsSource, /\.glass-secondary:hover::after\s*\{[\s\S]*?scale\(1\)/);
@@ -1984,6 +2207,7 @@ test("Today first render receives all queue data from one server snapshot", () =
 test("Today glass effect is present in server HTML from the first paint", () => {
   const globalsSource = readSource("./src/app/globals.css");
   const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const heroShell = todayDashboardSource.match(/<section className="dot-bg[^"]*"/)?.[0] ?? "";
 
   assert.match(heroGlowSource, /hero-glow-ambient/);
   assert.match(heroGlowSource, /hero-glow-glass/);
@@ -1996,6 +2220,7 @@ test("Today glass effect is present in server HTML from the first paint", () => 
   assert.match(globalsSource, /\.hero-glow-glass\s*\{[\s\S]*var\(--glass-surface-raised\)[\s\S]*var\(--glass-surface\)[\s\S]*backdrop-filter:\s*blur\(var\(--glass-blur\)\)[\s\S]*box-shadow:\s*inset 0 1px 0 var\(--glass-highlight\)/);
   assert.match(designSystemSource, /玻璃表面/);
   assert.match(designSystemSource, /`12px`/);
+  assert.doesNotMatch(heroShell, /\bborder(?:-\w+)?\b/, "the Dashboard action hero must remain borderless");
   assert.doesNotMatch(todayDashboardSource, /backdrop-blur-\[2px\]/);
 });
 
@@ -2026,9 +2251,27 @@ test("dashboard puts analytics first and arranges compact charts in a responsive
   assert.match(todayDashboardSource, /\{ key: "OFFER", label: "已获 Offer", tone: "success" \}/);
   assert.match(todayDashboardSource, /\{ label: "4\.5 – 5\.0", tone: "success"/);
   assert.match(todayDashboardSource, /analytics\.topCompanies\.map[\s\S]*tone="brand"/);
-  assert.match(todayDashboardSource, /<Stat value=\{analytics\.total\} label="已评估" tone="brand"/);
+  assert.match(
+    todayDashboardSource,
+    /<Stat[\s\S]*?value=\{analytics\.total\}[\s\S]*?label="已评估"[\s\S]*?tone="brand"/,
+  );
   assert.match(todayDashboardSource, /className="relative h-2 flex-1 overflow-hidden/);
   assert.doesNotMatch(todayDashboardSource, /from-foreground\/25|to-foreground\/10|tone="neutral"/);
+});
+
+test("dashboard headline metrics explain all four values", () => {
+  assert.match(
+    todayDashboardSource,
+    /<Stat[\s\S]*?value=\{analytics\.total\}[\s\S]*?label="已评估"[\s\S]*?hint=\{analytics\.total === 0[\s\S]*?"完成首个评估，建立岗位对比基线"[\s\S]*?"助你理解自己的优势，明确职业方向"/,
+  );
+  assert.match(todayDashboardSource, /function averageScoreHint\(average: number\)/);
+  assert.match(todayDashboardSource, /average >= 4[\s\S]*?"整体匹配良好，优先推进高分岗位"/);
+  assert.match(todayDashboardSource, /average >= 3[\s\S]*?"详尽的岗位分析，提升入职成功率"/);
+  assert.match(
+    todayDashboardSource,
+    /label="平均分"[\s\S]*?hint=\{averageScoreHint\(analytics\.average\)\}/,
+  );
+  assert.equal((todayDashboardSource.match(/<Stat[\s\S]*?hint=/g) ?? []).length >= 4, true);
 });
 
 test("user-facing pages share the pipeline and CV page width contract", () => {

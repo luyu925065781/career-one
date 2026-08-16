@@ -389,7 +389,8 @@ function ScaleSection({ document, onCopy, copiedKey }: {
             .map(([name, value]) => (
               <article
                 key={name}
-                className="relative min-h-32 rounded-card border border-border bg-surface p-4"
+                data-ui-card="solid"
+                className="relative min-h-32 p-4"
                 style={{ boxShadow: value }}
               >
                 <code className="font-mono text-xs font-semibold text-foreground">{name}</code>
