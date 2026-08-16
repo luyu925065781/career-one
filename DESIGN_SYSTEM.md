@@ -90,9 +90,12 @@
 | faint | gray-500 | `#6b7280` |
 | selected-text | gray-900 | `#111827` |
 | brand-text | secondary-600 | `#ca8a04` |
-| action-secondary | gray-100 | `#f3f4f6` |
-| action-secondary-hover | gray-200 | `#e5e7eb` |
-| action-secondary-active | gray-300 | `#d1d5db` |
+| interactive-hover | info-700 | `#1d4ed8` |
+| action-secondary | white / 64% | `rgb(255 255 255 / 0.64)` |
+| action-secondary-hover | gray-900 / 7% | `rgb(17 24 39 / 0.07)` |
+| action-secondary-active | gray-900 / 11% | `rgb(17 24 39 / 0.11)` |
+| action-secondary-border | gray-900 / 14% | `rgb(17 24 39 / 0.14)` |
+| action-secondary-border-hover | gray-900 / 28% | `rgb(17 24 39 / 0.28)` |
 | action-secondary-foreground | gray-900 | `#111827` |
 | outline-bg | gray-900 / 2.5% | `rgb(17 24 39 / 0.025)` |
 | outline-bg-hover | gray-900 / 5% | `rgb(17 24 39 / 0.05)` |
@@ -112,9 +115,12 @@
 | faint | `#9ca3af` |
 | selected-text | `#ffffff` |
 | brand-text | `#facc15` |
-| action-secondary | `rgb(255 255 255 / 0.12)` |
-| action-secondary-hover | `rgb(255 255 255 / 0.18)` |
-| action-secondary-active | `rgb(255 255 255 / 0.24)` |
+| interactive-hover | `#60a5fa` |
+| action-secondary | `rgb(255 255 255 / 0.07)` |
+| action-secondary-hover | `rgb(255 255 255 / 0.14)` |
+| action-secondary-active | `rgb(255 255 255 / 0.20)` |
+| action-secondary-border | `rgb(255 255 255 / 0.16)` |
+| action-secondary-border-hover | `rgb(255 255 255 / 0.42)` |
 | action-secondary-foreground | `#ffffff` |
 | outline-bg | `rgb(255 255 255 / 0.05)` |
 | outline-bg-hover | `rgb(255 255 255 / 0.1)` |
@@ -134,13 +140,32 @@
 
 浅色与深色模式分别定义这些运行时值。状态文字、浅底和描边必须作为一组切换，避免只覆盖文字导致对比度失衡。
 
-### 3.4 大号指标强调色
+反馈容器统一使用 `data-ui-feedback="inline|callout"` 和
+`data-tone="info|success|warning|danger"`。`inline` 用于字段或局部流程附近的反馈，
+`callout` 用于需要更完整内容层级的上下文提示；页面只保留布局类，不得重新拼装状态底色、描边、前景或圆角。
+动态出现的重要错误由页面同时声明 `role="alert"`，普通完成反馈使用 `role="status"`；随页面加载的静态说明不设置 live region。
+只读状态和评分使用共享 `Badge`，交互式筛选继续使用结构控件 `chip` appearance，不把标签、按钮和链接混成同一组件。
+
+### 3.4 玻璃表面
+
+玻璃效果用于 Hero 聚合面板和玻璃副按钮，不作为所有卡片的默认样式。它由半透明中性表面、`12px` 背景模糊、118% 饱和度、细描边和顶部 1px 内高光共同建立；不依赖厚重阴影，也不得降低正文对比度。
+
+| Token | 浅色模式 | 深色模式 | 用途 |
+|---|---:|---:|---|
+| glass-surface | `rgb(255 255 255 / 0.56)` | `rgb(255 255 255 / 0.055)` | 常规玻璃底 |
+| glass-surface-raised | `rgb(255 255 255 / 0.72)` | `rgb(255 255 255 / 0.10)` | 渐变高处与悬浮层 |
+| glass-border | `rgb(17 24 39 / 0.10)` | `rgb(255 255 255 / 0.12)` | 中性发丝描边 |
+| glass-highlight | `rgb(255 255 255 / 0.90)` | `rgb(255 255 255 / 0.16)` | 顶部内高光 |
+
+不支持 `backdrop-filter` 时，半透明底、描边和前景色仍须形成清晰层级。玻璃表面只负责材质感，品牌黄色仍只用于第一优先级动作和关键选中状态。
+
+### 3.5 大号指标强调色
 
 大号数据不复用小字号正文色或图标色，统一使用独立的 `metric-*` Token。它们提高了色彩纯度与视觉亮感，但仅用于 24px 及以上的大号数字，普通正文、链接、徽章和图标仍使用原有语义 Token。
 
 | Token | 浅色模式 | 深色模式 | 用途 |
 |---|---:|---:|---|
-| metric-brand | `#b48300` | `#facc15` | 核心数量、品牌指标 |
+| metric-brand | `#e07900` | `#fbbf24` | 核心数量、品牌指标（明亮琥珀） |
 | metric-warning | `#ea580c` | `#fb923c` | 待处理、需要关注的指标 |
 | metric-info | `#2563eb` | `#60a5fa` | 流程与面试指标 |
 | metric-success | `#059669` | `#10b981` | Offer、完成与正向指标 |
@@ -212,11 +237,16 @@
 ## 7. 交互状态
 
 - Hover：150–200ms，使用 hover 渐变或 gray-100 背景。
+- 普通交互 Hover：文字统一使用清晰的深蓝 `interactive-hover`（浅色 `#1d4ed8`、深色 `#60a5fa`），列表行同时使用 `surface-hover`；黄色仅保留给品牌主动作、明确选中态和品牌标识，普通链接、表格行与图标按钮不得在 hover 时变黄或与静止态无差别。
 - Active：使用 active 渐变，不改变布局尺寸。
 - 按钮、链接等非表单交互控件的 Focus visible：2px 品牌黄色轮廓，2px offset。
 - 输入框、搜索框、文本域和下拉框聚焦时禁止阴影、光晕和发光轮廓；仅通过边框颜色变化显示焦点。
+- 普通原生 `input`、`select`、`textarea` 必须声明 `data-ui-control`，由 `globals.css` 统一默认、Hover、Focus、Disabled、警告和错误状态；页面只能追加布局、字体和文本域高度。
+- 舒适密度使用 44px 高度，适合 C 端填写与触屏场景；紧凑密度通过控件或容器的 `data-density="compact"` 使用 36px，适合 B 端工具栏和表格筛选，移动端仍回到至少 44px。
+- 复选框、文件输入等原生专用控件无需套用该契约；复合输入必须显式使用 `data-ui-control="unstyled"`，并由外层容器承担边框、背景和焦点状态。
 - Disabled：降低透明度，保持文字可辨识，禁止交互。
 - 所有非原生控件必须提供 ARIA 状态和键盘操作。
+- Tab、Switch、分段选择、筛选 Chip、选择卡和披露容器必须声明 `data-ui-structural` 的有限 appearance，并由 `globals.css` 根据 `aria-selected`、`aria-checked`、`aria-pressed` 或 `aria-expanded` 统一 Hover、Focus、Disabled 与选中反馈；默认紧凑密度为 36px，`data-density="comfortable"` 为 44px，`spacious` 为 56px，移动端最低 44px（Switch 轨道由外层行提供触控尺寸）。页面只保留布局与排版，不得再次拼装状态颜色或用局部高度覆盖密度合同。
 - 只有整张卡片本身可点击或可触发操作时，卡片容器才允许显示 Hover；仅在卡片内部放置按钮或链接的静态容器不得响应 Hover，避免与内部控件争夺层级。
 - 第三优先级描边按钮以 `surface` 为静止背景，并使用中性描边；hover/active 仅提高中性背景与边框强度，始终保持黑白中性，不使用品牌色。
 - 选中标签、状态徽章和分段控件不属于空心按钮，可使用持续的状态背景。
@@ -224,10 +254,11 @@
 ### 7.1 按钮层级
 
 - `primary`：第一优先级。每个任务区域最多一个，使用品牌渐变，承载当前区域最重要的动作。
-- `secondary`：第二优先级。使用无描边的中性实底；浅色模式依次使用 gray-100 / gray-200 / gray-300 表达静止、hover 和 active，深色模式映射为逐级增强的白色透明表面。
+- `secondary`：第二优先级，使用玻璃副按钮。静止态为半透明中性底、语义细描边、`12px` 模糊和顶部内高光；hover 以 360ms 径向洗色并增强描边，active 提高洗色强度。不得使用品牌填充或浮层阴影。
 - `tertiary`：第三优先级。使用 `surface` 白底和中性描边；hover/active 只增强中性背景与描边，不使用品牌填充，不使用阴影。
 - `ghost`：用于比第三优先级更弱的熟悉或辅助操作，静止态不显示容器。
-- 链接和原生按钮必须复用 `web/src/components/ui/button.tsx` 的同一 variant；页面只可覆盖尺寸，不得覆盖胶囊形状或重新拼装一套副按钮颜色。
+- `danger`：仅用于确认删除等不可逆动作，使用 `danger-solid`、白色前景和 `danger` hover；触发确认前的删除入口使用共享 `danger-ghost`，由 `danger` 文字与 `danger-surface` hover 构成，不得在页面直接拼装或使用 Tailwind 红色色阶。
+- 原生按钮使用 `Button`，按钮式链接必须调用 `buttonVariants`，两者复用 `web/src/components/ui/button.tsx` 的同一 variant；页面只可追加布局与必要尺寸，不得覆盖胶囊形状或重新拼装动作颜色、边框、Hover 和 Focus。
 - `outline` 不作为独立 variant；白底描边职责统一由 `tertiary` 承担。
 
 ## 8. 图标语义 Token

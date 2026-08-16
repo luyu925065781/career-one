@@ -26,6 +26,7 @@ import {
 } from "@/components/jobs/worker-pills";
 import { pillTone } from "@/components/jobs/worker-card";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 const TASK_STATUS_TABS = [
@@ -120,8 +121,10 @@ function TaskTypeBadge({ job }: { job: Job }) {
   );
 }
 
-const TASK_ACTION_CLASS =
-  "inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
+const TASK_ACTION_CLASS = cn(
+  buttonVariants({ variant: "ghost", size: "sm" }),
+  "whitespace-nowrap text-muted",
+);
 
 function TaskAction({ job }: { job: Job }) {
   const reportHref = findReportHref(job);
@@ -280,23 +283,20 @@ export default function JobsHistory() {
               return (
                 <button
                   key={tab.key}
+                  type="button"
+                  role="tab"
+                  data-ui-structural="tab-line"
+                  data-density="comfortable"
                   ref={(node) => {
                     tabRefs.current[index] = node;
                   }}
                   id={`agent-task-tab-${tab.key}`}
-                  type="button"
-                  role="tab"
                   aria-selected={selected}
                   aria-controls="agent-task-panel"
                   tabIndex={selected ? 0 : -1}
                   onClick={() => setStatusFilter(tab.key)}
                   onKeyDown={(event) => handleTabKeyDown(event, index)}
-                  className={cn(
-                    "-mb-px inline-flex min-h-11 shrink-0 items-center justify-center gap-1 border-b-2 px-3 text-xs font-medium transition-colors",
-                    selected
-                      ? "border-brand text-foreground"
-                      : "border-transparent text-muted hover:text-foreground",
-                  )}
+                  className="-mb-px inline-flex shrink-0 items-center justify-center gap-1 border-b-2 px-3 text-xs font-medium"
                 >
                   {tab.label}
                   <span className="tabular-nums text-faint">{count}</span>
@@ -320,6 +320,8 @@ export default function JobsHistory() {
                 <span>任务类型</span>
                 <span className="relative block">
                   <select
+                    data-ui-control
+                    data-density="compact"
                     value={typeFilter}
                     onChange={(event) => setTypeFilter(event.target.value as TaskType)}
                     className="min-h-10 min-w-[10.5rem] appearance-none rounded-control border border-border bg-surface px-3 pr-10 text-sm text-foreground outline-none transition-colors focus:border-brand/50"
@@ -360,13 +362,13 @@ export default function JobsHistory() {
                     {filteredJobs.map((job) => {
                       const result = taskResult(job);
                       return (
-                        <tr key={job.id} className="group transition-colors hover:bg-surface/40">
+                        <tr key={job.id} className="group transition-colors hover:bg-surface-hover">
                           <td className="px-4 py-3">
                             <Link
                               href={`/jobs/${job.id}`}
                               className="block min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-brand"
                             >
-                              <span className="block truncate font-medium text-foreground transition-colors group-hover:text-brand">
+                              <span className="block truncate font-medium text-foreground transition-colors group-hover:text-interactive-hover">
                                 {job.title}
                               </span>
                               {job.subtitle && (

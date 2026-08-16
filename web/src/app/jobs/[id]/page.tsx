@@ -28,7 +28,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   if (!jobsReady) {
     return (
       <div className="page-shell py-10">
-        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-brand">
+        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-interactive-hover">
           <ArrowLeft className="size-4" /> Agent 任务
         </Link>
         <p className="mt-8 flex items-center gap-2 text-sm text-muted" aria-live="polite">
@@ -42,7 +42,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   if (!job) {
     return (
       <div className="page-shell py-10">
-        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-brand">
+        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-interactive-hover">
           <ArrowLeft className="size-4" /> Agent 任务
         </Link>
         <p className="mt-8 text-sm text-muted">
@@ -66,7 +66,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   return (
     <div className="page-shell py-8">
       <div className="flex items-center justify-between gap-4">
-        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-brand">
+        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-interactive-hover">
           <ArrowLeft className="size-4" /> Agent 任务
         </Link>
         {canDelete && <QueuedTaskArchiveButton job={job} />}
@@ -170,17 +170,19 @@ function QueuedTaskArchiveButton({ job }: { job: Job }) {
 
   return (
     <>
-      <button
+      <Button
         ref={triggerRef}
         type="button"
+        variant="danger-ghost"
+        size="sm"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-button border border-outline-border bg-surface px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:border-danger-border hover:bg-danger-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-icon-danger focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="shrink-0"
       >
         <Trash2 className="size-3.5" aria-hidden="true" />
         删除任务
-      </button>
+      </Button>
 
       {open && createPortal(
         <div
@@ -218,20 +220,20 @@ function QueuedTaskArchiveButton({ job }: { job: Job }) {
             )}
 
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
+              <Button
                 ref={cancelRef}
                 type="button"
+                variant="tertiary"
                 onClick={closeDialog}
                 disabled={busy}
-                className="inline-flex min-h-10 items-center justify-center rounded-button border border-outline-border bg-outline-bg px-4 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-border-hover focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               >
                 取消
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="danger"
                 onClick={confirmArchive}
                 disabled={busy}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-button bg-icon-danger px-4 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-icon-danger focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               >
                 {busy ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -239,7 +241,7 @@ function QueuedTaskArchiveButton({ job }: { job: Job }) {
                   <Trash2 className="size-4" aria-hidden="true" />
                 )}
                 {busy ? "正在删除…" : "删除任务"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>,
@@ -339,6 +341,7 @@ function AgentTaskContinuation({ job, instruction }: { job: Job; instruction: st
             您的回答
           </label>
           <textarea
+            data-ui-control
             id="agent-task-answer"
             aria-label="您的回答"
             value={answer}
@@ -455,7 +458,7 @@ function ProposalReview({
         </div>
       )}
 
-      {error && <p className="border-t border-border px-5 py-3 text-sm text-red-600 dark:text-red-300">{error}</p>}
+      {error && <p className="border-t border-border px-5 py-3 text-sm text-danger" role="alert">{error}</p>}
       {status === "pending" && (
         <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
           <Button variant="tertiary" onClick={() => decide("reject")} disabled={busy !== null}>

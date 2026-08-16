@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Send, Lock } from "lucide-react";
 import { useJobs } from "@/components/jobs/job-store";
 import { useApply } from "@/components/apply/apply-provider";
+import { Button } from "@/components/ui/button";
 
 // The "Apply" CTA — brand orange, paper-plane. Enabled ONLY when the tailored CV
 // for THIS offer is ready (the tracker's PDF column is ✅, or a pdf worker for
@@ -20,27 +21,29 @@ export function ApplyButton({ n, url, company, pdfReady }: { n: string; url?: st
 
   if (!ready) {
     return (
-      <button
+      <Button
         type="button"
+        variant="tertiary"
+        size="sm"
         disabled
         title={!hasUrl ? "报告中没有投递网址" : "请先生成岗位定制简历 PDF"}
-        className="inline-flex cursor-not-allowed items-center justify-center gap-1.5 rounded-full border border-border bg-surface/40 px-3.5 py-1 text-xs font-medium text-faint max-sm:min-h-[44px]"
+        className="cursor-not-allowed"
       >
         <Lock className="size-3.5" /> 投递
-      </button>
+      </Button>
     );
   }
   return (
-    <button
+    <Button
       type="button"
+      size="sm"
       onClick={() => {
         apply.open(url!, { prefill: true, company });
         router.push("/apply");
       }}
-      className="inline-flex items-center justify-center gap-1.5 rounded-full bg-brand px-3.5 py-1 text-xs font-medium text-brand-foreground shadow-sm transition-colors hover:bg-brand-200 max-sm:min-h-[44px]"
       title="打开预填后的投递表单，由你检查并亲自提交"
     >
       <Send className="size-3.5" /> 投递
-    </button>
+    </Button>
   );
 }

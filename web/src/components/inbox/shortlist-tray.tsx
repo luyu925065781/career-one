@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown, Coins, Settings, Sparkles, X } from "lucide-react";
 import { CompanyLogo } from "@/components/company-logo";
 import { CostBadge } from "@/components/cost/cost-badge";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { resolveCompanyIdentity } from "@/lib/company";
 
@@ -59,14 +60,16 @@ export function ShortlistTray({
                       <span className="font-medium">{companyIdentity.label}</span>{" "}
                       <span className="text-muted">· {it.role}</span>
                     </span>
-                    <button
+                    <Button
                       type="button"
                       onClick={() => onRemove(it.url)}
                       aria-label={`移除 ${companyIdentity.label}`}
-                      className="inline-flex items-center justify-center rounded-md p-1 text-faint transition-colors hover:text-foreground max-sm:min-h-[44px] max-sm:min-w-[44px]"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-icon-muted"
                     >
                       <X className="size-4" />
-                    </button>
+                    </Button>
                   </li>
                 );
               })}
@@ -77,6 +80,9 @@ export function ShortlistTray({
           <div className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
             <button
               type="button"
+              data-button-shape="container"
+              data-ui-structural="disclosure-inline"
+              aria-expanded={open}
               onClick={() => setOpen((v) => !v)}
               className="inline-flex items-center gap-1.5 text-sm font-medium max-sm:min-h-[44px]"
             >
@@ -85,22 +91,22 @@ export function ShortlistTray({
             </button>
 
             {open && (
-              <button type="button" onClick={onClear} className="text-xs text-faint transition-colors hover:text-foreground max-sm:min-h-[44px]">
+              <Button type="button" onClick={onClear} variant="ghost" size="sm" className="text-faint">
                 清除
-              </button>
+              </Button>
             )}
 
             <div className="ml-auto flex items-center gap-2">
               {!confirming ? (
-                <button
+                <Button
                   type="button"
                   onClick={() => setConfirming(true)}
-                  className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-200 max-sm:min-h-[44px]"
+                  className="px-4"
                 >
                   <Sparkles className="size-4" />
                   <span>评分 {n} 个岗位</span>
                   <span className="hidden text-xs font-normal text-brand-foreground/80 sm:inline">· {costText}</span>
-                </button>
+                </Button>
               ) : (
                 <ConfirmScore n={n} costText={costText} hasCli={hasCli} onCancel={() => setConfirming(false)} onConfirm={() => { setConfirming(false); onScore(); }} />
               )}
@@ -135,12 +141,12 @@ function ConfirmScore({
     return (
       <div className="flex items-center gap-2 text-xs">
         <span className="text-muted">尚未配置 Agent。</span>
-        <Link href="/config" className="inline-flex items-center gap-1 rounded-full border border-outline-border bg-outline-bg px-3 py-1.5 font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px]">
+        <Link href="/config" className={buttonVariants({ variant: "tertiary", size: "sm" })}>
           <Settings className="size-3.5" /> 去设置
         </Link>
-        <button type="button" onClick={onCancel} className="text-faint hover:text-foreground max-sm:min-h-[44px]">
+        <Button type="button" onClick={onCancel} variant="ghost" size="sm" className="text-faint">
           取消
-        </button>
+        </Button>
       </div>
     );
   }
@@ -149,16 +155,16 @@ function ConfirmScore({
       <span className="hidden items-center gap-1 text-[11px] text-muted sm:inline-flex">
         <Coins className="size-3.5 text-icon-brand" /> {costText}
       </span>
-      <button
+      <Button
         type="button"
         onClick={onConfirm}
-        className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-200 max-sm:min-h-[44px]"
+        className="px-4"
       >
         立即评分 {n} 个岗位
-      </button>
-      <button type="button" onClick={onCancel} className="rounded-full px-2 py-2 text-xs text-faint transition-colors hover:text-foreground max-sm:min-h-[44px]">
+      </Button>
+      <Button type="button" onClick={onCancel} variant="ghost" size="sm" className="text-faint">
         取消
-      </button>
+      </Button>
     </div>
   );
 }

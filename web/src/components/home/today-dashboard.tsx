@@ -290,19 +290,19 @@ export function TodayDashboard({
             </p>
             <div className="mt-6 flex flex-wrap gap-2.5">
               {onboardingFocus && profileSetupNeeded ? (
-                <Link href="/profile" className={cn(buttonVariants({ variant: "primary" }), "rounded-full px-5 py-2.5")}>
+                <Link href="/profile" className={cn(buttonVariants({ variant: "primary" }), "px-5 py-2.5")}>
                   完善求职画像 <ArrowRight className="size-4" />
                 </Link>
               ) : onboardingFocus && nextGuideStep ? (
-                <Link href={nextGuideStep.href} className={cn(buttonVariants({ variant: "primary" }), "rounded-full px-5 py-2.5")}>
+                <Link href={nextGuideStep.href} className={cn(buttonVariants({ variant: "primary" }), "px-5 py-2.5")}>
                   {nextGuideStep.title} <ArrowRight className="size-4" />
                 </Link>
               ) : (
                 <>
-                  <Link href="/cn-diagnose" className={cn(buttonVariants({ variant: "primary" }), "rounded-full px-5 py-2.5")}>
+                  <Link href="/cn-diagnose" className={cn(buttonVariants({ variant: "primary" }), "px-5 py-2.5")}>
                     岗位评估 <ArrowRight className="size-4" />
                   </Link>
-                  <Link href="/pipeline" className={cn(buttonVariants({ variant: "secondary" }), "rounded-full px-5 py-2.5")}>
+                  <Link href="/pipeline" className={cn(buttonVariants({ variant: "secondary" }), "px-5 py-2.5")}>
                     求职进度
                   </Link>
                 </>
@@ -351,7 +351,7 @@ export function TodayDashboard({
             ))}
           </div>
           {initialFresh.length > 6 && (
-            <Link href="/pipeline?tab=INBOX" className="mt-3 inline-flex items-center text-sm text-muted transition hover:text-brand max-sm:min-h-[44px]">
+            <Link href="/pipeline?tab=INBOX" className="mt-3 inline-flex items-center text-sm text-muted transition hover:text-interactive-hover max-sm:min-h-[44px]">
               查看全部 {initialFresh.length} 个岗位 →
             </Link>
           )}

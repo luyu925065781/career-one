@@ -35,19 +35,26 @@ colors:
   surface-container-high: "#E5E7EB"
   surface-container-highest: "#D1D5DB"
   surface-hover: "#F3F4F6"
+  glass-surface: "rgb(255 255 255 / 0.56)"
+  glass-surface-raised: "rgb(255 255 255 / 0.72)"
+  glass-border: "rgb(17 24 39 / 0.10)"
+  glass-highlight: "rgb(255 255 255 / 0.90)"
   on-surface: "#111827"
   on-surface-variant: "#4B5563"
   muted: "#4B5563"
   faint: "#6B7280"
-  metric-brand: "#B48300"
+  interactive-hover: "#1D4ED8"
+  metric-brand: "#E07900"
   metric-warning: "#EA580C"
   metric-info: "#2563EB"
   metric-success: "#059669"
   metric-danger: "#E11D48"
   metric-purple: "#4D44D6"
-  action-secondary: "#F3F4F6"
-  action-secondary-hover: "#E5E7EB"
-  action-secondary-active: "#D1D5DB"
+  action-secondary: "rgb(255 255 255 / 0.64)"
+  action-secondary-hover: "rgb(17 24 39 / 0.07)"
+  action-secondary-active: "rgb(17 24 39 / 0.11)"
+  action-secondary-border: "rgb(17 24 39 / 0.14)"
+  action-secondary-border-hover: "rgb(17 24 39 / 0.28)"
   action-secondary-foreground: "#111827"
   outline-bg: "rgb(17 24 39 / 0.025)"
   outline-bg-hover: "rgb(17 24 39 / 0.05)"
@@ -88,9 +95,15 @@ colors:
   dark-on-background: "#FFFFFF"
   dark-surface: "#161616"
   dark-surface-hover: "#232323"
-  dark-action-secondary: "rgb(255 255 255 / 0.12)"
-  dark-action-secondary-hover: "rgb(255 255 255 / 0.18)"
-  dark-action-secondary-active: "rgb(255 255 255 / 0.24)"
+  dark-glass-surface: "rgb(255 255 255 / 0.055)"
+  dark-glass-surface-raised: "rgb(255 255 255 / 0.10)"
+  dark-glass-border: "rgb(255 255 255 / 0.12)"
+  dark-glass-highlight: "rgb(255 255 255 / 0.16)"
+  dark-action-secondary: "rgb(255 255 255 / 0.07)"
+  dark-action-secondary-hover: "rgb(255 255 255 / 0.14)"
+  dark-action-secondary-active: "rgb(255 255 255 / 0.20)"
+  dark-action-secondary-border: "rgb(255 255 255 / 0.16)"
+  dark-action-secondary-border-hover: "rgb(255 255 255 / 0.42)"
   dark-action-secondary-foreground: "#FFFFFF"
   dark-outline-bg: "rgb(255 255 255 / 0.05)"
   dark-outline-bg-hover: "rgb(255 255 255 / 0.1)"
@@ -99,9 +112,10 @@ colors:
   dark-outline: "#262626"
   dark-on-surface: "#FFFFFF"
   dark-on-surface-variant: "#9CA3AF"
+  dark-interactive-hover: "#60A5FA"
   dark-primary: "#FACC15"
   dark-on-primary: "#111827"
-  dark-metric-brand: "#FACC15"
+  dark-metric-brand: "#FBBF24"
   dark-metric-warning: "#FB923C"
   dark-metric-info: "#60A5FA"
   dark-metric-success: "#10B981"
@@ -208,6 +222,10 @@ elevation:
   dark-raised: "0 1px 2px rgb(0 0 0 / 0.24), 0 4px 12px rgb(0 0 0 / 0.18)"
   dark-floating: "0 8px 24px rgb(0 0 0 / 0.32)"
   dark-overlay: "0 20px 48px rgb(0 0 0 / 0.46)"
+effects:
+  glass-blur: "12px"
+  glass-saturation: "118%"
+  glass-highlight: "inset 0 1px 0 {colors.glass-highlight}"
 spacing:
   base: 4px
   xs: 4px
@@ -253,16 +271,19 @@ components:
     rounded: "{rounded.md}"
   button-secondary:
     backgroundColor: "{colors.action-secondary}"
+    borderColor: "{colors.action-secondary-border}"
     textColor: "{colors.action-secondary-foreground}"
     typography: "{typography.label-md}"
     rounded: "{rounded.md}"
     padding: 8px 12px
     height: 40px
   button-secondary-hover:
-    backgroundColor: "{colors.action-secondary-hover}"
+    overlayColor: "{colors.action-secondary-hover}"
+    borderColor: "{colors.action-secondary-border-hover}"
     textColor: "{colors.action-secondary-foreground}"
   button-secondary-active:
-    backgroundColor: "{colors.action-secondary-active}"
+    overlayColor: "{colors.action-secondary-active}"
+    borderColor: "{colors.action-secondary-border-hover}"
     textColor: "{colors.action-secondary-foreground}"
   button-tertiary:
     backgroundColor: "{colors.surface}"
@@ -282,11 +303,20 @@ components:
     textColor: "{colors.on-surface}"
   input-field:
     backgroundColor: "{colors.surface}"
+    borderColor: "{colors.outline}"
     textColor: "{colors.on-surface}"
     typography: "{typography.body-md}"
     rounded: "{rounded.md}"
     padding: 12px
     height: 44px
+  input-field-compact:
+    backgroundColor: "{colors.surface}"
+    borderColor: "{colors.outline}"
+    textColor: "{colors.on-surface}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.md}"
+    padding: 8px 12px
+    height: 36px
   card-standard:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.on-surface}"
@@ -433,6 +463,8 @@ components:
 
 - 输入框使用白色或深色表面、1px 中性边框和 8px 圆角。
 - 输入框 Focus 禁止阴影、光晕或发光环，只改变边框颜色；按钮和链接继续保留 2px 可见焦点轮廓。
+- 普通原生 `input`、`select`、`textarea` 使用 `data-ui-control` 接入统一状态；舒适密度为 44px，`data-density="compact"` 紧凑密度为 36px，移动端仍至少 44px。
+- 复合输入使用 `data-ui-control="unstyled"`，由外层容器统一边框、背景与 Focus；复选框和文件输入继续使用原生专用样式。
 - 二元设置使用开关或复选框，模式切换使用 Segmented Control，视图切换使用 Tabs，选项集合使用菜单。
 - 选中标签和状态徽章可以使用持续的浅色状态背景，但必须同时有文字或图标说明状态。
 

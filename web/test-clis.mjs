@@ -1,12 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { KNOWN } from "./src/lib/clis.ts";
 import { companyInitials, resolveCompanyIdentity } from "./src/lib/company.ts";
 import { isEvaluationIntent, localizeUserMessage, parseReport, reportSectionPreview } from "./src/lib/format.ts";
 
 function readSource(path) {
   return readFileSync(new URL(path, import.meta.url), "utf8");
+}
+
+function readWebSources() {
+  const sourceRoot = new URL("./src/", import.meta.url);
+  return readdirSync(sourceRoot, { recursive: true, encoding: "utf8" })
+    .filter((path) => /\.(?:css|ts|tsx)$/.test(path))
+    .map((path) => ({ path, source: readFileSync(new URL(path, sourceRoot), "utf8") }));
 }
 
 const jobsPageSource = readSource("./src/app/jobs/page.tsx");
@@ -67,6 +74,10 @@ const designSystemShowcaseSource = readSource("./src/components/design-system-sh
 const badgeSource = readSource("./src/components/ui/badge.tsx");
 const buttonSource = readSource("./src/components/ui/button.tsx");
 const cardSource = readSource("./src/components/ui/card.tsx");
+const portalsViewSource = readSource("./src/components/portals-view.tsx");
+const deleteFromTrackerSource = readSource("./src/components/delete-from-tracker.tsx");
+const shortlistTraySource = readSource("./src/components/inbox/shortlist-tray.tsx");
+const inboxTriageSource = readSource("./src/components/inbox/inbox-triage.tsx");
 const PAGE_SHELL_SOURCES = [
   "./src/app/apply/page.tsx",
   "./src/app/interview/page.tsx",
@@ -1146,7 +1157,7 @@ test("clearing finished Agent tasks requires one accessible confirmation flow", 
   assert.match(workerPillsSource, /aria-modal="true"/);
   assert.match(workerPillsSource, /aria-labelledby=\{titleId\}/);
   assert.match(workerPillsSource, /aria-describedby=\{descriptionId\}/);
-  assert.match(workerPillsSource, />\s*清除历史任务\s*<\/button>/);
+  assert.match(workerPillsSource, />\s*清除历史任务\s*<\/Button>/);
   assert.match(workerPillsSource, /清除历史任务？/);
   assert.match(workerPillsSource, /报告和已生成文件不会被删除/);
   assert.match(workerPillsSource, /ref=\{cancelRef\}[\s\S]*取消/);
@@ -1233,6 +1244,37 @@ test("Agent history distinguishes loading from empty and folds duplicate failed 
   assert.match(jobsPageSource, /aria-busy=\{!jobsReady\}/);
   assert.match(jobsPageSource, /!jobsReady\s*\?/);
   assert.match(jobsPageSource, /visibleJobs\.length === 0/);
+});
+
+test("Agent history table uses legible semantic hover colors", () => {
+  assert.match(jobsPageSource, /hover:bg-surface-hover/);
+  assert.match(jobsPageSource, /group-hover:text-interactive-hover/);
+  assert.doesNotMatch(jobsPageSource, /hover:bg-surface\/40/);
+  assert.doesNotMatch(jobsPageSource, /group-hover:text-brand(?:-text)?/);
+});
+
+test("ordinary text and table rows share one visible global hover contract", () => {
+  const globalsSource = readSource("./src/app/globals.css");
+  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designTokenSource = readSource("../DESIGN.md");
+
+  assert.match(globalsSource, /--color-interactive-hover:\s*var\(--interactive-hover\)/);
+  assert.match(globalsSource, /--interactive-hover:\s*#1d4ed8/);
+  assert.match(globalsSource, /\.dark\s*\{[\s\S]*--interactive-hover:\s*#60a5fa/);
+  assert.match(designTokenSource, /\n  interactive-hover:\s*"#1D4ED8"/);
+  assert.match(designTokenSource, /\n  dark-interactive-hover:\s*"#60A5FA"/);
+  assert.match(designSystemSource, /普通交互 Hover/);
+
+  for (const { path, source } of readWebSources()) {
+    assert.doesNotMatch(
+      source,
+      /\b(?:group-)?hover:text-brand(?:-text)?\b/,
+      `${path} bypasses the neutral hover token with a brand-yellow text hover`,
+    );
+  }
+
+  assert.match(pipelineViewSource, /group[^"\n]*transition-colors hover:bg-surface-hover/);
+  assert.doesNotMatch(pipelineViewSource, /hover:bg-surface\/40/);
 });
 
 test("the standalone discovery page is replaced by the profile page", () => {
@@ -1346,6 +1388,42 @@ test("career-one semantic tokens own status, radius, elevation, and controls", (
   assert.match(cardSource, /shadow-raised/);
 });
 
+test("native form fields opt into one density-aware visual contract", () => {
+  const globalsSource = readSource("./src/app/globals.css");
+  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designTokenSource = readSource("../DESIGN.md");
+
+  assert.match(globalsSource, /--control-height-comfortable:\s*2\.75rem;/);
+  assert.match(globalsSource, /--control-height-compact:\s*2\.25rem;/);
+  assert.match(
+    globalsSource,
+    /\[data-ui-control\]:not\(\[data-ui-control="unstyled"\]\)\s*\{[\s\S]*?min-height:\s*var\(--control-height-comfortable\);[\s\S]*?border:\s*1px solid var\(--border\);[\s\S]*?border-radius:\s*var\(--radius-control\);[\s\S]*?background:\s*var\(--surface\);/,
+  );
+  assert.match(globalsSource, /\[data-ui-control\]:not\(\[data-ui-control="unstyled"\]\):hover:not\(:disabled\)/);
+  assert.match(globalsSource, /\[data-ui-control\]:not\(\[data-ui-control="unstyled"\]\):focus/);
+  assert.match(globalsSource, /:is\(input, select\)\[data-ui-control\]:not\(\[data-ui-control="unstyled"\]\)\s*\{[\s\S]*?height:\s*var\(--control-height-comfortable\)/);
+  assert.match(globalsSource, /:is\(input, select\)\[data-ui-control\]\[data-density="compact"\][\s\S]*?height:\s*var\(--control-height-compact\)/);
+  assert.match(globalsSource, /\[data-ui-control\]\[data-density="compact"\]/);
+  assert.match(globalsSource, /\[data-ui-control\]\[data-state="warning"\]/);
+  assert.match(designTokenSource, /input-field-compact:/);
+  assert.match(designSystemSource, /`data-ui-control`/);
+  assert.match(designSystemSource, /舒适密度/);
+  assert.match(designSystemSource, /紧凑密度/);
+
+  for (const { path, source } of readWebSources()) {
+    if (!path.endsWith(".tsx")) continue;
+    for (const match of source.matchAll(/<(input|select|textarea)\b[^>]*>/g)) {
+      const [tag, element] = match;
+      const isExemptNativeInput = element === "input" && (
+        /\btype="(?:button|checkbox|file|hidden|reset|submit)"/.test(tag)
+        || /\shidden(?:\s|\/?>)/.test(tag)
+      );
+      if (isExemptNativeInput) continue;
+      assert.match(tag, /\bdata-ui-control(?:=|\s|\/?>)/, `${path} contains an uncontracted ${element}`);
+    }
+  }
+});
+
 test("all action buttons use one global pill-shaped radius without changing form controls", () => {
   const globalsSource = readSource("./src/app/globals.css");
   const designSystemSource = readSource("../DESIGN_SYSTEM.md");
@@ -1354,7 +1432,7 @@ test("all action buttons use one global pill-shaped radius without changing form
   assert.match(globalsSource, /--radius-control:\s*0\.5rem;/);
   assert.match(
     globalsSource,
-    /button:not\(\[data-button-shape="container"\]\):not\(\[role="tab"\]\)[\s\S]{0,280}border-radius:\s*var\(--radius-button\)\s*!important;/,
+    /button:not\(\[data-button-shape="container"\]\):not\(\[role="tab"\]\):not\(\[role="switch"\]\)[\s\S]{0,280}border-radius:\s*var\(--radius-button\)\s*!important;/,
   );
   assert.match(globalsSource, /input\[type="submit"\]/);
   assert.match(globalsSource, /input\[type="button"\]/);
@@ -1363,9 +1441,10 @@ test("all action buttons use one global pill-shaped radius without changing form
   assert.doesNotMatch(buttonSource, /rounded-control/);
   assert.match(
     pipelineViewSource,
-    /data-button-shape="container"[\s\S]{0,220}border-b-2/,
-    "pipeline tabs must keep a straight selection indicator",
+    /data-ui-structural="tab-line"[\s\S]{0,320}border-b-2/,
+    "pipeline filters must use the shared straight tab-line appearance",
   );
+  assert.match(globalsSource, /data-ui-structural="tab-line"[\s\S]{0,240}border-bottom-color/);
 
   for (const source of [
     jobDetailSource,
@@ -1378,6 +1457,7 @@ test("all action buttons use one global pill-shaped radius without changing form
   }
 
   assert.match(configFormSource, /data-button-shape="container"/);
+  assert.match(configFormSource, /role="switch"/);
   assert.match(designSystemSource, /所有文本按钮、图标按钮和按钮式链接统一使用胶囊形/);
   assert.match(designSystemSource, /披露行或整行可点击容器不属于动作按钮/);
 });
@@ -1389,7 +1469,7 @@ test("dashboard metrics use vivid dedicated semantic tokens", () => {
   const lightThemeSource = globalsSource.match(/:root \{([\s\S]*?)\n\}/)?.[1] ?? "";
   const darkThemeSource = globalsSource.match(/\.dark \{([\s\S]*?)\n\}/)?.[1] ?? "";
   const metricColors = {
-    brand: "#b48300",
+    brand: "#e07900",
     warning: "#ea580c",
     info: "#2563eb",
     success: "#059669",
@@ -1405,7 +1485,7 @@ test("dashboard metrics use vivid dedicated semantic tokens", () => {
     purple: 0.6,
   };
   const darkMetricColors = {
-    brand: "#facc15",
+    brand: "#fbbf24",
     warning: "#fb923c",
     info: "#60a5fa",
     success: "#10b981",
@@ -1571,11 +1651,57 @@ test("shared status UI consumes career-one semantic tokens instead of palette co
   assert.match(badgeSource, /bg-danger-surface text-danger/);
 });
 
+test("feedback surfaces and read-only status badges use one semantic contract", () => {
+  const globalsSource = readSource("./src/app/globals.css");
+  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+
+  assert.match(
+    globalsSource,
+    /\[data-ui-feedback\]\s*\{[\s\S]*?border:\s*1px solid;[\s\S]*?background:[\s\S]*?color:/,
+    "feedback containers must share one border, surface, and foreground contract",
+  );
+  assert.match(globalsSource, /\[data-ui-feedback="inline"\][\s\S]*?border-radius:\s*var\(--radius-control\)/);
+  assert.match(globalsSource, /\[data-ui-feedback="callout"\][\s\S]*?border-radius:\s*var\(--radius-card\)/);
+  for (const tone of ["info", "success", "warning", "danger"]) {
+    assert.match(
+      globalsSource,
+      new RegExp(`\\[data-ui-feedback\\]\\[data-tone="${tone}"\\]\\s*\\{[\\s\\S]*?var\\(--state-${tone}-border\\)[\\s\\S]*?var\\(--state-${tone}-surface\\)[\\s\\S]*?var\\(--state-${tone}\\)`),
+      `missing ${tone} feedback tone`,
+    );
+  }
+
+  assert.match(badgeSource, /tone\?:\s*"good" \| "warn" \| "bad" \| "info" \| "muted"/);
+  assert.match(badgeSource, /size\?:\s*"sm" \| "md"/);
+  assert.match(badgeSource, /info:\s*"bg-info-surface text-info"/);
+  assert.match(designSystemSource, /`data-ui-feedback="inline\|callout"`/);
+
+  for (const { path, source } of readWebSources()) {
+    if (!path.endsWith(".tsx")) continue;
+    assert.doesNotMatch(
+      source,
+      /(?:bg|text|border)-(?:amber|emerald|red|green|yellow|blue)-/,
+      `${path} bypasses semantic state tokens with a raw Tailwind palette color`,
+    );
+  }
+
+  assert.match(portalsViewSource, /role=\{error \? "alert" : "status"\}/);
+  assert.match(portalsViewSource, /data-ui-feedback="inline"/);
+  assert.match(applyViewSource, /data-ui-feedback="callout"/);
+  assert.match(cvIngestSource, /data-ui-feedback="inline"/);
+});
+
 test("buttons expose one shared three-level action hierarchy", () => {
   const globalsSource = readSource("./src/app/globals.css");
   const designSystemSource = readSource("../DESIGN_SYSTEM.md");
   const designTokenSource = readSource("../DESIGN.md");
-  for (const token of ["action-secondary", "action-secondary-hover", "action-secondary-active", "action-secondary-foreground"]) {
+  for (const token of [
+    "action-secondary",
+    "action-secondary-hover",
+    "action-secondary-active",
+    "action-secondary-border",
+    "action-secondary-border-hover",
+    "action-secondary-foreground",
+  ]) {
     assert.match(globalsSource, new RegExp(`--color-${token}:\\s*var\\(--${token}\\)`), `missing runtime button token ${token}`);
     assert.match(designTokenSource, new RegExp(`\\n  ${token}:`), `missing machine-readable button token ${token}`);
   }
@@ -1604,10 +1730,12 @@ test("buttons expose one shared three-level action hierarchy", () => {
   assert.match(designSystemSource, /`tertiary`：第三优先级/);
 
   assert.match(buttonSource, /primary:\s*"[^"]*\bbg-brand\b[^"]*"/);
-  assert.match(buttonSource, /secondary:\s*"[^"]*\bbg-action-secondary\b[^"]*"/);
-  assert.match(buttonSource, /secondary:\s*"[^"]*\bhover:bg-action-secondary-hover\b[^"]*"/);
-  assert.match(buttonSource, /secondary:\s*"[^"]*\bactive:bg-action-secondary-active\b[^"]*"/);
-  assert.doesNotMatch(buttonSource.match(/secondary:\s*"[^"]*"/)?.[0] ?? "", /\bborder\b/);
+  assert.match(buttonSource, /secondary:\s*"[^"]*\bglass-secondary\b[^"]*"/);
+  assert.match(globalsSource, /\.glass-secondary\s*\{[\s\S]*?background:\s*var\(--action-secondary\);[\s\S]*?border:\s*1px solid var\(--action-secondary-border\);[\s\S]*?backdrop-filter:\s*blur\(var\(--glass-blur\)\)/);
+  assert.match(globalsSource, /\.glass-secondary::after\s*\{[\s\S]*?background:\s*var\(--action-secondary-hover\);[\s\S]*?transform:\s*translate\(-50%, -50%\) scale\(0\)/);
+  assert.match(globalsSource, /\.glass-secondary:hover::after\s*\{[\s\S]*?scale\(1\)/);
+  assert.match(globalsSource, /\.glass-secondary:hover\s*\{[\s\S]*?border-color:\s*var\(--action-secondary-border-hover\)/);
+  assert.match(globalsSource, /\.glass-secondary:active::after\s*\{[\s\S]*?background:\s*var\(--action-secondary-active\)/);
   assert.match(buttonSource, /tertiary:\s*"[^"]*\bborder-outline-border\b[^"]*"/);
   assert.match(buttonSource, /tertiary:\s*"[^"]*\bbg-surface\b[^"]*"/);
   assert.match(buttonSource, /tertiary:\s*"[^"]*\bhover:bg-outline-bg\b[^"]*"/);
@@ -1617,8 +1745,8 @@ test("buttons expose one shared three-level action hierarchy", () => {
   assert.match(buttonSource, /focus-visible:ring-offset-background/);
   assert.doesNotMatch(buttonSource, /\n\s+outline:/);
 
-  assert.match(followUpCardSource, /import \{ buttonVariants \} from "@\/components\/ui\/button"/);
-  assert.match(followUpCardSource, /buttonVariants\(\{ variant: "secondary", size: "sm" \}\)/);
+  assert.match(followUpCardSource, /import \{ Button, buttonVariants \} from "@\/components\/ui\/button"/);
+  assert.match(followUpCardSource, /<Button[\s\S]{0,100}variant="secondary"[\s\S]{0,100}size="sm"/);
   assert.match(decisionCardSource, /import \{ Button, buttonVariants \} from "@\/components\/ui\/button"/);
   assert.match(decisionCardSource, /<Button\s+type="button"\s+variant="secondary"\s+size="sm"/);
   assert.match(decisionCardSource, /<Button\s+type="button"\s+variant="tertiary"\s+size="sm"/);
@@ -1633,9 +1761,211 @@ test("buttons expose one shared three-level action hierarchy", () => {
   assert.match(jobDetailSource, /<Button variant="tertiary"/);
   assert.match(designSystemShowcaseSource, /<Button variant="secondary">查看报告/);
   assert.match(designSystemShowcaseSource, /<Button variant="tertiary">稍后处理/);
+  assert.match(designSystemSource, /玻璃副按钮/);
 
   for (const source of [todayDashboardSource, followUpCardSource, jobDetailSource, designSystemShowcaseSource]) {
     assert.doesNotMatch(source, /variant(?::|=)\s*["{]outline/);
+  }
+});
+
+test("shared Button owns destructive and icon action states", () => {
+  assert.match(buttonSource, /danger:\s*"[^"]*\bbg-danger-solid\b[^"]*\btext-white\b[^"]*"/);
+  assert.match(buttonSource, /danger:\s*"[^"]*\bhover:bg-danger\b[^"]*"/);
+  assert.match(buttonSource, /"danger-ghost":\s*"[^"]*\btext-danger\b[^"]*\bhover:bg-danger-surface\b[^"]*"/);
+  assert.match(buttonSource, /sm:\s*"[^"]*\bh-8\b[^"]*"/);
+  assert.match(buttonSource, /default:\s*"[^"]*\bh-10\b[^"]*"/);
+  assert.match(buttonSource, /lg:\s*"[^"]*\bh-11\b[^"]*"/);
+  assert.match(buttonSource, /icon:\s*"[^"]*\bsize-10\b[^"]*\bmax-sm:size-11\b[^"]*"/);
+  assert.match(buttonSource, /"icon-sm":\s*"[^"]*\bsize-8\b[^"]*\bmax-sm:size-11\b[^"]*"/);
+});
+
+test("high-frequency action surfaces cannot rebuild Button visuals locally", () => {
+  const sharedActionSources = [
+    assistantConsoleSource,
+    applyViewSource,
+    generatePdfButtonSource,
+    quickEvaluateSource,
+    deleteFromTrackerSource,
+    shortlistTraySource,
+    inboxTriageSource,
+  ];
+
+  for (const source of sharedActionSources) {
+    assert.match(source, /@\/components\/ui\/button/);
+    for (const [tag] of source.matchAll(/<button\b[^>]*>/g)) {
+      assert.match(
+        tag,
+        /(?:role="(?:tab|switch)"|data-button-shape="container")/,
+        "only structural controls may bypass the shared Button contract",
+      );
+    }
+  }
+
+  const portalNativeButtons = [...portalsViewSource.matchAll(/<button\b[^>]*>/g)].map(([tag]) => tag);
+  assert.ok(portalNativeButtons.length > 0, "portal tabs and switches must remain explicit semantic controls");
+  for (const tag of portalNativeButtons) {
+    assert.match(tag, /role="(?:tab|switch)"/, "only tabs and switches may bypass shared Button on the portals screen");
+  }
+  assert.match(portalsViewSource, /@\/components\/ui\/button/);
+  assert.match(portalsViewSource, /variant="danger-ghost"/);
+  assert.match(deleteFromTrackerSource, /variant="danger"/);
+  assert.match(deleteFromTrackerSource, /variant="danger-ghost"/);
+  assert.doesNotMatch(
+    [portalsViewSource, deleteFromTrackerSource].join("\n"),
+    /hover:(?:bg|text|border)-red-(?:[1-9]00|500\/)/,
+    "danger actions must use semantic danger tokens",
+  );
+});
+
+test("all native buttons are shared actions or explicit structural controls", () => {
+  for (const { path, source } of readWebSources()) {
+    if (!path.endsWith(".tsx") || path === "components/ui/button.tsx") continue;
+
+    for (const [tag] of source.matchAll(/<button\b[^>]*>/g)) {
+      assert.match(
+        tag,
+        /(?:role="(?:tab|switch)"|data-button-shape="container")/,
+        `${path} contains a native action button outside the shared Button contract: ${tag}`,
+      );
+    }
+  }
+});
+
+test("structural controls use one state-driven appearance contract", () => {
+  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const globalsSource = readSource("./src/app/globals.css");
+  const allowedAppearances = new Set([
+    "tab-line",
+    "segment",
+    "chip",
+    "choice-card",
+    "switch-track",
+    "switch-row",
+    "disclosure-inline",
+    "disclosure-row",
+  ]);
+
+  assert.match(designSystemSource, /`data-ui-structural`/);
+  assert.match(globalsSource, /button\[data-ui-structural\]/);
+  assert.match(globalsSource, /:where\(button\[data-ui-structural\]:not\(\[data-ui-structural="switch-track"\]\)\)\s*\{[^}]*min-height:\s*var\(--control-height-compact\);/);
+  assert.match(globalsSource, /button\[data-ui-structural\]\[data-density="comfortable"\]\s*\{[^}]*min-height:\s*var\(--control-height-comfortable\);/);
+  assert.match(globalsSource, /button\[data-ui-structural\]\[data-density="spacious"\]\s*\{[^}]*min-height:\s*3\.5rem;/);
+  assert.match(globalsSource, /@media \(max-width: 639px\)[\s\S]*:where\(button\[data-ui-structural\]:not\(\[data-ui-structural="switch-track"\]\)\)\s*\{[^}]*min-height:\s*var\(--control-height-comfortable\);/);
+  assert.match(globalsSource, /button\[data-ui-structural\]:focus-visible/);
+  assert.match(globalsSource, /button\[data-ui-structural\]:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--color-brand\);[^}]*outline-offset:\s*2px;/);
+  assert.match(globalsSource, /data-ui-structural="tab-line"/);
+  assert.match(globalsSource, /data-ui-structural="segment"/);
+  assert.match(globalsSource, /data-ui-structural="chip"/);
+  assert.match(globalsSource, /data-ui-structural="choice-card"/);
+  assert.match(globalsSource, /data-ui-structural="switch-track"/);
+  assert.match(globalsSource, /data-ui-structural="switch-row"/);
+  assert.match(globalsSource, /data-ui-structural="disclosure-inline"/);
+  assert.match(globalsSource, /data-ui-structural="disclosure-row"/);
+
+  for (const { path, source } of readWebSources()) {
+    if (!path.endsWith(".tsx") || path === "components/ui/button.tsx") continue;
+
+    for (const [buttonBlock] of source.matchAll(/<button\b[\s\S]*?<\/button>/g)) {
+      const appearance = buttonBlock.match(/data-ui-structural="([^"]+)"/)?.[1];
+      const preview = buttonBlock.slice(0, 260);
+      assert.ok(appearance, `${path} structural control is missing data-ui-structural: ${preview}`);
+      assert.ok(allowedAppearances.has(appearance), `${path} uses unknown structural appearance: ${appearance}`);
+      const density = buttonBlock.match(/data-density="([^"]+)"/)?.[1];
+      if (density) assert.ok(["comfortable", "spacious"].includes(density), `${path} uses unknown structural density: ${density}`);
+
+      if (/role="tab"/.test(buttonBlock)) {
+        assert.match(buttonBlock, /aria-selected=/, `${path} tab is missing aria-selected: ${preview}`);
+      } else if (/role="switch"/.test(buttonBlock)) {
+        assert.match(buttonBlock, /aria-checked=/, `${path} switch is missing aria-checked: ${preview}`);
+      } else {
+        assert.match(
+          buttonBlock,
+          /aria-(?:pressed|expanded)=/,
+          `${path} structural container is missing a pressed or expanded state: ${preview}`,
+        );
+      }
+
+      let openingTagEnd = -1;
+      let braceDepth = 0;
+      let quote = "";
+      for (let index = 0; index < buttonBlock.length; index += 1) {
+        const character = buttonBlock[index];
+        if (quote) {
+          if (character === quote && buttonBlock[index - 1] !== "\\") quote = "";
+          continue;
+        }
+        if (character === '"' || character === "'") {
+          quote = character;
+        } else if (character === "{") {
+          braceDepth += 1;
+        } else if (character === "}") {
+          braceDepth -= 1;
+        } else if (character === ">" && braceDepth === 0) {
+          openingTagEnd = index;
+          break;
+        }
+      }
+      assert.ok(openingTagEnd > 0, `${path} structural control has an unreadable opening tag`);
+      const openingTag = buttonBlock.slice(0, openingTagEnd + 1);
+      assert.doesNotMatch(
+        openingTag,
+        /\b(?:bg-brand-soft|border-brand(?:\/\d+)?|text-brand|hover:bg-surface-hover|hover:text-foreground|focus-visible:ring-brand|transition-colors)\b/,
+        `${path} rebuilds structural state visuals outside globals.css: ${openingTag}`,
+      );
+    }
+  }
+});
+
+test("button-shaped links compose the shared action variants", () => {
+  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  assert.match(
+    designSystemSource,
+    /按钮式链接必须调用 `buttonVariants`/,
+    "the design source of truth must name the shared link-action entrypoint",
+  );
+
+  for (const { path, source } of readWebSources()) {
+    if (!path.endsWith(".tsx") || path === "components/ui/button.tsx") continue;
+
+    const literalClassConstants = new Map(
+      [...source.matchAll(/const\s+([A-Z][A-Z0-9_]*_CLASS)\s*=\s*"([^"]*)"\s*;/g)]
+        .map(([, name, classes]) => [name, classes]),
+    );
+
+    for (const [tag] of source.matchAll(/<(?:Link|a)\b[^>]*>/g)) {
+      const directClasses = tag.match(/className="([^"]*)"/)?.[1];
+      const referencedClass = tag.match(/className=\{([A-Z][A-Z0-9_]*_CLASS)\}/)?.[1];
+      const literalClasses = directClasses ?? literalClassConstants.get(referencedClass ?? "");
+      if (!literalClasses) continue;
+
+      const rebuildsActionShape = /\binline-flex\b/.test(literalClasses)
+        && /\brounded(?:-[^\s"]+)?\b/.test(literalClasses)
+        && /\b(?:p[xy]?|min-[hw]|size)-[^\s"]+/.test(literalClasses);
+      const rebuildsPrimaryAction = /\bbg-brand\b/.test(literalClasses);
+      const rebuildsGlassAction = /\bglass-secondary\b/.test(literalClasses);
+
+      assert.equal(
+        rebuildsActionShape || rebuildsPrimaryAction || rebuildsGlassAction,
+        false,
+        `${path} rebuilds a button-shaped link outside buttonVariants: ${tag}`,
+      );
+    }
+
+    for (const [, name, initializer] of source.matchAll(/const\s+([A-Z][A-Z0-9_]*ACTION_CLASS)\s*=\s*([^;]+);/g)) {
+      assert.match(
+        initializer,
+        /buttonVariants\(/,
+        `${path} defines ${name} without the shared action variants`,
+      );
+    }
+
+    for (const [, overrides] of source.matchAll(/cn\(\s*buttonVariants\([^)]*\)\s*,\s*"([^"]*)"\s*\)/g)) {
+      assert.doesNotMatch(
+        overrides,
+        /\brounded(?:-[^\s"]+)?\b/,
+        `${path} overrides the shared action radius after buttonVariants`,
+      );
+    }
   }
 });
 
@@ -1653,12 +1983,19 @@ test("Today first render receives all queue data from one server snapshot", () =
 
 test("Today glass effect is present in server HTML from the first paint", () => {
   const globalsSource = readSource("./src/app/globals.css");
+  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
 
   assert.match(heroGlowSource, /hero-glow-ambient/);
   assert.match(heroGlowSource, /hero-glow-glass/);
   assert.doesNotMatch(heroGlowSource, /"use client"|next\/dynamic|requestIdleCallback|setTimeout|animate-fade-in-delayed/);
   assert.match(globalsSource, /\.hero-glow-ambient\s*\{[\s\S]*radial-gradient/);
-  assert.match(globalsSource, /\.hero-glow-glass\s*\{[\s\S]*backdrop-filter:\s*blur/);
+  for (const token of ["glass-surface", "glass-surface-raised", "glass-border", "glass-highlight"]) {
+    assert.match(globalsSource, new RegExp(`--color-${token}:\\s*var\\(--${token}\\)`), `missing runtime glass token ${token}`);
+  }
+  assert.match(globalsSource, /--glass-blur:\s*12px/);
+  assert.match(globalsSource, /\.hero-glow-glass\s*\{[\s\S]*var\(--glass-surface-raised\)[\s\S]*var\(--glass-surface\)[\s\S]*backdrop-filter:\s*blur\(var\(--glass-blur\)\)[\s\S]*box-shadow:\s*inset 0 1px 0 var\(--glass-highlight\)/);
+  assert.match(designSystemSource, /玻璃表面/);
+  assert.match(designSystemSource, /`12px`/);
   assert.doesNotMatch(todayDashboardSource, /backdrop-blur-\[2px\]/);
 });
 

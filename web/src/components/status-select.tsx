@@ -59,6 +59,8 @@ export function StatusSelect({
       {showLabel && <span className="text-xs text-faint">状态</span>}
       {compact && <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", statusDot(status))} />}
       <select
+        data-ui-control
+        data-density={compact ? "compact" : undefined}
         aria-label={ariaLabel}
         value={status}
         onChange={onChange}

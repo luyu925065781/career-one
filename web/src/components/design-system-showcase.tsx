@@ -85,7 +85,7 @@ const COLOR_LABELS: Record<string, string> = {
   "accent-green": "强调绿",
   "accent-blue": "强调蓝",
   "accent-purple": "强调紫",
-  "metric-brand": "品牌指标金",
+  "metric-brand": "品牌指标琥珀",
   "metric-purple": "紫色指标",
   outline: "默认边框",
   "outline-strong": "强调边框",
@@ -158,15 +158,17 @@ function TokenCopyButton({ name, value, onCopy, copied }: {
   copied: boolean;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon-sm"
       onClick={() => onCopy(name, value)}
-      className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-icon-muted transition-colors hover:bg-surface-hover hover:text-icon-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+      className="shrink-0 text-icon-muted"
       aria-label={`复制 ${name}`}
       title={`复制 ${name}`}
     >
       {copied ? <Check className="size-4 text-icon-success" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
-    </button>
+    </Button>
   );
 }
 
@@ -414,9 +416,12 @@ function ComponentTokenList({ document }: { document: DesignDocument }) {
           <div key={name}>
             <button
               type="button"
-              onClick={() => setOpen(isOpen ? null : name)}
-              className="flex min-h-14 w-full items-center justify-between gap-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+              data-button-shape="container"
+              data-ui-structural="disclosure-row"
+              data-density="spacious"
               aria-expanded={isOpen}
+              onClick={() => setOpen(isOpen ? null : name)}
+              className="flex w-full items-center justify-between gap-4 px-2 py-3 text-left"
             >
               <code className="font-mono text-sm font-semibold text-foreground">{name}</code>
               <ChevronDown className={cn("size-4 text-icon-muted transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
@@ -451,7 +456,7 @@ function ComponentsSection({ document }: { document: DesignDocument }) {
           <section aria-labelledby="buttons-heading">
             <div className="mb-4 border-b border-border pb-3">
               <h3 id="buttons-heading" className="text-lg font-semibold text-foreground">按钮与命令</h3>
-              <p className="mt-1 text-sm text-muted">Primary 使用品牌色，Secondary 使用中性实底，Tertiary 使用白底描边。</p>
+              <p className="mt-1 text-sm text-muted">Primary 使用品牌色，Secondary 使用中性玻璃，Tertiary 使用白底描边；按钮式链接复用同一套变体。</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button><Sparkles className="size-4" aria-hidden="true" />AI 岗位诊断</Button>
@@ -471,12 +476,12 @@ function ComponentsSection({ document }: { document: DesignDocument }) {
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="block text-sm font-medium text-foreground">
                 目标岗位
-                <input className="mt-2 h-11 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground outline-none focus:border-outline-border-hover" placeholder="例如：AI 产品经理" />
+                <input data-ui-control className="mt-2 h-11 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground outline-none focus:border-outline-border-hover" placeholder="例如：AI 产品经理" />
               </label>
               <label className="block text-sm font-medium text-foreground">
                 所在城市
                 <span className="relative mt-2 block">
-                  <select className="h-11 w-full appearance-none rounded-md border border-border bg-surface px-3 pr-10 text-sm text-foreground outline-none focus:border-outline-border-hover">
+                  <select data-ui-control className="h-11 w-full appearance-none rounded-md border border-border bg-surface px-3 pr-10 text-sm text-foreground outline-none focus:border-outline-border-hover">
                     <option>深圳</option>
                     <option>上海</option>
                     <option>北京</option>
@@ -493,9 +498,10 @@ function ComponentsSection({ document }: { document: DesignDocument }) {
                     key={item}
                     type="button"
                     role="tab"
+                    data-ui-structural="segment"
                     aria-selected={mode === item}
                     onClick={() => setMode(item)}
-                    className={cn("min-w-24 rounded-md px-3 text-sm font-medium transition-colors", mode === item ? "bg-brand-soft text-brand-text" : "text-muted hover:text-foreground")}
+                    className="min-w-24 rounded-md px-3 text-sm font-medium"
                   >
                     {item} 诊断
                   </button>
@@ -507,11 +513,12 @@ function ComponentsSection({ document }: { document: DesignDocument }) {
                 <button
                   type="button"
                   role="switch"
+                  data-ui-structural="switch-track"
                   aria-checked={enabled}
                   onClick={() => setEnabled((value) => !value)}
-                  className={cn("relative h-7 w-12 rounded-full border transition-colors", enabled ? "border-brand bg-brand" : "border-border bg-surface-hover")}
+                  className="relative h-7 w-12 rounded-full border"
                 >
-                  <span className={cn("absolute top-0.5 size-5 rounded-full bg-surface shadow-sm transition-transform", enabled ? "translate-x-5" : "translate-x-0.5")} />
+                  <span data-ui-switch-thumb className="absolute left-0 top-0.5 size-5 rounded-full" />
                 </button>
               </label>
             </div>
@@ -681,12 +688,11 @@ export function DesignSystemShowcase({ document, principles }: {
                   key={tab.id}
                   type="button"
                   role="tab"
+                  data-ui-structural="segment"
+                  data-density="comfortable"
                   aria-selected={selected}
                   onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "group flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
-                    selected ? "bg-brand-soft text-brand-text" : "text-muted hover:bg-surface-hover hover:text-foreground",
-                  )}
+                  className="group flex items-center gap-2 rounded-md px-3 text-sm font-medium"
                 >
                   <Icon className={cn("size-4", selected ? "text-icon-brand" : "text-icon-muted group-hover:text-icon-default")} aria-hidden="true" />
                   {tab.label}

@@ -10,6 +10,8 @@ import {
   useJobs,
 } from "@/components/jobs/job-store";
 import { CostBadge } from "@/components/cost/cost-badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
 
 type Props = {
   n: string;
@@ -129,14 +131,16 @@ export function AgentTaskHandoffDialog({
               粘贴下面的指令继续处理。
             </p>
           </div>
-          <button
+          <Button
             type="button"
             onClick={closeDialog}
             aria-label="关闭"
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-border-hover"
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 text-icon-muted"
           >
             <X className="size-4" aria-hidden="true" />
-          </button>
+          </Button>
         </div>
 
         <div className="mt-5 rounded-xl border border-border bg-background/60 p-4">
@@ -159,19 +163,19 @@ export function AgentTaskHandoffDialog({
           <Link
             href={`/jobs/${handoff.id}`}
             onClick={closeDialog}
-            className="inline-flex min-h-10 items-center justify-center rounded-button border border-outline-border bg-outline-bg px-4 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-border-hover"
+            className={cn(buttonVariants({ variant: "tertiary" }), "px-4")}
           >
             查看 Agent 任务
           </Link>
-          <button
+          <Button
             ref={copyRef}
             type="button"
             onClick={copyInstruction}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-button bg-brand px-4 text-sm font-semibold text-brand-foreground transition-colors hover:bg-brand-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+            className="px-4 font-semibold"
           >
             {copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
             {copied ? "已复制" : "复制指令"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>,
@@ -229,7 +233,7 @@ export function GeneratePdfButton({ n, company, pdfReady, reportNumber }: Props)
     trigger = (
       <Link
         href={`/jobs/${job.id}`}
-        className="inline-flex items-center justify-center gap-1.5 rounded-full border border-outline-border bg-outline-bg px-3 py-1 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px]"
+        className={buttonVariants({ variant: "tertiary", size: "sm" })}
       >
         <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
         Agent 正在生成…
@@ -237,31 +241,33 @@ export function GeneratePdfButton({ n, company, pdfReady, reportNumber }: Props)
     );
   } else if (job?.runStatus === "queued") {
     trigger = (
-      <button
+      <Button
         ref={triggerRef}
         type="button"
         onClick={showExistingHandoff}
         aria-haspopup="dialog"
         aria-expanded={dialogOpen}
-        className="inline-flex items-center justify-center gap-1.5 rounded-full border border-outline-border bg-outline-bg px-3 py-1 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px]"
+        variant="tertiary"
+        size="sm"
       >
         <Bot className="size-3.5 text-icon-brand" aria-hidden="true" />
         等待 Agent 处理
-      </button>
+      </Button>
     );
   } else if (job?.status === "error" && !pdfReady) {
     trigger = (
-      <button
+      <Button
         ref={triggerRef}
         type="button"
         onClick={showExistingHandoff}
         aria-haspopup="dialog"
         aria-expanded={dialogOpen}
-        className="inline-flex items-center justify-center gap-1.5 rounded-full border border-outline-border bg-outline-bg px-3 py-1 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px]"
+        variant="tertiary"
+        size="sm"
       >
         <RotateCcw className="size-3.5" aria-hidden="true" />
         回到 Agent 重试
-      </button>
+      </Button>
     );
   } else if (pdfReady || job?.status === "done") {
     trigger = (
@@ -270,12 +276,12 @@ export function GeneratePdfButton({ n, company, pdfReady, reportNumber }: Props)
           href={pdfHref}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-500/15 dark:text-emerald-400 max-sm:min-h-[44px]"
+          className={buttonVariants({ variant: "tertiary", size: "sm" })}
         >
           <FileText className="size-3.5" aria-hidden="true" />
           查看定制简历
         </a>
-        <button
+        <Button
           ref={triggerRef}
           type="button"
           onClick={beginHandoff}
@@ -283,27 +289,30 @@ export function GeneratePdfButton({ n, company, pdfReady, reportNumber }: Props)
           aria-label="在 Agent 中重新生成定制简历"
           aria-haspopup="dialog"
           aria-expanded={dialogOpen}
-          className="inline-flex items-center justify-center rounded-full p-1 text-faint transition-colors hover:text-brand max-sm:min-h-[44px] max-sm:min-w-[44px]"
+          variant="ghost"
+          size="icon-sm"
+          className="text-icon-muted"
         >
           <RotateCcw className="size-3" aria-hidden="true" />
-        </button>
+        </Button>
       </span>
     );
   } else {
     trigger = (
       <span className="inline-flex items-center gap-1.5">
-        <button
+        <Button
           ref={triggerRef}
           type="button"
           onClick={beginHandoff}
           aria-haspopup="dialog"
           aria-expanded={dialogOpen}
-          className="inline-flex items-center justify-center gap-1.5 rounded-full border border-outline-border bg-outline-bg px-3 py-1 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px]"
+          variant="tertiary"
+          size="sm"
           title="由你的 Codex、WorkBuddy 或其他 Agent 生成岗位定制简历"
         >
           <Bot className="size-3.5 text-icon-brand" aria-hidden="true" />
           在 Agent 中生成
-        </button>
+        </Button>
         <CostBadge kind="spend" size="xs" />
       </span>
     );

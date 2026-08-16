@@ -5,6 +5,7 @@ import { Search, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { DiscoveredOffer } from "@/lib/explore";
 import { CostBadge } from "@/components/cost/cost-badge";
+import { Button } from "@/components/ui/button";
 import { DiscoveryCard } from "./discovery-card";
 import { useExplore } from "./explore-provider";
 
@@ -44,6 +45,7 @@ export function ResultsList({ offers }: { offers: EnrichedOffer[] }) {
           <div className="flex items-center gap-1.5 rounded-lg border border-border bg-surface/40 px-2.5 py-1.5">
             <Search className="size-3.5 text-icon-muted" />
             <input
+              data-ui-control="unstyled"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="筛选结果…"
@@ -55,21 +57,25 @@ export function ResultsList({ offers }: { offers: EnrichedOffer[] }) {
               <button
                 key={s}
                 type="button"
+                data-button-shape="container"
+                data-ui-structural="segment"
+                aria-pressed={sort === s}
                 onClick={() => setSort(s)}
-                className={cn("rounded-md px-2.5 py-1 font-medium capitalize transition-colors", sort === s ? "bg-brand-soft text-brand" : "text-muted hover:text-foreground")}
+                className="rounded-md px-2.5 py-1 font-medium capitalize"
               >
                 {s === "fresh" ? "最新" : "公司"}
               </button>
             ))}
           </div>
           {addable.length > 1 && (
-            <button
+            <Button
               type="button"
+              variant="tertiary"
+              size="sm"
               onClick={() => addToPipeline(addable)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-outline-border bg-outline-bg px-2.5 py-1.5 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover"
             >
               <Plus className="size-3.5" /> 全部加入 {addable.length}
-            </button>
+            </Button>
           )}
         </div>
       </div>

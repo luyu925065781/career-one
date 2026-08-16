@@ -14,6 +14,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cleanChips, formatJobSearchKeywords, type ExploreFilters } from "@/lib/explore";
 
 const RECENCY = [
@@ -70,12 +71,13 @@ function KeywordField({
         <span key={v} className={cn("co-fb__chip", tone === "inc" ? "inc" : "border-border bg-surface-hover text-muted")}>
           {tone === "exc" && <Ban className="size-3 opacity-70" />}
           {v}
-          <button type="button" aria-label={`移除 ${v}`} onClick={() => onChange(values.filter((x) => x !== v))}>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={`移除 ${v}`} onClick={() => onChange(values.filter((x) => x !== v))}>
             <X className="size-3" />
-          </button>
+          </Button>
         </span>
       ))}
       <input
+        data-ui-control="unstyled"
         value={draft}
         onChange={(e) => {
           const val = e.target.value;
@@ -132,17 +134,19 @@ function CopyKeywordsButton({ values, label }: { values: string[]; label: string
   };
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       onClick={() => void copy()}
       disabled={!copyValue}
-      className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-[11px] font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 max-sm:min-h-[44px]"
+      className="text-muted"
       aria-label={`复制全部${label}`}
       title={`复制全部${label}，可粘贴到其他招聘平台`}
     >
       {state === "copied" ? <Check className="size-3.5 text-icon-success" /> : <Copy className="size-3.5 text-icon-muted" />}
       {state === "copied" ? "已复制" : state === "failed" ? "复制失败" : "复制"}
-    </button>
+    </Button>
   );
 }
 
@@ -186,11 +190,11 @@ export function FilterBuilder({
               <button
                 key={r.days}
                 type="button"
+                data-button-shape="container"
+                data-ui-structural="segment"
+                aria-pressed={filters.sinceDays === r.days}
                 onClick={() => set({ sinceDays: r.days })}
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-medium transition-colors max-sm:min-h-[44px]",
-                  filters.sinceDays === r.days ? "bg-brand-soft text-brand" : "text-muted hover:text-foreground",
-                )}
+                className="rounded-md px-2.5 py-1 text-xs font-medium max-sm:min-h-[44px]"
               >
                 {r.label}
               </button>
@@ -211,7 +215,7 @@ export function FilterBuilder({
                 href={platform.href}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-brand/40 bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand transition-colors hover:bg-brand/15 max-sm:min-h-[44px]"
+                className={buttonVariants({ variant: "tertiary", size: "sm" })}
                 aria-label={`前往${platform.name}官网`}
                 title={`打开${platform.name}官网`}
               >
@@ -225,10 +229,12 @@ export function FilterBuilder({
 
       <button
         type="button"
-        onClick={() => setAdvanced((v) => !v)}
+        data-button-shape="container"
+        data-ui-structural="disclosure-inline"
         aria-expanded={advanced}
         aria-controls="explore-location-filters"
-        className="inline-flex items-center gap-1.5 text-[12px] text-muted transition-colors hover:text-foreground max-sm:min-h-[44px]"
+        onClick={() => setAdvanced((v) => !v)}
+        className="inline-flex items-center gap-1.5 text-[12px] max-sm:min-h-[44px]"
       >
         <SlidersHorizontal className="size-3.5 text-icon-muted" aria-hidden="true" />
         地区与扫描范围

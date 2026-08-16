@@ -6,6 +6,7 @@ import type { InboxJob } from "@/lib/career-one";
 import type { AtsSource } from "@/lib/explore";
 import { ATS_LABEL } from "@/lib/explore";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CompanyLogo } from "@/components/company-logo";
 import { cn } from "@/lib/cn";
 import { resolveCompanyIdentity } from "@/lib/company";
@@ -96,27 +97,29 @@ export function TriageRow({
         </Link>
       ) : (
         <div className="flex shrink-0 items-center gap-1">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={onSave}
             title={shortlisted ? "已加入候选清单" : "保存到候选清单"}
             aria-pressed={shortlisted}
-            className={cn(
-              "inline-flex items-center justify-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors max-sm:min-h-[44px] max-sm:min-w-[44px]",
-              shortlisted ? "text-brand" : "text-muted hover:bg-surface-hover hover:text-brand",
-            )}
+            className={shortlisted ? "text-brand" : "text-muted"}
           >
             {shortlisted ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
             <span className="max-sm:hidden">{shortlisted ? "已保存" : "保存"}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             onClick={onSkip}
             title="跳过并从岗位收件箱隐藏"
-            className="inline-flex items-center justify-center rounded-md p-1 text-faint transition-colors hover:bg-surface-hover hover:text-foreground max-sm:min-h-[44px] max-sm:min-w-[44px]"
+            aria-label="跳过并隐藏岗位"
+            className="text-faint"
           >
             <X className="size-4" />
-          </button>
+          </Button>
         </div>
       )}
     </li>

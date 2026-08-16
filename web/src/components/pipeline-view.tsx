@@ -19,7 +19,7 @@ import {
 import type { Application, InboxJob } from "@/lib/career-one";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { CompanyLogo } from "@/components/company-logo";
 import { StatusSelect } from "@/components/status-select";
 import { GeneratePdfButton } from "@/components/generate-pdf-button";
@@ -85,15 +85,17 @@ export function ReportBackButton() {
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       onClick={handleBack}
       aria-label="返回上一页"
-      className="inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+      className="text-muted"
     >
       <ArrowLeft className="size-4" aria-hidden="true" />
       返回
-    </button>
+    </Button>
   );
 }
 
@@ -199,7 +201,7 @@ export function ApplicationProgressDetail({
     <div className="page-shell py-8 max-sm:pb-24">
       <Link
         href="/pipeline"
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+        className={cn(buttonVariants({ variant: "ghost" }), "text-muted")}
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
         求职进度
@@ -535,6 +537,8 @@ export function PipelineView({
           <div className="relative w-64 max-w-[40vw]">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-icon-muted" />
             <input
+              data-ui-control
+              data-density="compact"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="搜索公司或岗位…"
@@ -545,7 +549,7 @@ export function PipelineView({
       </div>
 
       {/* tabs */}
-      <div className="mt-6 flex flex-wrap gap-1 border-b border-border">
+      <div className="mt-6 flex flex-wrap gap-1 border-b border-border" role="group" aria-label="按求职进度筛选">
         {TABS.map((t) => {
           const count =
             t === "INBOX"
@@ -556,14 +560,12 @@ export function PipelineView({
               return (
                 <button
                   key={t}
+                  type="button"
                   data-button-shape="container"
+                  data-ui-structural="tab-line"
+                  aria-pressed={tab === t}
                   onClick={() => setParams({ tab: t === "ALL" ? null : t })}
-                  className={cn(
-                "-mb-px inline-flex items-center justify-center border-b-2 px-3 py-2 text-xs font-medium transition-colors max-sm:min-h-[44px]",
-                tab === t
-                  ? "border-brand text-foreground"
-                  : "border-transparent text-muted hover:text-foreground",
-              )}
+                  className="-mb-px inline-flex items-center justify-center border-b-2 px-3 py-2 text-xs font-medium max-sm:min-h-[44px]"
             >
               {TAB_LABELS[t]} <span className="text-faint tabular-nums">{count}</span>
             </button>
@@ -574,15 +576,16 @@ export function PipelineView({
       {tab !== "INBOX" && minFilter != null && (
         <div className="mt-3 flex items-center gap-2">
           <span className="text-xs text-faint">已筛选：</span>
-          <button
+          <Button
             type="button"
+            variant="tertiary"
+            size="sm"
             onClick={() => setParams({ min: null })}
-            className="inline-flex items-center gap-1.5 rounded-full border border-outline-border bg-outline-bg px-2.5 py-1 text-xs font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover"
             title="清除评分筛选"
           >
             评分 ≥ {minFilter.toFixed(1)}
             <X className="size-3" />
-          </button>
+          </Button>
         </div>
       )}
 
@@ -617,17 +620,17 @@ export function PipelineView({
               {filtered.map((r, i) => {
                 const companyIdentity = resolveCompanyIdentity(r.company, r.via);
                 return (
-                  <tr key={`${r.n}-${i}`} className="group transition-colors hover:bg-surface/40">
+                  <tr key={`${r.n}-${i}`} className="group transition-colors hover:bg-surface-hover">
                     <td className="px-4 py-3">
                       <Link
                         href={`/pipeline/${r.n}`}
-                        className="font-semibold leading-5 text-foreground transition-colors group-hover:text-brand"
+                        className="font-semibold leading-5 text-foreground transition-colors group-hover:text-interactive-hover"
                       >
                         {r.role}
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-muted">
-                      <Link href={`/pipeline/${r.n}`} className="flex items-center gap-2.5 whitespace-nowrap transition-colors group-hover:text-brand">
+                      <Link href={`/pipeline/${r.n}`} className="flex items-center gap-2.5 whitespace-nowrap transition-colors group-hover:text-interactive-hover">
                         <CompanyLogo name={r.company} size={28} />
                         {companyIdentity.label}
                       </Link>
@@ -691,7 +694,7 @@ function InboxEmpty({ count, filtered }: { count: number; filtered: boolean }) {
             <p className="mx-auto mt-2 max-w-sm text-sm text-muted">先在招聘网站找到感兴趣的岗位，再带回工作台评估。</p>
             <Link
               href="/cn-diagnose"
-              className="mt-5 inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-brand-foreground shadow-sm transition-all duration-200 hover:bg-brand-200 hover:-translate-y-0.5 hover:shadow-md"
+              className={cn(buttonVariants({ variant: "primary" }), "mt-5")}
             >
               <ScanSearch className="size-4" /> 去评估岗位 <ArrowRight className="size-4" />
             </Link>

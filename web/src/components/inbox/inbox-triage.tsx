@@ -10,6 +10,7 @@ import { daysSince, seniorityFromTitle, sourceFromUrl, SENIORITY_ORDER, type Sen
 import { FacetChips } from "./facet-chips";
 import { TriageRow, type RowScore } from "./triage-row";
 import { ShortlistTray, type ShortItem } from "./shortlist-tray";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 const SHORTLIST_KEY = "career-one:shortlist";
@@ -206,9 +207,9 @@ export function InboxTriage({ inbox }: { inbox: InboxJob[] }) {
           {capped ? "最新岗位 · 值得看看" : anyFacet ? `${filtered.length} 个匹配结果` : "全部岗位"}
         </p>
         {hiddenCount > 0 && (
-          <button type="button" onClick={() => setHidden([])} className="text-xs text-faint transition-colors hover:text-foreground">
+          <Button type="button" onClick={() => setHidden([])} variant="ghost" size="sm" className="text-faint">
             已隐藏 {hiddenCount} 个 · 恢复
-          </button>
+          </Button>
         )}
       </div>
 
@@ -216,12 +217,12 @@ export function InboxTriage({ inbox }: { inbox: InboxJob[] }) {
       {selected.size > 0 && (
         <div className="mt-2 flex items-center gap-3 rounded-lg border border-brand/30 bg-brand-soft px-3 py-2 text-sm">
           <span className="font-medium text-brand tabular-nums">已选择 {selected.size} 个</span>
-          <button type="button" onClick={saveSelected} className="rounded-md bg-brand px-2.5 py-1 text-xs font-medium text-brand-foreground max-sm:min-h-[44px]">
+          <Button type="button" onClick={saveSelected} size="sm" className="px-2.5">
             保存到候选清单
-          </button>
-          <button type="button" onClick={() => setSelected(new Set())} className="text-xs text-muted hover:text-foreground max-sm:min-h-[44px]">
+          </Button>
+          <Button type="button" onClick={() => setSelected(new Set())} variant="ghost" size="sm">
             清除
-          </button>
+          </Button>
         </div>
       )}
 
@@ -251,13 +252,15 @@ export function InboxTriage({ inbox }: { inbox: InboxJob[] }) {
 
       {/* "See all N" — only when the fresh batch is capping a larger list */}
       {capped && ordered.length > BATCH && (
-        <button
+        <Button
           type="button"
           onClick={() => setShowAll(true)}
-          className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-xl border border-outline-border bg-outline-bg py-2.5 text-sm font-medium text-outline-text transition-colors hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px]"
+          variant="tertiary"
+          size="lg"
+          className="mt-3 w-full"
         >
           查看收件箱中的全部 {ordered.length} 个岗位 →
-        </button>
+        </Button>
       )}
 
       {/* empty-shortlist guidance (only once there's nothing saved) */}
@@ -270,9 +273,9 @@ export function InboxTriage({ inbox }: { inbox: InboxJob[] }) {
         <div className={cn("fixed inset-x-0 z-40 flex justify-center px-4", shortlist.length > 0 ? "bottom-24 sm:bottom-24" : "bottom-6")}>
           <div className="inline-flex items-center gap-3 rounded-full border border-border bg-surface px-4 py-2 text-sm shadow-lg">
             <span className="text-muted">{undo.label}</span>
-            <button type="button" onClick={() => { undo.fn(); setUndo(null); }} className="inline-flex items-center gap-1 font-medium text-brand max-sm:min-h-[44px]">
+            <Button type="button" onClick={() => { undo.fn(); setUndo(null); }} variant="ghost" size="sm" className="gap-1 text-interactive-hover">
               <Undo2 className="size-3.5" /> 撤销
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -10,6 +10,7 @@ import {
   useJobs,
 } from "@/components/jobs/job-store";
 import { CostBadge } from "@/components/cost/cost-badge";
+import { Button } from "@/components/ui/button";
 
 // Paste a job URL, persist a task, then hand the instruction to the user's
 // current Agent product. Web never starts a model or a CLI process.
@@ -65,6 +66,7 @@ export function QuickEvaluate({ page = "/" }: { page?: string }) {
       <div className="flex max-w-xl items-center gap-2 rounded-full border border-border bg-surface/70 py-1.5 pl-4 pr-1.5 shadow-sm focus-within:border-brand/50">
         <Sparkles className="size-4 shrink-0 text-icon-brand" />
         <input
+          data-ui-control="unstyled"
           value={url}
           onChange={(e) => {
             setUrl(e.target.value);
@@ -76,13 +78,14 @@ export function QuickEvaluate({ page = "/" }: { page?: string }) {
           placeholder="粘贴岗位网址进行评估…"
           className="min-w-0 flex-1 bg-transparent py-1.5 text-sm outline-none placeholder:text-faint"
         />
-        <button
+        <Button
           ref={triggerRef}
           type="button"
           onClick={run}
           aria-haspopup="dialog"
           aria-expanded={handoffOpen}
-          className="shrink-0 rounded-full bg-brand px-4 py-1.5 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-200"
+          size="sm"
+          className="shrink-0 px-4 text-sm"
         >
           <span className="inline-flex items-center gap-1.5">
             <Bot className="size-4" aria-hidden="true" />
@@ -92,7 +95,7 @@ export function QuickEvaluate({ page = "/" }: { page?: string }) {
                 ? "重新交给 Agent 评估"
                 : "交给 Agent 评估"}
           </span>
-        </button>
+        </Button>
       </div>
       <div className="mt-2 flex items-center gap-2">
         <CostBadge kind="spend" size="xs" />
