@@ -113,7 +113,7 @@ async function main(argv = process.argv.slice(2)) {
     die(`${error.message}。请检查网络，或从 GitHub Release 手动安装。`);
   }
   console.log(`\n→ 正在安装择程AI（career-one）@ ${tag} 到 ${display} ...`);
-  const cloneArgs = ["clone", "--depth=1", "--branch", tag, REPOSITORY_URL, target];
+  const cloneArgs = ["clone", "--depth=1", `--branch=${tag}`, "--", REPOSITORY_URL, target];
   try {
     execFileSync("git", cloneArgs, { stdio: "inherit" });
   } catch {

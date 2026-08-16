@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const read = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
@@ -722,7 +722,12 @@ for (const [name, host] of [
   ["脉脉", "maimai.cn"],
   ["智联招聘", "www.zhaopin.com"],
 ]) {
-  assert.match(filterBuilder, new RegExp(`name: "${name}"[\\s\\S]{0,120}https://${host.replaceAll(".", "\\.")}`), `搜索渠道必须提供${name}官网入口`);
+  const sourceIndex = filterBuilder.indexOf(`name: "${name}"`);
+  assert.notEqual(sourceIndex, -1, `搜索渠道必须声明${name}`);
+  assert.ok(
+    filterBuilder.slice(sourceIndex, sourceIndex + 240).includes(`https://${host}`),
+    `搜索渠道必须提供${name}官网入口`,
+  );
 }
 for (const removedChannel of ["公共招聘平台", "用户主动采集", "前程无忧"]) {
   assert.doesNotMatch(filterBuilder, new RegExp(removedChannel), `搜索渠道不得继续显示${removedChannel}`);
@@ -831,8 +836,17 @@ assert.match(
 );
 assert.match(
   scaffolderCli,
-  /const cloneArgs = \[[^\n]*REPOSITORY_URL[^\n]*\]/,
-  "安装器必须使用统一仓库常量克隆择程AI仓库",
+  /const cloneArgs = \["clone", "--depth=1", `--branch=\$\{tag\}`, "--", REPOSITORY_URL, target\]/,
+  "安装器必须使用统一仓库常量，并在仓库与目录参数前结束 Git 选项解析",
+);
+
+const storyBankModule = await import(pathToFileURL(path.join(root, "web/src/lib/story-bank.mjs")));
+const adversarialWhitespace = "\t".repeat(50_000);
+const adversarialStoryBank = `# 面试故事库\n\n## S01${adversarialWhitespace}·${adversarialWhitespace}线性解析验证\n\n### S 情境\n\n- 安全测试\n`;
+assert.deepEqual(
+  storyBankModule.parseStoryBank(adversarialStoryBank).stories.map(({ id, title }) => ({ id, title })),
+  [{ id: "S01", title: "线性解析验证" }],
+  "故事库解析器必须能在线性时间内处理超长不可信空白输入",
 );
 assert.match(
   readme,

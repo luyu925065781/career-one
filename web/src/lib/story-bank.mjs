@@ -17,6 +17,110 @@ const SECTION_KEY = {
   R: "result",
   Reflection: "reflection",
 };
+const METADATA_KEYS = ["状态", "能力标签", "适用问题", "事实来源", "更新日期"];
+
+function isWhitespace(character) {
+  return Boolean(character) && character.trim() === "";
+}
+
+function headingContent(line, marker) {
+  if (!line.startsWith(marker) || !isWhitespace(line[marker.length])) return null;
+  return line.slice(marker.length).trimStart();
+}
+
+function parseStoryHeadingContent(content) {
+  const value = String(content ?? "").trim();
+  if (value[0]?.toUpperCase() !== "S") return null;
+
+  let cursor = 1;
+  const digitStart = cursor;
+  while (cursor < value.length && value.charCodeAt(cursor) >= 48 && value.charCodeAt(cursor) <= 57) {
+    cursor += 1;
+  }
+  if (cursor === digitStart) return null;
+  const id = value.slice(0, cursor).toUpperCase();
+
+  while (cursor < value.length && isWhitespace(value[cursor])) cursor += 1;
+  if (!["·", "|", "-"].includes(value[cursor])) return null;
+  cursor += 1;
+  while (cursor < value.length && isWhitespace(value[cursor])) cursor += 1;
+
+  const title = value.slice(cursor).trim();
+  return title ? { id, title } : null;
+}
+
+function parseStoryHeadingLine(line) {
+  const content = headingContent(line, "##");
+  return content === null ? null : parseStoryHeadingContent(content);
+}
+
+function parseSectionHeadingLine(line) {
+  const content = headingContent(line, "###");
+  if (content === null) return null;
+  for (const key of Object.keys(SECTION_KEY)) {
+    if (content.slice(0, key.length).toLowerCase() !== key.toLowerCase()) continue;
+    const boundary = content[key.length];
+    if (boundary && /[0-9A-Za-z_]/.test(boundary)) continue;
+    return SECTION_KEY[key];
+  }
+  return null;
+}
+
+function parseMetadataLine(line) {
+  if (line[0] !== "-" || !isWhitespace(line[1])) return null;
+  const content = line.slice(1).trimStart();
+  for (const key of METADATA_KEYS) {
+    const prefix = `**${key}：**`;
+    if (!content.startsWith(prefix)) continue;
+    const value = content.slice(prefix.length).trim();
+    return value ? { key, value } : null;
+  }
+  return null;
+}
+
+function removeBullet(line) {
+  return ["-", "*"].includes(line[0]) && isWhitespace(line[1])
+    ? line.slice(1).trimStart()
+    : line;
+}
+
+function markdownLines(markdown) {
+  const text = String(markdown ?? "");
+  const lines = [];
+  let start = 0;
+  while (start <= text.length) {
+    const newline = text.indexOf("\n", start);
+    const end = newline === -1 ? text.length : newline;
+    const raw = text.slice(start, end);
+    lines.push({ raw: raw.endsWith("\r") ? raw.slice(0, -1) : raw, index: start });
+    if (newline === -1) break;
+    start = newline + 1;
+  }
+  return lines;
+}
+
+function storyHeadings(markdown) {
+  return markdownLines(markdown).flatMap(({ raw, index }) => {
+    const parsed = parseStoryHeadingLine(raw.trim());
+    return parsed ? [{ ...parsed, index }] : [];
+  });
+}
+
+function isStoryId(value) {
+  if (value.length < 2 || value[0] !== "S") return false;
+  for (let index = 1; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code < 48 || code > 57) return false;
+  }
+  return true;
+}
+
+function trailingBlockWhitespace(block) {
+  let cursor = block.length;
+  while (cursor > 0 && ["\r", "\n", "\t", " "].includes(block[cursor - 1])) cursor -= 1;
+  const trailing = block.slice(cursor);
+  return trailing.includes("\n") ? trailing : "\n";
+}
 
 function splitTags(value) {
   return value.split(/[、,，]/).map((item) => item.trim()).filter(Boolean);
@@ -149,36 +253,34 @@ export function parseStoryBank(markdown) {
   let current = null;
   let section = null;
 
-  for (const raw of markdown.split("\n")) {
+  for (const { raw } of markdownLines(markdown)) {
     const line = raw.trim();
     if (!line) continue;
 
-    const bankHeading = line.match(/^#\s+(.+)$/);
-    if (bankHeading && !line.startsWith("##")) {
-      title = bankHeading[1].trim() || DEFAULT_TITLE;
+    const bankHeading = headingContent(line, "#");
+    if (bankHeading !== null) {
+      title = bankHeading.trim() || DEFAULT_TITLE;
       continue;
     }
 
-    const storyHeading = line.match(/^##\s+(S\d+)\s*[·|-]\s*(.+)$/i);
+    const storyHeading = parseStoryHeadingLine(line);
     if (storyHeading) {
-      current = emptyStory(storyHeading[1].toUpperCase(), storyHeading[2].trim());
+      current = emptyStory(storyHeading.id, storyHeading.title);
       stories.push(current);
       section = null;
       continue;
     }
     if (!current) continue;
 
-    const sectionHeading = line.match(/^###\s+(S|T|A|R|Reflection)\b/i);
+    const sectionHeading = parseSectionHeadingLine(line);
     if (sectionHeading) {
-      const rawKey = sectionHeading[1];
-      const normalized = rawKey.toLowerCase() === "reflection" ? "Reflection" : rawKey.toUpperCase();
-      section = SECTION_KEY[normalized];
+      section = sectionHeading;
       continue;
     }
 
-    const metadata = line.match(/^-\s+\*\*(状态|能力标签|适用问题|事实来源|更新日期)：\*\*\s*(.+)$/);
+    const metadata = parseMetadataLine(line);
     if (metadata) {
-      const [, key, value] = metadata;
+      const { key, value } = metadata;
       if (key === "状态") current.status = normalizeStoryStatus(value);
       if (key === "能力标签") current.tags = splitTags(value);
       if (key === "适用问题") current.questions = splitQuestions(value);
@@ -187,7 +289,7 @@ export function parseStoryBank(markdown) {
       continue;
     }
 
-    if (section) current[section].push(line.replace(/^[-*]\s+/, ""));
+    if (section) current[section].push(removeBullet(line));
   }
 
   stories.sort((a, b) => {
@@ -211,13 +313,16 @@ export function validateStoryBankMarkdown(markdown) {
   if (typeof markdown !== "string" || !markdown.trim()) {
     return { ok: false, error: "故事库不能为空。" };
   }
-  const firstLine = markdown.trimStart().split(/\r?\n/, 1)[0].trim();
+  const firstLine = markdownLines(markdown.trimStart())[0]?.raw.trim() ?? "";
   if (firstLine !== "# 面试故事库") {
     return { ok: false, error: "一级标题必须是“# 面试故事库”。" };
   }
 
-  const headings = [...markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
-  const malformed = headings.find((heading) => !/^S\d+\s*[·|-]\s*.+$/i.test(heading));
+  const headings = markdownLines(markdown).flatMap(({ raw }) => {
+    const content = headingContent(raw.trim(), "##");
+    return content === null ? [] : [content.trim()];
+  });
+  const malformed = headings.find((heading) => !parseStoryHeadingContent(heading));
   if (malformed) {
     return { ok: false, error: `故事标题“${malformed}”不符合“## S01 · 标题”格式。` };
   }
@@ -235,12 +340,25 @@ export function validateStoryBankMarkdown(markdown) {
 }
 
 function cleanInline(value) {
-  return String(value ?? "").replace(/\s+/g, " ").trim();
+  let cleaned = "";
+  let pendingSpace = false;
+  for (const character of String(value ?? "")) {
+    if (isWhitespace(character)) {
+      pendingSpace = cleaned.length > 0;
+      continue;
+    }
+    if (pendingSpace) cleaned += " ";
+    cleaned += character;
+    pendingSpace = false;
+  }
+  return cleaned;
 }
 
 function cleanLines(value) {
-  const values = Array.isArray(value) ? value : String(value ?? "").split(/\r?\n/);
-  return values.map((line) => cleanInline(line).replace(/^[-*]\s+/, "")).filter(Boolean);
+  const values = Array.isArray(value)
+    ? value
+    : markdownLines(String(value ?? "")).map(({ raw }) => raw);
+  return values.map((line) => removeBullet(cleanInline(line))).filter(Boolean);
 }
 
 /**
@@ -291,13 +409,13 @@ export function validateStoryMarkdown(storyMarkdown, expectedId) {
     return { ok: false, error: "故事内容不能为空。" };
   }
   const trimmed = storyMarkdown.trim();
-  if (!/^##\s+S\d+\s*[·|-]\s*.+$/im.test(trimmed.split(/\r?\n/, 1)[0])) {
+  if (!parseStoryHeadingLine(markdownLines(trimmed)[0]?.raw.trim() ?? "")) {
     return { ok: false, error: "故事必须以“## S01 · 标题”开头。" };
   }
-  if (/^#\s+/m.test(trimmed)) {
+  if (markdownLines(trimmed).some(({ raw }) => headingContent(raw.trim(), "#") !== null)) {
     return { ok: false, error: "单个故事不能包含故事库一级标题。" };
   }
-  const headings = [...trimmed.matchAll(/^##\s+(.+)$/gm)];
+  const headings = markdownLines(trimmed).filter(({ raw }) => headingContent(raw.trim(), "##") !== null);
   if (headings.length !== 1) {
     return { ok: false, error: "单次维护只能包含一个故事。" };
   }
@@ -323,9 +441,9 @@ export function validateStoryMarkdown(storyMarkdown, expectedId) {
  */
 export function replaceStoryInMarkdown(markdown, storyId, storyMarkdown) {
   const normalizedId = cleanInline(storyId).toUpperCase();
-  if (!/^S\d+$/.test(normalizedId)) throw new Error("故事编号无效。");
-  const headings = [...String(markdown ?? "").matchAll(/^##\s+(S\d+)\s*[·|-]\s*.+$/gmi)];
-  const targetIndex = headings.findIndex((match) => match[1].toUpperCase() === normalizedId);
+  if (!isStoryId(normalizedId)) throw new Error("故事编号无效。");
+  const headings = storyHeadings(markdown);
+  const targetIndex = headings.findIndex((heading) => heading.id === normalizedId);
   if (targetIndex < 0) throw new Error(`故事 ${normalizedId} 不存在，请刷新页面后重试。`);
   const validation = validateStoryMarkdown(storyMarkdown, normalizedId);
   if (!validation.ok) throw new Error(validation.error);
@@ -333,6 +451,6 @@ export function replaceStoryInMarkdown(markdown, storyId, storyMarkdown) {
   const start = headings[targetIndex].index;
   const end = headings[targetIndex + 1]?.index ?? markdown.length;
   const currentBlock = markdown.slice(start, end);
-  const trailing = currentBlock.match(/(?:\r?\n[\t ]*)+$/)?.[0] ?? "\n";
+  const trailing = trailingBlockWhitespace(currentBlock);
   return `${markdown.slice(0, start)}${storyMarkdown.trim()}${trailing}${markdown.slice(end)}`;
 }
