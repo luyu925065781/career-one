@@ -120,7 +120,7 @@
   --landing: #111827;
   --brand-text: #111827;
   --switch-thumb: #ffffff;
-  --interactive-hover: #1d4ed8;
+  --interactive-hover: #ffb24d;
   --brand-accent-text: #ca8a04;
   --accent-yellow: #facc15;
   --accent-orange: #f59e0b;
@@ -193,7 +193,7 @@
   --landing: #ffffff;
   --brand-text: #ffffff;
   --switch-thumb: #f9fafb;
-  --interactive-hover: #60a5fa;
+  --interactive-hover: #ffb24d;
   --brand-accent-text: #facc15;
   --metric-brand: #fbbf24;
   --metric-warning: #fb923c;
@@ -306,7 +306,6 @@ button[data-ui-structural="tab-line"]:is([aria-selected="true"], [aria-pressed="
 
 button[data-ui-structural="tab-line"]:is([aria-selected="false"], [aria-pressed="false"]):hover {
   background: var(--surface-hover);
-  color: var(--interactive-hover);
 }
 
 button[data-ui-structural="segment"] {

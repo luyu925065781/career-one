@@ -630,7 +630,7 @@ export function PipelineView({
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-muted">
-                      <Link href={`/pipeline/${r.n}`} className="flex items-center gap-2.5 whitespace-nowrap transition-colors group-hover:text-interactive-hover">
+                      <Link href={`/pipeline/${r.n}`} className="flex items-center gap-2.5 whitespace-nowrap">
                         <CompanyLogo name={r.company} size={28} />
                         {companyIdentity.label}
                       </Link>

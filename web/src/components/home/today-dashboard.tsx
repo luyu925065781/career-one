@@ -428,7 +428,7 @@ export function TodayDashboard({
                   label={name}
                   value={count}
                   pct={(count / analytics.maxCompany) * 100}
-                  tone="purple"
+                  tone="blue"
                 />
               ))
             ) : (

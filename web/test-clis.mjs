@@ -1271,13 +1271,20 @@ test("ordinary text and table rows share one visible global hover contract", () 
   const globalsSource = readSource("./src/app/globals.css");
   const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
   const designTokenSource = readSource("../docs/DESIGN.md");
+  const inactiveTabHoverRule = globalsSource.match(
+    /button\[data-ui-structural="tab-line"\]:is\(\[aria-selected="false"\], \[aria-pressed="false"\]\):hover\s*\{([^}]*)\}/,
+  )?.[1] ?? "";
 
   assert.match(globalsSource, /--color-interactive-hover:\s*var\(--interactive-hover\)/);
-  assert.match(globalsSource, /--interactive-hover:\s*#1d4ed8/);
-  assert.match(globalsSource, /\.dark\s*\{[\s\S]*--interactive-hover:\s*#60a5fa/);
-  assert.match(designTokenSource, /\n  interactive-hover:\s*"#1D4ED8"/);
-  assert.match(designTokenSource, /\n  dark-interactive-hover:\s*"#60A5FA"/);
+  assert.match(globalsSource, /--interactive-hover:\s*#ffb24d/);
+  assert.match(globalsSource, /\.dark\s*\{[\s\S]*--interactive-hover:\s*#ffb24d/);
+  assert.match(designTokenSource, /\n  interactive-hover:\s*"#FFB24D"/);
+  assert.match(designTokenSource, /\n  dark-interactive-hover:\s*"#FFB24D"/);
   assert.match(designSystemSource, /普通交互 Hover/);
+  assert.match(designSystemSource, /Tab 文案与列表中的辅助实体信息/);
+
+  assert.match(inactiveTabHoverRule, /background:\s*var\(--surface-hover\)/);
+  assert.doesNotMatch(inactiveTabHoverRule, /\bcolor:/);
 
   for (const { path, source } of readWebSources()) {
     assert.doesNotMatch(
@@ -1288,6 +1295,15 @@ test("ordinary text and table rows share one visible global hover contract", () 
   }
 
   assert.match(pipelineViewSource, /group[^"\n]*transition-colors hover:bg-surface-hover/);
+  assert.match(
+    pipelineViewSource,
+    /className="font-semibold leading-5 text-foreground transition-colors group-hover:text-interactive-hover"/,
+  );
+  assert.equal((pipelineViewSource.match(/group-hover:text-interactive-hover/g) ?? []).length, 1);
+  assert.match(
+    pipelineViewSource,
+    /className="flex items-center gap-2\.5 whitespace-nowrap"/,
+  );
   assert.doesNotMatch(pipelineViewSource, /hover:bg-surface\/40/);
 });
 
@@ -2256,7 +2272,7 @@ test("dashboard puts analytics first and arranges compact charts in a responsive
   assert.match(todayDashboardSource, /\{ label: "4\.0 – 4\.4", tone: "yellow"/);
   assert.match(todayDashboardSource, /\{ label: "3\.0 – 3\.9", tone: "orange"/);
   assert.match(todayDashboardSource, /\{ label: "< 3\.0", tone: "red"/);
-  assert.match(todayDashboardSource, /analytics\.topCompanies\.map[\s\S]*tone="purple"/);
+  assert.match(todayDashboardSource, /analytics\.topCompanies\.map[\s\S]*tone="blue"/);
   assert.match(designSystemSource, /评分分布固定为绿、黄、橙、红/);
   assert.match(designSystemSource, /单序列排名图保持同一色相/);
   assert.match(
