@@ -1,12 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { KNOWN } from "./src/lib/clis.ts";
 import { companyInitials, resolveCompanyIdentity } from "./src/lib/company.ts";
 import { isEvaluationIntent, localizeUserMessage, parseReport, reportSectionPreview } from "./src/lib/format.ts";
 
 function readSource(path) {
-  return readFileSync(new URL(path, import.meta.url), "utf8");
+  const sourceUrl = new URL(path, import.meta.url);
+  if (existsSync(sourceUrl)) {
+    return readFileSync(sourceUrl, "utf8");
+  }
+
+  // Source checkouts keep project documentation under system/docs, while
+  // installed compatibility bundles may still expose the legacy root layout.
+  if (path.startsWith("../docs/")) {
+    return readFileSync(new URL(path.replace("../docs/", "../system/docs/"), import.meta.url), "utf8");
+  }
+
+  return readFileSync(sourceUrl, "utf8");
 }
 
 function readWebSources() {

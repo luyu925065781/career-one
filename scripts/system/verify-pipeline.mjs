@@ -32,9 +32,11 @@ const APPS_FILE = process.env.CAREER_ONE_TRACKER
 const ADDITIONS_DIR = join(CAREER_ONE, 'batch/tracker-additions');
 // CAREER_ONE_REPORTS overrides the reports dir (used by tests, mirrors CAREER_ONE_TRACKER).
 const REPORTS_DIR = process.env.CAREER_ONE_REPORTS || join(CAREER_ONE, 'reports');
-const STATES_FILE = existsSync(join(CAREER_ONE, 'templates/states.yml'))
-  ? join(CAREER_ONE, 'templates/states.yml')
-  : join(CAREER_ONE, 'states.yml');
+const STATES_FILE = existsSync(join(CAREER_ONE, 'system/templates/states.yml'))
+  ? join(CAREER_ONE, 'system/templates/states.yml')
+  : existsSync(join(CAREER_ONE, 'templates/states.yml'))
+    ? join(CAREER_ONE, 'templates/states.yml')
+    : join(CAREER_ONE, 'states.yml');
 
 // Ensure required directories exist (fresh setup)
 mkdirSync(join(CAREER_ONE, 'data'), { recursive: true });

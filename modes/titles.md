@@ -98,7 +98,7 @@ When the user accepts one or more suggestions:
    noisy keywords are deferred to #1353's seniority-tier helper.
 7. **Separately-confirmed exception:** accepted titles can additionally become
    `fit: adjacent` archetypes in `config/profile.yml` (an existing schema
-   field — see `config/profile.example.yml`). Mention that this is possible,
+   field — see `system/config/profile.example.yml`). Mention that this is possible,
    but do it **only if the user asks** — never write archetypes by default.
    When the user does ask, that write gets its **own YAML diff and its own
    separate confirmation**; never bundle the `portals.yml` and
@@ -115,7 +115,7 @@ When the user accepts one or more suggestions:
 - `cv.md` missing → stop and point at onboarding (`node doctor.mjs --json`).
   There is no evidence base to suggest from, and inventing one is forbidden.
 - `portals.yml` missing, or `title_filter.positive` empty → offer to create it
-  from `templates/portals.example.yml` first, then re-run this mode. (An empty
+  from `system/templates/portals.example.yml` first, then re-run this mode. (An empty
   positive list means the scanner matches everything — nothing to broaden.)
 - `config/profile.yml` or `modes/_profile.md` missing → **hard stop**: do not
   generate suggestions. Point at onboarding (`node doctor.mjs --json`) and

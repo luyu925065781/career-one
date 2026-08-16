@@ -34,7 +34,7 @@ if (!existsSync(cvPath)) {
 // 2. Check profile.yml exists
 const profilePath = join(projectRoot, 'config', 'profile.yml');
 if (!existsSync(profilePath)) {
-  errors.push('config/profile.yml not found. Copy from config/profile.example.yml and fill in your details.');
+  errors.push('config/profile.yml not found. Copy from system/config/profile.example.yml and fill in your details.');
 } else {
   const profileContent = readFileSync(profilePath, 'utf-8');
   const requiredFields = ['full_name', 'email', 'location'];

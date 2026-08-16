@@ -224,7 +224,7 @@ async function cmdAvailable() {
   }
   console.log('\n✓ Community plugins approved by career-one:\n');
   if (reg.plugins.length === 0) {
-    console.log('  (none yet — publish yours as `career-one-plugin-<name>` and open a registry PR; see docs/PLUGINS.md)');
+    console.log('  (none yet — publish yours as `career-one-plugin-<name>` and open a registry PR; see system/docs/PLUGINS.md)');
   } else {
     for (const p of reg.plugins) {
       const seed = p.supersedesBundled === true ? `  🔁 maintained successor of the bundled "${p.id}" reference` : '';
@@ -304,7 +304,7 @@ function cmdNew(args) {
   console.log(`✓ Scaffolded plugins.local/${name}/`);
   console.log('  Next: edit manifest.json + index.mjs, then either');
   console.log(`    A) develop locally:  node career-one.mjs plugins enable ${name}`);
-  console.log(`    B) publish:          push a github repo named "career-one-plugin-${name}", then open a registry PR (docs/PLUGINS.md)`);
+  console.log(`    B) publish:          push a github repo named "career-one-plugin-${name}", then open a registry PR (system/docs/PLUGINS.md)`);
 }
 
 async function cmdAdd(args) {

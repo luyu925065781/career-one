@@ -112,6 +112,33 @@ data/model-blacklist.json
 career-dashboard
 career-dashboard.exe
 
+# Generated compatibility entrypoints (source of truth lives under system/)
+/doctor.mjs
+/start-web.mjs
+/test-all.mjs
+/启动择程AI.command
+/CODEX.md
+/GEMINI.md
+/KIMI.md
+/OPENCODE.md
+/.claude-plugin/
+/.claude/skills/career-one/
+/.opencode/skills/career-one/
+/.qwen/skills/career-one/
+/.antigravitycli/skills/career-one/
+/.grok/skills/career-one/
+/.kimi/skills/career-one/
+/.trae/skills/career-one/
+/.env.example
+/config/profile.example.yml
+/config/plugins.example.yml
+/config/tracker-aliases.json
+/Dockerfile
+/docker-compose.yml
+/career-one-docker
+/flake.nix
+/flake.lock
+
 # Playwright MCP server run artifacts (ephemeral, machine-local)
 .playwright-mcp/
 

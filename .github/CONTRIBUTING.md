@@ -8,6 +8,6 @@
 - 不绕过招聘平台权限、登录机制或反爬限制。
 - 不加入自动提交申请或批量骚扰招聘者的能力。
 - 修改系统层规则时同步更新测试和文档。
-- 提交前运行 `node test-all.mjs` 和 `npm run test:distributions`。
+- 提交前运行 `npm test` 和 `npm run test:distributions`。
 
 仓库地址：https://github.com/luyu925065781/career-one

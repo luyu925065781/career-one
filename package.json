@@ -4,11 +4,12 @@
   "description": "择程AI：面向中国大陆用户的本地优先 AI 求职工作台，可由 Codex、Claude Code、OpenCode、TRAE 等 Agent 驱动",
   "private": true,
   "scripts": {
-    "dev:web": "node start-web.mjs",
+    "dev:web": "node system/compat/start-web.mjs",
+    "test": "node system/compat/test-all.mjs",
     "test:brand": "node tests/system/career-one-migration.test.mjs",
-    "build:distributions": "node distribution/build-packages.mjs",
-    "test:distributions": "node --test distribution/distribution.test.mjs",
-    "doctor": "node doctor.mjs",
+    "build:distributions": "node system/distribution/build-packages.mjs",
+    "test:distributions": "node --test system/distribution/distribution.test.mjs",
+    "doctor": "node system/compat/doctor.mjs",
     "or": "node scripts/integrations/openrouter-runner.mjs",
     "or:scan": "node scripts/integrations/openrouter-runner.mjs scan",
     "or:pipeline": "node scripts/integrations/openrouter-runner.mjs pipeline",
@@ -55,7 +56,7 @@
     "archive": "node scripts/application/archive-posting.mjs",
     "prepare:application": "node scripts/application/prepare-application.mjs",
     "build:dashboard": "node scripts/system/build-dashboard.mjs",
-    "serve:dashboard": "cd dashboard && go run . --path ..",
+    "serve:dashboard": "cd system/dashboard && go run . --path ../..",
     "postinstall": "npx playwright install chromium --with-deps || npx playwright install chromium --with-deps"
   },
   "keywords": [

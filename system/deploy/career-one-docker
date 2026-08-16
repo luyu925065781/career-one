@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# career-one-docker — thin wrapper: run any career-one command inside the docker container.
+#
+# Examples:
+#   ./career-one-docker doctor
+#   ./career-one-docker verify
+#   ./career-one-docker pdf cv.html output/cv.pdf
+#   ./career-one-docker scan
+#   ./career-one-docker node career-one.mjs pdf cv.html output/cv.pdf
+#   ./career-one-docker shell                     # interactive bash
+#   ./career-one-docker up | down | rebuild | logs
+#
+# Anything not matching a known subcommand is forwarded to npm run <subcommand>
+# when package.json defines it, otherwise executed verbatim inside the container.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/package.json" ]; then
+  PROJECT_ROOT="$SCRIPT_DIR"
+else
+  PROJECT_ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
+fi
+cd "$PROJECT_ROOT"
+
+SERVICE="career-one"
+COMPOSE=(docker compose -f system/deploy/docker-compose.yml)
+
+ensure_up() {
+  if ! "${COMPOSE[@]}" ps --services --filter "status=running" | grep -qx "$SERVICE"; then
+    "${COMPOSE[@]}" up -d >/dev/null
+  fi
+}
+
+case "${1:-}" in
+  ""|help|-h|--help)
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+  up)
+    "${COMPOSE[@]}" up -d
+    exit 0
+    ;;
+  down)
+    "${COMPOSE[@]}" down
+    exit 0
+    ;;
+  rebuild)
+    "${COMPOSE[@]}" build --no-cache
+    "${COMPOSE[@]}" up -d
+    exit 0
+    ;;
+  logs)
+    shift
+    "${COMPOSE[@]}" logs -f "$@"
+    exit 0
+    ;;
+  shell|bash)
+    ensure_up
+    exec "${COMPOSE[@]}" exec -it "$SERVICE" bash
+    ;;
+  node|npm|npx|go|bash|sh)
+    ensure_up
+    exec "${COMPOSE[@]}" exec -it "$SERVICE" "$@"
+    ;;
+esac
+
+# Map known npm scripts → `npm run <name>`. Anything else is forwarded raw.
+cmd="$1"; shift || true
+
+case "$cmd" in
+  doctor|verify|normalize|dedup|merge|pdf|sync-check|liveness|scan|gemini:eval|update|update:check|rollback)
+    ensure_up
+    exec "${COMPOSE[@]}" exec -it "$SERVICE" npm run --silent "$cmd" -- "$@"
+    ;;
+  *)
+    ensure_up
+    exec "${COMPOSE[@]}" exec -it "$SERVICE" "$cmd" "$@"
+    ;;
+esac

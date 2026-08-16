@@ -21,7 +21,7 @@ jobs:
       # never launch a browser, so the ~170 MB download is pure CI overhead.
       - run: npm install --ignore-scripts
       - run: npm run release:verify
-      - run: node test-all.mjs --quick
+      - run: npm test -- --quick
       - name: Go dashboard tests
         run: go test ./...
         working-directory: dashboard

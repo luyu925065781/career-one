@@ -51,7 +51,9 @@ if (resolve(MD_PATH) === resolve(DB_PATH)) {
   console.error(`Error: DB path must differ from the markdown path (${MD_PATH}).`);
   process.exit(1);
 }
-const STATES_PATH = 'templates/states.yml';
+const STATES_PATH = existsSync('system/templates/states.yml')
+  ? 'system/templates/states.yml'
+  : 'templates/states.yml';
 const HEADER = '| # | Date | Company | Role | Score | Status | PDF | Report | Notes |';
 const SEPARATOR = '|---|------|---------|------|-------|--------|-----|--------|-------|';
 

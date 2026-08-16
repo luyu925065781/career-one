@@ -2,13 +2,13 @@
 
 ## 前端设计 Source of Truth
 
-前端视觉、颜色、文字层级、间距、圆角、交互状态和可访问性以 `docs/DESIGN_SYSTEM.md` 为准。实现时优先复用 `web/src/app/globals.css` 中的语义 Token，不得在页面组件中另建一套品牌色或中性色。
+前端视觉、颜色、文字层级、间距、圆角、交互状态和可访问性以 `system/docs/DESIGN_SYSTEM.md` 为准。实现时优先复用 `web/src/app/globals.css` 中的语义 Token，不得在页面组件中另建一套品牌色或中性色。
 
 **择程AI必须由用户自己的 Agent 完成个性化。** 首次使用时通过对话创建或完善 `cv.md`、个人画像和目标岗位。所有真实个人数据保存在用户当前工作区，系统层和可分发 Skill 不得包含任何用户简历事实。
 
 ## Data Contract (CRITICAL)
 
-There are two layers. Read `docs/DATA_CONTRACT.md` for the full list.
+There are two layers. Read `system/docs/DATA_CONTRACT.md` for the full list.
 
 **User Layer (NEVER auto-updated, personalization goes HERE):**
 - `cv.md`, `config/profile.yml`, `modes/_profile.md`, `article-digest.md`, `portals.yml`
@@ -18,7 +18,7 @@ There are two layers. Read `docs/DATA_CONTRACT.md` for the full list.
 
 **System Layer (auto-updatable, DON'T put user data here):**
 - `modes/_shared.md`, `modes/oferta.md`, all other modes
-- `AGENTS.md`, `CLAUDE.md`, `CODEX.md`, `OPENCODE.md`, `*.mjs` scripts, `dashboard/*`, `templates/*`, `batch/*`
+- `AGENTS.md`, `CLAUDE.md`, `system/compat/agents/*`, `*.mjs` scripts, `system/dashboard/*`, `system/templates/*`, `system/batch/*`
 
 **THE RULE: When the user asks to customize anything (archetypes, narrative, negotiation scripts, proof points, location policy, comp targets), ALWAYS write to `modes/_profile.md` or `config/profile.yml`. NEVER edit `modes/_shared.md` for user-specific content.** This ensures system updates don't overwrite their customizations.
 
@@ -82,7 +82,7 @@ To rollback: `node update-system.mjs rollback`
 
 ## Release Channels and Feature Gates
 
-`release.config.json` is the single source of truth for release version, channel, and Web feature maturity. Read `docs/RELEASES.md` before changing release behavior.
+`system/release.config.json` is the single source of truth for release version, channel, and Web feature maturity. Read `system/docs/RELEASES.md` before changing release behavior.
 
 - `main` is the stable baseline. A stable version has no prerelease suffix and may only be prepared from `main`.
 - `develop` is the integrated development baseline. Development versions use `-dev.N` or `-next.N`.
@@ -116,8 +116,8 @@ To rollback: `node update-system.mjs rollback`
 | `data/pipeline.md` | Inbox of pending URLs |
 | `data/scan-history.tsv` | Scanner dedup history |
 | `portals.yml` | Query and company config |
-| `templates/cv-template.html` | HTML template for CVs |
-| `templates/cv-template.tex` | LaTeX/Overleaf template for CVs |
+| `system/templates/cv-template.html` | HTML template for CVs |
+| `system/templates/cv-template.tex` | LaTeX/Overleaf template for CVs |
 | `scripts/generate/generate-pdf.mjs` | Playwright: HTML to PDF |
 | `scripts/generate/generate-latex.mjs` | LaTeX CV validator + pdflatex compiler |
 | `article-digest.md` | Compact proof points from portfolio (optional) |
@@ -177,7 +177,7 @@ If `cv.md` is missing, ask in Chinese:
 Create `cv.md` from whatever they provide. Make it clean markdown with standard sections. Before writing, show a fact summary and mark uncertain information as `待确认`; never invent missing details.
 
 #### Step 2: Profile (required)
-If `config/profile.yml` is missing, copy from `config/profile.example.yml` and then ask:
+If `config/profile.yml` is missing, copy from `system/config/profile.example.yml` and then ask:
 > "请一次性确认下面这组求职画像信息；已能从简历明确提取的内容我会预填，你只需纠正或补充：
 > 1. 姓名和联系方式
 > 2. 所在城市和时区
@@ -199,7 +199,7 @@ Fill in `config/profile.yml` with their answers. For archetypes and targeting na
 If `portals.yml` is missing:
 > "我可以根据你的目标岗位配置中国大陆招聘渠道和搜索关键词。是否现在设置？"
 
-Copy `templates/portals.example.yml` → `portals.yml`. If they gave target roles in Step 2, update `title_filter.positive` to match.
+Copy `system/templates/portals.example.yml` → `portals.yml`. If they gave target roles in Step 2, update `title_filter.positive` to match.
 
 #### Step 4: Tracker
 If `data/applications.md` doesn't exist, create it:
@@ -238,7 +238,7 @@ This system is designed to be customized by YOU (AI Agent). When the user asks y
 - "Translate the modes to English" → edit all files in `modes/`
 - "Add these companies to my portals" → edit `portals.yml`
 - "Update my profile" → edit `config/profile.yml`
-- "Change the CV template design" → edit `templates/cv-template.html`
+- "Change the CV template design" → edit `system/templates/cv-template.html`
 - "Adjust the scoring weights" → edit `modes/_profile.md` for user-specific weighting, or edit `modes/_shared.md` and `batch/batch-prompt.md` only when changing the shared system defaults for everyone
 
 ### Language Modes
@@ -417,14 +417,14 @@ Write one TSV file per evaluation to `batch/tracker-additions/{num}-{company-slu
 1. **NEVER edit applications.md to ADD new entries** -- Write TSV in `batch/tracker-additions/` and `merge-tracker.mjs` handles the merge.
 2. **UPDATE status/notes of existing entries via `node career-one.mjs set-status <report#|company> <State> [--note]`** — the canonical (locked, validated, atomic) write path. Do not hand-edit the table.
 3. All reports MUST include `**URL:**` in the header (between Score and PDF). Include `**Legitimacy:** {tier}` (see Block G in `modes/oferta.md`).
-4. All statuses MUST be canonical (see `templates/states.yml`).
+4. All statuses MUST be canonical (see `system/templates/states.yml`).
 5. Health check: `node career-one.mjs verify`
 6. Normalize statuses: `node career-one.mjs normalize`
 7. Dedup: `node career-one.mjs dedup`
 
 ### Canonical States (applications.md)
 
-**Source of truth:** `templates/states.yml`
+**Source of truth:** `system/templates/states.yml`
 
 | State | When to use |
 |-------|-------------|

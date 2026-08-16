@@ -48,7 +48,10 @@ const aliasCache = new Map();
  * @returns {Record<string, string>}
  */
 export function loadHeaderAliases(rootDir) {
-  const file = path.resolve(rootDir, "config", "tracker-aliases.json");
+  const systemFile = path.resolve(rootDir, "system", "config", "tracker-aliases.json");
+  const file = fs.existsSync(systemFile)
+    ? systemFile
+    : path.resolve(rootDir, "config", "tracker-aliases.json");
   try {
     const { mtimeMs, size } = fs.statSync(file);
     const cached = aliasCache.get(file);

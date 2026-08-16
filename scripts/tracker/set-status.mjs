@@ -47,7 +47,10 @@ import {
 } from './tracker-utils.mjs';
 
 const CAREER_ONE = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
-const STATES_FILE = join(CAREER_ONE, 'templates/states.yml');
+const SYSTEM_STATES_FILE = join(CAREER_ONE, 'system/templates/states.yml');
+const STATES_FILE = existsSync(SYSTEM_STATES_FILE)
+  ? SYSTEM_STATES_FILE
+  : join(CAREER_ONE, 'templates/states.yml');
 
 const EXIT_OK = 0;
 const EXIT_USAGE = 1;

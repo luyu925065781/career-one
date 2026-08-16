@@ -24,9 +24,10 @@ const PACKAGE_FILES = [
   "package-lock.json",
   "web/package.json",
   "web/package-lock.json",
-  "scaffolder/package.json",
-  "packages/codex-plugin/career-one/.codex-plugin/plugin.json",
+  "system/scaffolder/package.json",
+  "system/packages/codex-plugin/career-one/.codex-plugin/plugin.json",
 ];
+const RELEASE_CONFIG = "system/release.config.json";
 const WEB_CONFIG_MIRROR = "web/release.config.json";
 
 function readJson(path) {
@@ -91,7 +92,7 @@ export function validateReleaseState(config, options = {}) {
   const expectedChannel = options.expectedChannel || "";
 
   if (!config || typeof config !== "object") {
-    return ["release.config.json 必须是对象"];
+    return [`${RELEASE_CONFIG} 必须是对象`];
   }
   if (!RELEASE_CHANNELS.includes(config.channel)) {
     errors.push(`未知发布通道：${config.channel || "(空)"}`);
@@ -130,7 +131,7 @@ export function validateReleaseState(config, options = {}) {
 }
 
 export function readReleaseState(root = ROOT) {
-  const configPath = join(root, "release.config.json");
+  const configPath = join(root, RELEASE_CONFIG);
   if (!existsSync(configPath)) {
     throw new Error(`缺少 ${configPath}`);
   }
@@ -148,7 +149,7 @@ export function verifyRelease({
   if (!existsSync(mirrorPath)) {
     errors.push(`缺少构建镜像：${WEB_CONFIG_MIRROR}`);
   } else if (JSON.stringify(readJson(mirrorPath)) !== JSON.stringify(config)) {
-    errors.push(`${WEB_CONFIG_MIRROR} 与根 release.config.json 不一致`);
+    errors.push(`${WEB_CONFIG_MIRROR} 与 ${RELEASE_CONFIG} 不一致`);
   }
 
   const versionPath = join(root, "VERSION");
@@ -156,7 +157,7 @@ export function verifyRelease({
     ? readFileSync(versionPath, "utf8").trim().split(/\s+/)[0]
     : "";
   if (version !== config.version) {
-    errors.push(`VERSION=${version || "(缺失)"}，release.config.json=${config.version}`);
+    errors.push(`VERSION=${version || "(缺失)"}，${RELEASE_CONFIG}=${config.version}`);
   }
 
   for (const relative of PACKAGE_FILES) {
@@ -212,7 +213,7 @@ export function prepareRelease({
     throw new Error(`稳定版只能在 main 准备，当前分支是 ${branch}`);
   }
 
-  const configPath = join(root, "release.config.json");
+  const configPath = join(root, RELEASE_CONFIG);
   const config = readJson(configPath);
   config.version = version;
   config.channel = channel;

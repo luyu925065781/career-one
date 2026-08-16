@@ -375,7 +375,10 @@ async function generatePDF() {
 export async function inlineLocalFonts(html) {
   const FONT_REF = /url\(\s*(['"]?)\.\/fonts\/([^'")\s]+)\1\s*\)/g;
   const MIME = { woff2: 'font/woff2', woff: 'font/woff', otf: 'font/otf', ttf: 'font/ttf' };
-  const fontsDir = resolve(__dirname, 'fonts');
+  const systemFontsDir = resolve(__dirname, 'system', 'fonts');
+  const fontsDir = existsSync(systemFontsDir)
+    ? systemFontsDir
+    : resolve(__dirname, 'fonts');
   const names = [...new Set([...html.matchAll(FONT_REF)].map((m) => m[2]))];
   const dataUrls = new Map();
   for (const name of names) {

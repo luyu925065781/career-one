@@ -111,7 +111,10 @@ export function buildHtml(payload) {
   _require(letter, ["role_title", "opening", "profile_intro"], "letter");
 
   const scriptDir = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
-  const templatePath = resolve(scriptDir, "templates", "cover-letter-template.html");
+  const systemTemplatePath = resolve(scriptDir, "system", "templates", "cover-letter-template.html");
+  const templatePath = existsSync(systemTemplatePath)
+    ? systemTemplatePath
+    : resolve(scriptDir, "templates", "cover-letter-template.html");
   let html = readFileSync(templatePath, "utf-8");
 
   // Optional salutation (e.g. "Dear Jane Smith,"). Omitted -> no salutation,

@@ -7,7 +7,10 @@ import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 
 const __dirname = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
-const TEMPLATE_PATH = resolve(__dirname, 'templates', 'cv-template.tex');
+const SYSTEM_TEMPLATE_PATH = resolve(__dirname, 'system', 'templates', 'cv-template.tex');
+const TEMPLATE_PATH = existsSync(SYSTEM_TEMPLATE_PATH)
+  ? SYSTEM_TEMPLATE_PATH
+  : resolve(__dirname, 'templates', 'cv-template.tex');
 const PLACEHOLDER_RE = /\{\{[A-Z_]+\}\}/g;
 
 function escapeLatex(text, mode = 'text') {

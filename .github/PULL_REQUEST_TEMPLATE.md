@@ -20,8 +20,8 @@
 - [ ] I have read [CONTRIBUTING.md](https://github.com/luyu925065781/career-one/blob/main/.github/CONTRIBUTING.md)
 - [ ] If this is a new feature or architecture change, I opened an issue first (bug fixes, providers, docs & translations are exempt — send those straight in)
 - [ ] My PR does not include personal data (CV, email, real names, scan results, or pipeline data)
-- [ ] I ran `node test-all.mjs` and all tests pass
-- [ ] My changes respect the [Data Contract](https://github.com/luyu925065781/career-one/blob/main/docs/DATA_CONTRACT.md) (no modifications to user-layer files)
+- [ ] I ran `npm test` and all tests pass
+- [ ] My changes respect the [Data Contract](https://github.com/luyu925065781/career-one/blob/main/system/docs/DATA_CONTRACT.md) (no modifications to user-layer files)
 - [ ] My changes align with the [project roadmap](https://github.com/luyu925065781/career-one/discussions/156)
 
 ---

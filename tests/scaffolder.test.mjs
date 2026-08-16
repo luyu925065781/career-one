@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,11 +11,12 @@ import {
   parseInstallArgs,
   resolveReleaseTag,
   selectReleaseTag,
-} from "../scaffolder/bin/installer-core.mjs";
+} from "../system/scaffolder/bin/installer-core.mjs";
+import { ensureCompatibilityEntrypoints } from "../system/scaffolder/bin/skill-entrypoints.mjs";
 
 test("npm 安装器通过 node_modules/.bin 符号链接启动时仍执行 CLI", () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "career-one-cli-"));
-  const cliPath = fileURLToPath(new URL("../scaffolder/bin/cli.mjs", import.meta.url));
+  const cliPath = fileURLToPath(new URL("../system/scaffolder/bin/cli.mjs", import.meta.url));
   const symlinkPath = join(tempRoot, "career-one");
   try {
     symlinkSync(cliPath, symlinkPath);
@@ -26,6 +27,43 @@ test("npm 安装器通过 node_modules/.bin 符号链接启动时仍执行 CLI",
     assert.match(result.stdout, /career-one \[目录\]/);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("npm clone 安装会物化稳定根命令和 Agent 兼容说明", () => {
+  const workspace = mkdtempSync(join(tmpdir(), "career-one-compat-"));
+  try {
+    const sources = new Map([
+      ["system/compat/doctor.mjs", "// doctor\n"],
+      ["system/compat/start-web.mjs", "// web\n"],
+      ["system/compat/test-all.mjs", "// test\n"],
+      ["system/compat/agents/CODEX.md", "# codex\n"],
+      ["system/compat/agents/GEMINI.md", "# gemini\n"],
+      ["system/compat/agents/KIMI.md", "# kimi\n"],
+      ["system/compat/agents/OPENCODE.md", "# opencode\n"],
+    ]);
+    for (const [relativePath, content] of sources) {
+      const absolutePath = join(workspace, ...relativePath.split("/"));
+      mkdirSync(join(absolutePath, ".."), { recursive: true });
+      writeFileSync(absolutePath, content);
+    }
+
+    const touched = ensureCompatibilityEntrypoints(workspace);
+    for (const target of [
+      "doctor.mjs",
+      "start-web.mjs",
+      "test-all.mjs",
+      "CODEX.md",
+      "GEMINI.md",
+      "KIMI.md",
+      "OPENCODE.md",
+    ]) {
+      assert.ok(touched.includes(target), `must materialize ${target}`);
+      assert.ok(existsSync(join(workspace, target)), `workspace must contain ${target}`);
+    }
+    assert.equal(readFileSync(join(workspace, "doctor.mjs"), "utf8"), "// doctor\n");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
   }
 });
 

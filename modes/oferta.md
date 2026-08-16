@@ -427,7 +427,7 @@ With the optional Via column (intermediary channel, #1596) after Company:
 
 ### 3. Salary observations (desired ask only)
 
-If — and only if — the user **explicitly stated a role-specific desired number for THIS application** in the conversation ("I'd ask 95k here"), append one `desired` line (source `user`) to `data/salary-observations.tsv` (create the file if missing; use the TSV contract in `docs/DATA_CONTRACT.md`):
+If — and only if — the user **explicitly stated a role-specific desired number for THIS application** in the conversation ("I'd ask 95k here"), append one `desired` line (source `user`) to `data/salary-observations.tsv` (create the file if missing; use the TSV contract in `system/docs/DATA_CONTRACT.md`):
 
 ```text
 {tracker#}\t{YYYY-MM-DD}\tdesired\t{amount}\t{currency}\tuser\t{short context note}

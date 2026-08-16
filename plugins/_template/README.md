@@ -30,7 +30,7 @@ node career-one.mjs plugins enable {{NAME}} --confirm  # 授予权限
 
 ## 申请进入批准列表
 
-向 career-one 提交注册表 PR，具体要求见 [docs/PLUGINS.md](https://github.com/luyu925065781/career-one/blob/main/docs/PLUGINS.md)。
+向 career-one 提交注册表 PR，具体要求见 [system/docs/PLUGINS.md](https://github.com/luyu925065781/career-one/blob/main/system/docs/PLUGINS.md)。
 
 ## 许可证
 

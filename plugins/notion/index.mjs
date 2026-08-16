@@ -1,7 +1,7 @@
 // @ts-check
 // ── Reference seed ── This bundled plugin is a stable, reviewed example. To
 // extend it, publish career-one-plugin-<id> with "supersedesBundled": true and
-// your version takes precedence once installed (see docs/PLUGINS.md). Bundled
+// your version takes precedence once installed (see system/docs/PLUGINS.md). Bundled
 // seeds take only security/compat fixes — feature work happens in the successor repo.
 //
 // Notion plugin — mirror your tracker to a Notion database (export) and read

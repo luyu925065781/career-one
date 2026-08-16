@@ -184,7 +184,7 @@ List every delta: what was recorded/targeted vs what the contract says, both
 quoted.
 
 Then append one `actual` observation line to `data/salary-observations.tsv`
-(create the file if missing; use the TSV contract in `docs/DATA_CONTRACT.md`): the
+(create the file if missing; use the TSV contract in `system/docs/DATA_CONTRACT.md`): the
 document's base compensation amount, source `contract` — or `offer-letter`
 when the document is an offer letter — with a total-comp note in the note
 column if the document states one. This records what the document says,
@@ -251,7 +251,7 @@ taking the list to a lawyer before signing.
 Update the existing row (never add a new one): status → `Offer` if not
 already; Notes column links the prep file relative to the tracker
 (`offers/{company-slug}/prep-{date}.md`). Canonical states per
-`templates/states.yml`.
+`system/templates/states.yml`.
 
 ## Step 8 — Reply draft (optional, on request)
 

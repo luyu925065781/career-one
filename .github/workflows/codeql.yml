@@ -33,8 +33,8 @@ jobs:
         if: matrix.language == 'go'
         uses: actions/setup-go@v6
         with:
-          go-version-file: dashboard/go.mod
-          cache-dependency-path: dashboard/go.sum
+          go-version-file: system/dashboard/go.mod
+          cache-dependency-path: system/dashboard/go.sum
 
       - name: Build Go
         if: matrix.language == 'go'

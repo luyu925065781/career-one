@@ -100,8 +100,8 @@ Codex 不保证显示斜杠命令；交互使用时直接输入上述中文自�
 | `tests/` | 与功能域对应的自动化测试 |
 | `modes/` | Agent 工作流、评分规则和多语言模式 |
 | `web/` | 可选的本地 Web 工作台 |
-| `docs/`、`.github/` | 产品文档、设计规范、数据契约、法律条款与社区治理文件 |
-| `templates/`、`providers/`、`plugins/` | 模板、公开岗位来源和可选集成 |
+| `system/` | 文档、模板、字体、部署、分发、发布配置和兼容入口等开发源码 |
+| `providers/`、`plugins/` | 公开岗位来源和可选集成 |
 | `data/`、`reports/`、`output/` | 用户本地求职数据、评估报告和生成结果；默认不会进入 Git |
 
 内部脚本路径可能随架构调整；用户和集成应优先调用 `career-one.mjs` 或 `npm run` 中的稳定命令。
@@ -120,7 +120,7 @@ Codex 不保证显示斜杠命令；交互使用时直接输入上述中文自�
 - 用户可见材料只使用本地已确认的简历、画像、作品和面试故事，不虚构经历、指标或项目归属。
 - 岗位发现不会绕过招聘平台登录、权限或反爬机制；国内平台以用户主动搜索和提供岗位为主。
 - Agent 可以评估、起草和协助填写，但不会替用户点击最终提交、发送或申请按钮。
-- 评估结果仅供求职决策参考；提交材料前请核对事实和表述。完整说明见 [隐私政策](docs/PRIVACY.md)、[使用条款](docs/TERMS.md)与[免责声明](docs/LEGAL_DISCLAIMER.md)。
+- 评估结果仅供求职决策参考；提交材料前请核对事实和表述。完整说明见 [隐私政策](system/docs/PRIVACY.md)、[使用条款](system/docs/TERMS.md)与[免责声明](system/docs/LEGAL_DISCLAIMER.md)。
 
 ## 免责声明
 
@@ -131,7 +131,7 @@ Codex 不保证显示斜杠命令；交互使用时直接输入上述中文自�
 3. **你需要遵守第三方服务条款。** 你必须按照所使用招聘平台（Greenhouse、Lever、Workday、LinkedIn 等）的服务条款来使用本工具。不要用它向雇主发送垃圾申请，也不要对 ATS 系统造成过载。
 4. **不提供任何保证。** 评估结果只是建议，不是真相。AI 模型可能会幻觉出并不存在的技能或经历。作者不对任何求职结果、申请被拒、账号受限或其他后果承担责任。
 
-完整内容见 [隐私政策](docs/PRIVACY.md)、[使用条款](docs/TERMS.md)与[免责声明](docs/LEGAL_DISCLAIMER.md)。本软件依据 [MIT License](LICENSE) 以“按现状”方式提供，不附带任何形式的担保。
+完整内容见 [隐私政策](system/docs/PRIVACY.md)、[使用条款](system/docs/TERMS.md)与[免责声明](system/docs/LEGAL_DISCLAIMER.md)。本软件依据 [MIT License](LICENSE) 以“按现状”方式提供，不附带任何形式的担保。
 
 ## 许可证
 

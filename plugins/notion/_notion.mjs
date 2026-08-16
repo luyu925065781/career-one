@@ -13,13 +13,16 @@
 // sleep keeps us under ~3 req/s. DB resolution is by NAME so no workspace id is
 // ever embedded. Files prefixed with _ are never discovered as plugins.
 
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import * as yaml from 'js-yaml';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
-const STATES_PATH = join(DIR, '..', '..', 'templates', 'states.yml');
+const SYSTEM_STATES_PATH = join(DIR, '..', '..', 'system', 'templates', 'states.yml');
+const STATES_PATH = existsSync(SYSTEM_STATES_PATH)
+  ? SYSTEM_STATES_PATH
+  : join(DIR, '..', '..', 'templates', 'states.yml');
 const MAX = 1900; // safety margin under Notion's 2000-char rich_text limit
 
 // ── canonical states (templates/states.yml is the source of truth) ──────────
