@@ -1,9 +1,6 @@
 # 择程AI
 
-<p align="center">
-  <strong>面向中国大陆用户的本地优先 AI 求职工作台</strong><br>
-  让你的 Agent 成为个人 AI 求职顾问，完成简历建档、求职画像、故事库、岗位评估、定制简历、面试准备与求职进度管理。
-</p>
+让你的 Agent 成为个人 AI 求职顾问，完成简历建档、求职画像、故事库、岗位评估、定制简历、面试准备与求职进度管理。
 
 择程AI支持你正在使用的 Codex、Claude Code、OpenCode、TRAE、WorkBuddy 等 Agent：智能优化你提供的初始简历，生成求职画像和面试故事库，并完成岗位评估、简历定制、面试准备与投递管理。项目、Skill 与命令的技术标识为 `career-one`。
 
@@ -80,7 +77,7 @@ macOS 也可双击根目录的 `启动择程AI.command`。Web 工作台默认运
 /career-one project        → 评估作品集项目
 ```
 
-也可以直接粘贴岗位 URL、职位描述或招聘截图，择程AI会自动识别并运行对应流程。Codex 不保证显示 `/career-one` 斜杠命令；不可用时直接使用中文自然语言：
+也可以直接粘贴岗位 URL、职位描述或招聘截图，择程AI会自动识别并运行对应流程。不可用时直接使用中文自然语言：
 
 ```text
 使用择程AI评估这个岗位：https://company.com/jobs/123
@@ -89,15 +86,6 @@ macOS 也可双击根目录的 `启动择程AI.command`。Web 工作台默认运
 为下周的面试制定准备计划。
 查看并总结当前求职进度。
 ```
-
-一次性 Codex 任务可使用：
-
-```bash
-codex exec "查看并总结当前求职进度。"
-codex exec --sandbox workspace-write --search "使用择程AI评估这个岗位：https://company.com/jobs/123"
-```
-
-完整用法见 [Codex 使用指南](docs/CODEX.md)。
 
 ## 项目结构
 
