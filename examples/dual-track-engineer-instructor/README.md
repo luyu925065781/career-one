@@ -1,106 +1,109 @@
-# Example -- dual-track engineer + instructor
+# 示例：工程师与讲师双轨职业
 
-This is for the case where one candidate has a real track record on two different archetypes at once. The example here is a senior AI engineer who is also a senior technical instructor, but the same structure works for backend + SRE, ML + research, IC + manager, or engineer + product manager.
+本示例适用于候选人同时在两个不同职业原型上拥有真实、可验证经历的情况。示例人物既是资深 AI 工程师，也是资深技术讲师；相同结构也适用于后端 + SRE、机器学习 + 研究、个人贡献者 + 管理者，或工程师 + 产品经理。
 
-The default career-one examples assume one north-star archetype. Hybrid careers do not fit that mould. Bootcamp instructors, university lecturers, AI/ML educators inside companies, DevRel engineers, training architects, internal-enablement leads -- these people have two real jobs on the CV and the existing single-archetype config either flattens one side or the other.
+career-one 的默认示例假设用户只有一个北极星职业原型，但混合型职业并不符合这种结构。训练营讲师、高校教师、企业内部 AI/ML 教育者、开发者关系工程师、培训架构师和内部赋能负责人，可能在简历上确实承担过两类工作。单一职业原型配置会削弱其中一条轨道。
 
-This folder shows how to:
+本目录展示如何：
 
-1. Configure `archetypes:` in `profile.yml` with two `fit: primary` entries instead of one.
-2. Write a `cv.md` that puts measurable wins on both sides in front of the recruiter without diluting either.
-3. Set two compensation ranges. Engineering and teaching pay differently, often by 20-40%, and the evaluator needs to know which range applies to a given offer.
-4. At evaluation time, decide which track to lead with for the specific JD on the desk.
+1. 在 `profile.yml` 的 `archetypes:` 下配置两个 `fit: primary` 项，而不是一个。
+2. 编写 `cv.md`，同时向招聘方呈现两条轨道上的可量化成果，又不稀释任何一方。
+3. 设置两套薪酬区间。工程与教学岗位的薪酬常相差 20%–40%，评估器需要知道当前岗位应套用哪一组。
+4. 评估时根据当前 JD 决定以哪条轨道为主线。
 
 ---
 
-## Files
+## 文件
 
-| File | Purpose |
+| 文件 | 用途 |
 |------|---------|
-| `cv.md` | Fictional dual-track CV (Sam Rivera). Use as structural reference for your own. |
-| `profile.yml` | Profile config with two primary archetypes and two comp ranges. |
-| `README.md` | This file. |
+| `cv.md` | 虚构人物 Sam Rivera 的双轨简历，可作为个人简历的结构参考。 |
+| `profile.yml` | 包含两个主要职业原型和两套薪酬区间的画像配置。 |
+| `README.md` | 当前说明文件。 |
 
-The persona is fictional (`Sam Rivera <sam@example.com>`). Do not copy values directly -- adapt them.
-
----
-
-## When to use the dual-track pattern
-
-Use it only if all of these are true:
-
-1. You have measurable, recent (under 3 years old) wins on two different archetypes. Not "I taught a workshop once", but real numbers: hours taught, alumni placed, retention rates, NPS -- and on the engineering side, LOC shipped, systems owned, latency or cost moved.
-2. You will actually take an offer from either side. If you would only really accept one and grudgingly take the other, do single-track and treat the other side as one strong bullet in the summary.
-3. The two tracks are at roughly the same seniority. A junior teacher who is also a staff engineer is a single-track engineer who happens to mentor.
-
-Use single-track instead if:
-
-- One side is hobby-grade. "I mentor on weekends" does not count as a teaching career.
-- The seniorities are mismatched.
-- You are early enough in your career that you don't actually know yet which side is the main one.
-- Your salary expectations on one track are non-negotiable. Pick that track and use the other as a differentiator in the cover letter.
+示例人物为虚构人物（`Sam Rivera <sam@example.com>`）。不要直接照抄其中的数据，请根据自己的事实调整。
 
 ---
 
-## How dual-track changes the rest of career-one
+## 何时使用双轨模式
 
-### `modes/_shared.md`
-List both archetypes in the "North Star -- Target Roles" table with `fit: primary`. The skill applies equal rigor to all primary archetypes, which is what you need here.
+只有同时满足以下条件时才使用双轨模式：
+
+1. 你最近三年内在两个不同职业原型上都有可量化成果。不能只是“我讲过一次工作坊”，而应有授课时长、学员就业人数、留存率、NPS 等真实数字；工程侧则应有交付代码、负责系统、延迟或成本改善等证据。
+2. 两条轨道的岗位你都确实愿意接受。如果你实际上只想接受其中一种，应使用单轨模式，并把另一条经历作为摘要中的一项有力差异化优势。
+3. 两条轨道的资历大致相当。初级讲师兼 Staff 工程师，本质上仍是单轨工程师，只是同时承担指导工作。
+
+出现以下情况时，应改用单轨模式：
+
+- 其中一条轨道只达到兴趣爱好程度。“我周末带过新人”不能算作教学职业。
+- 两条轨道的资历不匹配。
+- 你尚处职业早期，还无法判断哪一条才是主线。
+- 你对某条轨道的薪酬要求没有协商空间。此时应选择该轨道为主线，并在求职信中把另一条轨道作为差异化优势。
+
+---
+
+## 双轨模式如何影响 career-one 的其他部分
+
+### `profile.yml` 与 `modes/_profile.md`
+
+在 `profile.yml` 中将两个职业原型都标为 `fit: primary`。在真实工作区中，用户特定的职业原型和叙事应写入 `config/profile.yml` 或 `modes/_profile.md`，不要写入系统层 `modes/_shared.md`。Skill 会以同等严格标准处理所有主要职业原型。
 
 ### `cv.md`
-Two ways to structure it:
+有两种组织方式：
 
-- Layered (what I recommend): one Professional Summary that names both tracks in the first sentence, then experience entries that include both engineering and teaching bullets per role. Use this when the roles actually combined both. See the `cv.md` in this folder.
-- Sectioned: separate "Engineering Experience" and "Teaching Experience" headings. Use this when the two tracks happened at different employers and don't need to be told as one story.
+- **分层式（推荐）**：在同一份职业摘要的首句同时说明两条轨道，再在每段经历中分别列出工程和教学成果。适用于同一个岗位本来就同时包含两类职责的情况。可参考本目录的 `cv.md`。
+- **分节式**：分别使用“工程经历”和“教学经历”标题。适用于两条轨道发生在不同雇主处、不需要合并讲述的情况。
 
-Lead the Professional Summary with the combination itself -- "senior AI engineer who runs the curriculum", or whatever the equivalent is for your stack. The combination is the thing that's hard to hire. Either side alone is not.
+职业摘要应先强调组合本身，例如“负责课程体系的资深 AI 工程师”，或与你的技术栈对应的表达。真正稀缺的是两种能力的组合，而不是任意一方单独存在。
 
-### `profile.yml` -- compensation
-Put your engineering range in `compensation.target_range` (it's usually the higher one) and the teaching range in the optional `compensation.alternate_ranges` block. The evaluator picks the right one based on the JD.
+### `profile.yml`：薪酬
 
-### Evaluation reports
-When career-one evaluates an offer, it should detect which archetype the JD targets and pick the matching salary range, the matching CV emphasis, and the matching STAR stories. With two `fit: primary` entries this mostly just works, but check the `Archetype:` line in the report header. If it picked wrong, the rest of the report is wrong too.
+将工程岗位区间写入 `compensation.target_range`，通常这也是较高的一组；将教学岗位区间写入可选的 `compensation.alternate_ranges`。评估器会根据 JD 选择对应区间。
 
----
+### 评估报告
 
-## Interview objection handling
-
-A dual-track CV triggers objections that single-track CVs do not. Three you should expect.
-
-### "Why are you applying for an engineering role if you also teach?"
-
-The answer template I use:
-
-> "Teaching is how I keep the engineering sharp. I have to ship code that students can actually run, debug, and extend, so I cannot get away with hand-waving. The reason I am here for [role] is [specific reason about the team / product / scope]. Teaching stays as a side activity, not a competing job."
-
-Lead with engineering wins. Mention teaching as a credibility signal ("I have explained transformers about 200 times so I know exactly which parts trip people up"), not as a co-equal commitment.
-
-### "Are you sure you want a teaching role? Your engineering background is intense, you will be bored."
-
-> "The students I want to teach are going to ship production systems, not pass a quiz. My engineering background is exactly why I can get them there. I have done both for [N] years. This is not a step down. It is the same work in a different format."
-
-Lead with the teaching wins (hours, alumni placed, retention, NPS). Use the engineering background as proof of credibility, not as a fallback plan.
-
-### "Why not just pick one?"
-
-> "Because the combination is the actual value. Engineers who can teach end up leading onboarding, writing internal docs people actually read, and running technical interviews. Teachers who can ship get hired to design curriculum that survives contact with production. I am looking for roles where both matter."
+career-one 评估岗位时，应识别 JD 面向哪个职业原型，并选择对应的薪酬区间、简历重点和 STAR 故事。配置两个 `fit: primary` 后通常可以自动完成，但仍需检查报告头部的 `Archetype:` 行。如果职业原型选错，后续报告也会随之偏离。
 
 ---
 
-## Over/underqualified failure modes
+## 面试异议处理
 
-Dual-track candidates get read as overqualified for pure teaching roles ("you will leave in six months for an engineering job") and as underqualified for pure engineering roles ("you have not been a full-time IC in two years"). Both kill applications. The mitigations:
+双轨简历会引发单轨简历通常不会遇到的疑问。以下三类最常见。
 
-| Risk | Mitigation in CV | Mitigation in interview |
+### “你既然也做教学，为什么还要申请工程岗位？”
+
+可以使用以下回答结构：
+
+> “教学会倒逼我保持工程能力。我必须交付学生真正能运行、调试和扩展的代码，不能只停留在概念层面。我申请[岗位]，是因为[与团队、产品或职责范围有关的具体原因]。教学会作为辅助活动继续存在，不会与本职工作竞争。”
+
+先讲工程成果。将教学经历作为可信度信号，例如“我讲过约 200 次 Transformer，因此很清楚哪些部分最容易让人卡住”，而不是并列的工作承诺。
+
+### “你确定想做教学岗位吗？你的工程背景很强，会不会觉得无聊？”
+
+> “我希望培养的是能交付生产系统的学生，而不只是通过考试。工程背景正是我能帮助他们达到这个目标的原因。我同时从事两类工作已经[N]年。这不是降级，而是用另一种形式完成同样重要的工作。”
+
+先讲教学成果，例如课时、学员就业、留存率和 NPS。把工程背景作为专业可信度证明，而不是备用计划。
+
+### “为什么不只选一条轨道？”
+
+> “因为真正的价值就在两种能力的组合。会教学的工程师往往能主导新人入职、写出真正有人阅读的内部文档，并承担技术面试；能交付的讲师则可以设计经得起生产实践检验的课程。我寻找的是两种能力都能发挥作用的岗位。”
+
+---
+
+## 资历过高或不足的风险
+
+双轨候选人申请纯教学岗位时，可能被认为资历过高，例如“六个月后就会离职去做工程”；申请纯工程岗位时，又可能被认为资历不足，例如“两年没有担任全职个人贡献者”。两种判断都可能直接终止申请，可以这样缓解：
+
+| 风险 | 简历中的缓解方式 | 面试中的缓解方式 |
 |------|------------------|-------------------------|
-| Overqualified for teaching | Lead the Summary with curriculum and outcomes, not LOC | Tell a story about a course you redesigned that moved student outcomes. Show you care about pedagogy, not just shipping. |
-| Underqualified for engineering | Add a "Recent Engineering" section that lists shipping work from the last 12 months | Bring code. Pull up a PR you wrote in the last month. Walk through the architecture decisions in plain language. |
+| 教学岗位认为资历过高 | 摘要先写课程和教学结果，不先写代码行数 | 讲述一次课程重构如何改善学员结果，证明你关心教学方法，而不只是交付 |
+| 工程岗位认为资历不足 | 增加“近期工程工作”章节，列出过去 12 个月的实际交付 | 准备代码和最近一个月提交的 PR，用清晰语言说明架构决策 |
 
 ---
 
-## Related files
+## 相关文件
 
-- `../cv-example.md` -- single-track CV example for comparison.
-- `../../config/profile.example.yml` -- the canonical profile schema this example extends.
-- `../../modes/_shared.md` -- where archetypes feed into framing logic.
-- `../../CONTRIBUTING.md` -- this example was contributed under "Add example CVs for different roles".
+- `../cv-example.md`：用于对照的单轨 CV 示例。
+- `../../config/profile.example.yml`：本示例所扩展的规范画像结构。
+- `../../modes/_profile.template.md`：用户特定职业原型与叙事的模板。
+- `../../CONTRIBUTING.md`：本示例按照“为不同岗位添加示例简历”的贡献范围提交。

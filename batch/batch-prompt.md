@@ -171,16 +171,18 @@ Analyze posting signals to assess whether this is a real, active opening.
 **Assessment:** Apply the same three tiers (High Confidence / Proceed with Caution / Suspicious), weighting available signals more heavily. If insufficient signals are available to make a determination, default to "Proceed with Caution" with a note about limited data.
 
 #### Score Global
-Read `modes/_custom.md` → Scoring Rules, if it exists, and apply its override here. Default (if absent or silent): calculate global score based on dimension scores below.
+Read `modes/_custom.md` → Scoring Rules, if it exists, and apply its override here. Default (if absent or silent): calculate the global match score from the 5 scoring factors below. Block G remains a separate legitimacy tier and must not change the numeric score.
 
 | Dimensión | Score |
 |-----------|-------|
 | Match con CV | X/5 |
 | Alineación North Star | X/5 |
+| Level and responsibilities | X/5 |
 | Comp | X/5 |
-| Señales culturales | X/5 |
-| Red flags | -X (si hay) |
+| Organization and culture | X/5 |
 | **Global** | **X/5** |
+
+The final decision must combine Global with `legitimacy_tier`: legitimacy never changes the number, but Proceed with Caution or Suspicious can change an otherwise positive action into "Research first" or "Skip".
 
 #### Machine Summary
 
@@ -317,7 +319,7 @@ advertised_comp: {verbatim JD salary/range as a quoted string (e.g. "80-90k EUR"
 12. Escribe HTML a `output/cv-candidate-{company-slug}.html` (NO en /tmp — el HTML registrado es la fuente de regeneración del dashboard)
 13. Ejecuta:
 ```bash
-node generate-pdf.mjs \
+node career-one.mjs pdf \
   output/cv-candidate-{company-slug}.html \
   output/cv-candidate-{company-slug}-{{DATE}}.pdf \
   --format={letter|a4} \

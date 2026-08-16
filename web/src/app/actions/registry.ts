@@ -10,6 +10,7 @@
 
 import type { Application, InboxJob } from "@/lib/career-one";
 import type { Job } from "@/components/jobs/job-store";
+import { isPathEnabled } from "@/lib/release";
 
 export const AUTO_FIRE_MAX = 3; // fire ≤3 evaluations silently; confirm above that
 export const BATCH_CAP = 12; // hard ceiling on a single fan-out
@@ -35,6 +36,7 @@ export type ActionCtx = {
   push: (path: string) => void; // router.push — section/detail change
   replace: (path: string) => void; // router.replace — incremental filter tweak
   startJob: (opts: StartJobInput) => string | null;
+  queueAgentTask: (opts: StartJobInput) => { id: string; instruction: string };
   inbox: InboxJob[];
   applications: Application[]; // tracker snapshot — resolve #n → company/role for confirms
   jobForUrl: (url: string) => Job | undefined; // skip-if-done / retry logic
@@ -42,7 +44,6 @@ export type ActionCtx = {
   writeStatus: (n: string, status: string) => void; // UPDATE-only writeback via /api/status
   setApplyField: (idOrLabel: string, value: string) => void; // edit an apply-proxy answer
   startApply: (url: string) => void; // open the apply form-proxy for a posting URL
-  applyExplore?: (patch: Record<string, unknown>, opts?: { merge?: boolean; run?: boolean }) => void; // build a FREE discovery search
   writeProfile?: (patch: Record<string, unknown>) => void; // merge-safe config/profile.yml write
   writePortals?: (roles: string[], location?: string[]) => void; // merge-safe portals.yml title_filter write
 };
@@ -80,7 +81,7 @@ export type DoneInfo = { jobIds?: string[]; batchId?: string; note?: string };
 export type DispatchResult =
   | ({ status: "done" } & DoneInfo)
   | { status: "ignored"; note?: string }
-  | { status: "confirm"; summary: string; run: () => DoneInfo };
+  | { status: "confirm"; summary: string; preview?: string; run: () => DoneInfo };
 
 // ── helpers ──────────────────────────────────────────────────────────────
 const isStr = (v: unknown): v is string => typeof v === "string" && v.length > 0;
@@ -93,7 +94,10 @@ function isAllowedPath(p: string): boolean {
   if (/^(https?:)?\/\//i.test(p)) return false;
   const path = p.split(/[?#]/)[0];
   if (path === "/") return true;
-  return /^\/(explore|pipeline|portals|analytics|cv|config|apply|jobs)(\/[^/]+)?$/.test(path);
+  if (!/^\/(cn-diagnose|pipeline|portals|analytics|cv|profile|config|apply|jobs|interview)(\/[^/]+)?$/.test(path)) {
+    return false;
+  }
+  return isPathEnabled(path);
 }
 
 function genBatchId(): string {
@@ -211,20 +215,6 @@ const ACTIONS: Record<string, ActionDef> = {
     },
   },
 
-  explore: {
-    // FREE: opens the Explorer and builds a discovery search. Zero tokens — it
-    // never spends, so it bypasses the confirm gate. The provider clamps/validates.
-    sideEffect: "none",
-    run: (raw, ctx) => {
-      if (!ctx.applyExplore) return { status: "ignored", note: "当前页面无法使用岗位发现" };
-      const run = raw.run === true;
-      const merge = raw.merge === true;
-      ctx.push("/explore");
-      ctx.applyExplore(raw, { merge, run });
-      return { status: "done", note: run ? "正在进行 ATS 算法扫描…" : "已按筛选条件打开岗位发现。" };
-    },
-  },
-
   research: {
     sideEffect: "spend",
     run: (raw, ctx) => {
@@ -246,8 +236,14 @@ const ACTIONS: Record<string, ActionDef> = {
       const n = String(raw.n ?? "").trim();
       if (!n) return { status: "ignored", note: "缺少求职记录编号" };
       const app = ctx.applications.find((a) => a.n === n);
-      const id = ctx.startJob({ title: `简历 PDF · ${app?.company ?? `#${n}`}`, subtitle: "岗位定制简历", kind: "pdf", input: n, page: `/pipeline/${n}` });
-      return { status: "done", jobIds: id ? [id] : [] };
+      const handoff = ctx.queueAgentTask({
+        title: `生成定制简历 · ${app?.company ?? `#${n}`}`,
+        subtitle: "等待用户自己的 Agent 处理",
+        kind: "pdf",
+        input: n,
+        page: `/pipeline/${n}`,
+      });
+      return { status: "done", jobIds: [handoff.id], note: "已加入 Agent 待办，请回到你的 Agent 继续执行。" };
     },
   },
 
@@ -340,6 +336,22 @@ const ACTIONS: Record<string, ActionDef> = {
           return { note: "扫描目标已更新。" };
         },
       };
+    },
+  },
+
+  optimizeStory: {
+    sideEffect: "spend",
+    run: (raw, ctx) => {
+      const storyId = typeof raw.storyId === "string" ? raw.storyId.trim().toUpperCase() : "";
+      if (!/^S\d+$/.test(storyId)) return { status: "ignored", note: "故事编号无效" };
+      const handoff = ctx.queueAgentTask({
+        title: `优化面试故事 · ${storyId}`,
+        subtitle: "等待用户自己的 Agent 处理",
+        kind: "story",
+        input: storyId,
+        page: "/interview",
+      });
+      return { status: "done", jobIds: [handoff.id], note: "已加入 Agent 待办，请回到你的 Agent 继续执行。" };
     },
   },
 };

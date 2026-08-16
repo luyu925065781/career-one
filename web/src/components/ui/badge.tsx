@@ -11,9 +11,9 @@ export function Badge({
   tone?: "good" | "warn" | "bad" | "muted";
 }) {
   const tones = {
-    good: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-    warn: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-    bad: "bg-red-500/15 text-red-700 dark:text-red-400",
+    good: "bg-success-surface text-success",
+    warn: "bg-warning-surface text-warning",
+    bad: "bg-danger-surface text-danger",
     muted: "bg-surface-hover text-muted",
   } as const;
   return (

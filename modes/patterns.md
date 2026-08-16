@@ -29,7 +29,7 @@ Exit gracefully.
 Execute:
 
 ```bash
-node analyze-patterns.mjs
+node career-one.mjs patterns
 ```
 
 Parse the JSON output. It contains:
@@ -98,7 +98,7 @@ via X — it converts"*, a weak one is an observation, not an accusation.
 
 ### Salary lens (optional)
 
-If compensation observations exist (report `advertised_comp` keys or `data/salary-observations.tsv` lines), run `node salary-gap.mjs --summary` as an additional lens: advertised→actual haircut per (company, role) and per currency, plus desired-attainment. Zero tokens — never recompute these numbers manually. Respect its data-quality section the same way as `sufficientSample`: low sample sizes are observations, not recommendations.
+If compensation observations exist (report `advertised_comp` keys or `data/salary-observations.tsv` lines), run `node career-one.mjs salary-gap --summary` as an additional lens: advertised→actual haircut per (company, role) and per currency, plus desired-attainment. Zero tokens — never recompute these numbers manually. Respect its data-quality section the same way as `sufficientSample`: low sample sizes are observations, not recommendations.
 
 ## Step 1b — Session-Content Targeting Signal (optional)
 

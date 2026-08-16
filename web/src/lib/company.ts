@@ -6,7 +6,8 @@
 // from the company NAME instead: a small curated override map for the brand≠slug
 // long tail, then a slug+.com heuristic. The logo itself is fetched (and cached)
 // by the /api/logo localhost proxy; if anything fails we fall back to a
-// deterministic monogram that works fully offline with zero privacy leak.
+// semantic initials or a neutral entity icon that work fully offline with zero
+// privacy leak.
 
 /** Curated name → domain overrides for the common cases slug+.com gets wrong. */
 const DOMAIN_OVERRIDES: Record<string, string> = {
@@ -102,10 +103,38 @@ const DOMAIN_OVERRIDES: Record<string, string> = {
 
 const LEGAL_SUFFIX = /\b(inc|llc|ltd|limited|gmbh|co|corp|corporation|sa|s\.a|ag|plc|sl|s\.l|bv|oy|ab|company|group|holdings|technologies|technology|labs|systems)\b/gi;
 
+export type CompanyIdentityKind = "known" | "undisclosed" | "unverified";
+export type CompanyIdentity = { kind: CompanyIdentityKind; label: string };
+
+const UNKNOWN_COMPANY_NAME = /^(?:\?|[-—–]+|unknown|n\/a|未知(?:公司)?|公司待核实|待确认|待核实|未显示)$/i;
+const UNDISCLOSED_COMPANY_NAME = /^(?:confidential(?: company)?|stealth startup|匿名(?:公司)?|保密(?:公司)?|公司未披露|未披露|某(?:家|大型|知名)?[\p{L}\p{N}\s]*公司)$/iu;
+const UNDISCLOSED_CONTEXT = /(?:匿名|保密|未披露|confidential|代招[\s\S]*(?:未显示|未披露|隐藏)|(?:未显示|未披露|隐藏)[\s\S]*代招)/i;
+
+/** Stable user-facing company identity. The tracker keeps `?` as its structural
+ * unknown marker, while the UI explains whether that means intentionally
+ * undisclosed or simply not verified yet. */
+export function resolveCompanyIdentity(
+  name: string | undefined | null,
+  context?: string | undefined | null,
+): CompanyIdentity {
+  const normalized = name?.trim() ?? "";
+  if (normalized && UNDISCLOSED_COMPANY_NAME.test(normalized)) {
+    return { kind: "undisclosed", label: "公司未披露" };
+  }
+  if (normalized && !UNKNOWN_COMPANY_NAME.test(normalized)) {
+    return { kind: "known", label: normalized };
+  }
+  if (UNDISCLOSED_CONTEXT.test(`${normalized} ${context ?? ""}`)) {
+    return { kind: "undisclosed", label: "公司未披露" };
+  }
+  return { kind: "unverified", label: "公司待核实" };
+}
+
 /** Normalize a company name to a likely registrable domain, or null if empty. */
 export function companyDomain(name: string | undefined | null): string | null {
-  if (!name) return null;
-  const key = name.trim().toLowerCase();
+  const identity = resolveCompanyIdentity(name);
+  if (identity.kind !== "known") return null;
+  const key = identity.label.toLowerCase();
   if (!key) return null;
   if (DOMAIN_OVERRIDES[key]) return DOMAIN_OVERRIDES[key];
 
@@ -127,21 +156,18 @@ export function companyDomain(name: string | undefined | null): string | null {
 
 /** 1–2 uppercase initials for the monogram fallback. */
 export function companyInitials(name: string | undefined | null): string {
-  if (!name) return "?";
-  const words = name
+  const identity = resolveCompanyIdentity(name);
+  if (identity.kind !== "known") return "";
+  const words = identity.label
     .replace(LEGAL_SUFFIX, " ")
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .split(/\s+/)
     .filter(Boolean);
-  if (words.length === 0) return name.trim().slice(0, 1).toUpperCase() || "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  if (words.length === 0) return "";
+  if (words.length === 1) {
+    return /^\p{Script=Han}+$/u.test(words[0])
+      ? words[0].slice(0, 1)
+      : words[0].slice(0, 2).toUpperCase();
+  }
   return (words[0][0] + words[1][0]).toUpperCase();
-}
-
-/** Deterministic hue (0–359) from the name, so a company is always one color. */
-export function monogramHue(name: string | undefined | null): number {
-  const s = (name ?? "").trim().toLowerCase();
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h % 360;
 }

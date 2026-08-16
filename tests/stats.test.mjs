@@ -5,7 +5,7 @@ import { pathToFileURL } from 'url';
 
 console.log('\nstats.mjs — lifetime pipeline stats aggregator (#1604)');
 try {
-  const stats = await import(pathToFileURL(join(ROOT, 'stats.mjs')).href);
+  const stats = await import(pathToFileURL(join(ROOT, 'scripts/analysis/stats.mjs')).href);
 
   // Tracker roll-up — CRLF input on purpose (Windows checkouts).
   const trackerMd = [
@@ -107,7 +107,7 @@ try {
 
   // CLI smoke — must emit the full contract with null sections in a checkout
   // with no user data (exactly the CI environment).
-  const cliOut = run(NODE, [join(ROOT, 'stats.mjs')]);
+  const cliOut = run(NODE, [join(ROOT, 'scripts/analysis/stats.mjs')]);
   const parsed = JSON.parse(cliOut);
   if (parsed && parsed.metadata && 'tracker' in parsed && 'scan' in parsed && 'portals' in parsed
       && 'followups' in parsed && 'funnel' in parsed && 'runs' in parsed) {
@@ -115,7 +115,7 @@ try {
   } else {
     fail(`stats.mjs CLI missing sections: ${parsed ? Object.keys(parsed).join(',') : cliOut}`);
   }
-  const summaryOut = run(NODE, [join(ROOT, 'stats.mjs'), '--summary']);
+  const summaryOut = run(NODE, [join(ROOT, 'scripts/analysis/stats.mjs'), '--summary']);
   if (summaryOut && summaryOut.includes('Pipeline Stats')) {
     pass('stats.mjs --summary renders the human table');
   } else {

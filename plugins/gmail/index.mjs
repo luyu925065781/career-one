@@ -16,7 +16,7 @@
 // Enable in config/plugins.yml:
 //   gmail: { enabled: true, label: "Job Leads", days_back: 7 }
 // Add to .env: GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN.
-// Run:  node plugins.mjs run gmail
+// Run:  node career-one.mjs plugins run gmail
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import {

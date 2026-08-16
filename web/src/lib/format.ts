@@ -63,6 +63,66 @@ export const CANONICAL_STATE_LABELS: Record<(typeof CANONICAL_STATES)[number], s
   SKIP: "跳过",
 };
 
+const EVALUATION_INTENTS = new Set(["evaluate", "evaluate-job"]);
+
+/** Agent run intent is the authoritative task taxonomy; titles are user-facing
+ * text and may mention an evaluation report for unrelated work such as a CV. */
+export function isEvaluationIntent(intent: string | null | undefined): boolean {
+  return EVALUATION_INTENTS.has((intent ?? "").trim().toLowerCase());
+}
+
+const USER_MESSAGE_TRANSLATIONS: Record<string, string> = {
+  "The CLI produced no output — is it installed and authenticated?":
+    "Agent CLI 没有返回任何内容。请确认所选 CLI 已安装并完成登录，然后重试。",
+  "The CLI exited with an error — is it installed and authenticated?":
+    "Agent CLI 异常退出。请确认所选 CLI 已安装并完成登录，然后重试。",
+  "This evaluation didn't save a report, so it's not in your tracker. Check that the selected CLI can write to the workspace.":
+    "本次岗位评估未保存报告，因此没有加入求职进度。请确认所选 CLI 拥有当前工作区的写入权限，然后重试。",
+  "This run hit an error before finishing, so it isn't recorded as a confident result — re-run it to verify.":
+    "本次任务在完成前发生错误，结果未被记录。请重试以确认结果。",
+  "Interrupted (page reloaded)": "页面重新加载，任务已中断",
+  "Failed to start": "任务启动失败，请重试",
+  "Connection error": "连接中断，请检查 Agent CLI 后重试",
+  "Agent ready": "Agent 已就绪",
+  Done: "任务已完成",
+  Error: "任务执行失败",
+  "_(no output — is the CLI authenticated?)_": "_(Agent CLI 没有返回内容，请确认所选 CLI 已完成登录。)_",
+};
+
+/** Translate product-authored legacy feedback at render time so historical
+ * tasks saved before the Chinese UI migration do not keep leaking English. */
+export function localizeUserMessage(message: string): string {
+  const normalized = message.trim();
+  const exact = USER_MESSAGE_TRANSLATIONS[normalized];
+  if (exact) return exact;
+  const missingCli = normalized.match(/^CLI '([^']+)' not found(?: on this machine)?$/);
+  if (missingCli) return `未找到 Agent CLI“${missingCli[1]}”，请先安装或在设置中选择其他 CLI。`;
+  return message;
+}
+
+const REPORT_SECTION_PREVIEW_LENGTH = 96;
+const ORDERED_LIST_ITEM = /^\s*\d+\s*[.)、）]\s*(.*)$/;
+
+/** Collapsed report-card summary. Plain content keeps the existing leading-text
+ * behavior; ordered lists use only their first item before the shared limit. */
+export function reportSectionPreview(md: string): string {
+  const meaningfulLines = md
+    .replace(/```[\s\S]*?```/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !/^#+\s/.test(line));
+  const firstNumberedItem = meaningfulLines[0]?.match(ORDERED_LIST_ITEM);
+  const source = firstNumberedItem ? firstNumberedItem[1] : meaningfulLines.join(" ");
+  const text = source
+    .replace(/[*_`>#|]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const sentence = text.split(/(?<=[.!?])\s/)[0] ?? text;
+  return sentence.length > REPORT_SECTION_PREVIEW_LENGTH
+    ? sentence.slice(0, REPORT_SECTION_PREVIEW_LENGTH).trimEnd() + "…"
+    : sentence;
+}
+
 export function canonStatus(s: string): string {
   const k = s.trim().toLowerCase();
   if (k === "" || k === "—" || k === "-") return "DISCARDED";
@@ -73,11 +133,11 @@ export function canonStatus(s: string): string {
  *  responded, red skip/rejected, gray discarded, neutral evaluated. */
 export function statusDot(status: string): string {
   const c = canonStatus(status);
-  if (c.includes("INTERVIEW") || c.includes("OFFER")) return "bg-emerald-400";
-  if (c.includes("APPLIED") || c.includes("RESPONDED")) return "bg-sky-400";
-  if (c.includes("REJECTED") || c.includes("SKIP")) return "bg-red-400";
-  if (c.includes("DISCARDED")) return "bg-zinc-600";
-  return "bg-zinc-500"; // Evaluated / unknown
+  if (c.includes("INTERVIEW") || c.includes("OFFER")) return "bg-success-solid";
+  if (c.includes("APPLIED") || c.includes("RESPONDED")) return "bg-info-solid";
+  if (c.includes("REJECTED") || c.includes("SKIP")) return "bg-danger-solid";
+  if (c.includes("DISCARDED")) return "bg-muted";
+  return "bg-faint"; // Evaluated / unknown
 }
 
 /** First number in a score string ("4.1/5", "B+", "3.0") → numeric, or NaN. */
@@ -138,12 +198,13 @@ const FIELD_KEYS: Record<string, string> = {
   legitimacy: "Legitimacy",
   legitimidad: "Legitimacy",
   pdf: "PDF",
+  screenshots: "Screenshots",
 };
 
 /**
  * Tolerant report parser (per maintainer: adapt the render, don't migrate the
  * old data). Extracts the bold key/value header fields (Date/URL/Archetype/
- * Score/Legitimacy/PDF) when present and returns the body without the header
+ * Score/Legitimacy/PDF/Screenshots) when present and returns the body without the header
  * block. Degrades gracefully on legacy reports that lack some fields.
  */
 export function parseReport(md: string): ReportMeta {

@@ -16,12 +16,12 @@ export async function POST(req: Request) {
   try {
     b = await req.json();
   } catch {
-    return NextResponse.json({ error: "bad json" }, { status: 400 });
+    return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
   }
   const fact = (b.fact ?? "").toString();
-  if (!fact.trim()) return NextResponse.json({ error: "fact required" }, { status: 400 });
+  if (!fact.trim()) return NextResponse.json({ error: "缺少需要保存的用户信息" }, { status: 400 });
 
   const result = rememberFact(fact);
-  if (result === "error") return NextResponse.json({ error: "write failed" }, { status: 500 });
+  if (result === "error") return NextResponse.json({ error: "用户信息保存失败" }, { status: 500 });
   return NextResponse.json({ ok: true, deduped: result === "deduped" });
 }

@@ -33,12 +33,12 @@ async function searchIssues(q: string): Promise<SimilarIssue[]> {
   }
 }
 
-// Beta/RC differentiator: a small version+channel pill (only on a pre-release
-// channel) + a one-click "Report a bug" that opens a PRE-FILLED GitHub issue. No
-// telemetry to any server (local-first / firewall) — the user reviews the exact,
-// PII-scrubbed payload (preview-then-confirm) and clicks to open the issue himself.
+// Pre-release feedback entry: a one-click "Report a bug" button that opens a
+// PRE-FILLED GitHub issue. There is no telemetry to any server (local-first /
+// firewall) — the user reviews the exact, PII-scrubbed payload
+// (preview-then-confirm) and clicks to open the issue himself.
 export function BetaBanner() {
-  const [meta, setMeta] = useState<{ version: string; channel: string; sha: string } | null>(null);
+  const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState(false);
   const [desc, setDesc] = useState("");
   const [diag, setDiag] = useState<Diag | null>(null);
@@ -63,7 +63,7 @@ export function BetaBanner() {
     fetch("/api/version")
       .then((r) => r.json())
       .then((d) => {
-        if (d?.channel && d.channel !== "stable") setMeta(d);
+        if (d?.channel && d.channel !== "stable") setVisible(true);
       })
       .catch(() => {});
   }, []);
@@ -86,19 +86,17 @@ export function BetaBanner() {
     });
   };
 
-  if (!meta) return null;
+  if (!visible) return null;
 
   return (
     <>
-      <div className="fixed bottom-3 left-3 z-[70] flex items-center gap-2 rounded-full border border-brand/30 bg-surface/90 px-3 py-1.5 text-xs shadow-lg backdrop-blur-md">
-        <span className="flex items-center gap-1.5 font-medium text-brand-text">
-          <span className="size-1.5 animate-pulse rounded-full bg-brand" /> {meta.version} · {meta.channel}
-        </span>
-        {meta.sha && <span className="hidden font-mono text-faint sm:inline">{meta.sha}</span>}
-        <button onClick={openReport} className="ml-1 inline-flex items-center justify-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 font-medium text-brand-text transition-colors hover:bg-brand/15 max-sm:min-h-[44px]">
-          <Bug className="size-3" /> 反馈问题
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={openReport}
+        className="fixed bottom-3 right-3 z-[70] inline-flex items-center justify-center gap-1 rounded-full border border-brand/30 bg-surface/90 px-3 py-1.5 text-xs font-medium text-brand-text shadow-lg backdrop-blur-md transition-colors hover:bg-brand-soft max-sm:min-h-[44px] max-sm:px-4"
+      >
+        <Bug className="size-3" /> 反馈问题
+      </button>
 
       {open && diag && (
         <div className="fixed inset-0 z-[96] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="反馈问题" onClick={() => setOpen(false)}>

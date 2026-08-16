@@ -8,6 +8,7 @@ import { ATS_LABEL } from "@/lib/explore";
 import { Badge } from "@/components/ui/badge";
 import { CompanyLogo } from "@/components/company-logo";
 import { cn } from "@/lib/cn";
+import { resolveCompanyIdentity } from "@/lib/company";
 
 export type RowScore = { score: number | null; tone: "good" | "warn" | "bad" | "muted"; jobId: string; running: boolean };
 
@@ -46,6 +47,7 @@ export function TriageRow({
 }) {
   const ago = agoLabel(age);
   const evaluated = !!scored && (scored.running || scored.score != null);
+  const companyIdentity = resolveCompanyIdentity(job.company);
 
   return (
     <li
@@ -60,7 +62,7 @@ export function TriageRow({
         type="checkbox"
         checked={selected}
         onChange={onToggleSelect}
-        aria-label={`选择 ${job.company} ${job.role}`}
+        aria-label={`选择 ${companyIdentity.label} ${job.role}`}
         className="size-4 shrink-0 accent-brand max-sm:min-h-[44px] max-sm:min-w-[24px]"
       />
 
@@ -68,7 +70,7 @@ export function TriageRow({
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm">
-          <span className="font-medium text-foreground">{job.company}</span>
+          <span className="font-medium text-foreground">{companyIdentity.label}</span>
           <span className="text-muted"> · {job.role}</span>
         </p>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-faint">

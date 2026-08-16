@@ -28,17 +28,17 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return Response.json({ error: "bad json" }, { status: 400 });
+    return Response.json({ error: "请求格式不正确" }, { status: 400 });
   }
   const num = String(body.n ?? "").trim();
   if (!/^\d+$/.test(num)) {
-    return Response.json({ error: "a numeric application number is required" }, { status: 400 });
+    return Response.json({ error: "请输入有效的求职记录编号" }, { status: 400 });
   }
   const dryRun = !!body.dryRun;
 
   if (!trackerCanDelete()) {
     return Response.json(
-      { error: "Removing a tracker row needs a newer career-one — update to delete rows from here." },
+      { error: "当前版本暂不支持删除求职记录，请更新择程AI后重试。" },
       { status: 400 },
     );
   }
@@ -46,12 +46,12 @@ export async function POST(req: Request) {
   // (tracker.mjs delete doesn't share a lock with merge-tracker yet).
   if (isTrackerWriting()) {
     return Response.json(
-      { error: "An evaluation is updating your tracker right now — try again in a moment." },
+      { error: "岗位评估正在更新求职进度，请稍后再试。" },
       { status: 409 },
     );
   }
   if (!dryRun && deleting) {
-    return Response.json({ error: "Another delete is already in progress — try again in a moment." }, { status: 409 });
+    return Response.json({ error: "另一项删除操作正在进行，请稍后再试。" }, { status: 409 });
   }
   if (!dryRun) deleting = true;
 
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
       try {
         child = spawn(process.execPath, args, { cwd: careerOneRoot(), env: process.env });
       } catch (e) {
-        resolve({ code: 1, err: e instanceof Error ? e.message : "failed to start tracker.mjs" });
+        resolve({ code: 1, err: e instanceof Error ? e.message : "求职进度脚本启动失败" });
         return;
       }
       child.stderr.on("data", (d: Buffer) => {
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     if (result.code !== 0) {
       const notFound = /No application numbered/i.test(result.err);
       return Response.json(
-        { error: result.err.trim().split("\n")[0] || "delete failed" },
+        { error: result.err.trim().split("\n")[0] || "删除求职记录失败" },
         { status: notFound ? 404 : 400 },
       );
     }

@@ -38,7 +38,7 @@ Application answers を生成する前に、form が意図した active job を�
 
 この preflight が解決するまで Step 6 に進まない。
 
-**Applying to several roles in one sitting?** この preflight は目の前の単一 form を確認する。Multi-role session の前、特に scanner entries が `**Verification:** unconfirmed (batch mode)` と marked されている場合は、`pipeline` mode の **Liveness sweep** を先に実行する（`node check-liveness.mjs --file <urls>`）。これにより `data/pipeline.md` から dead postings がまとめて落ち、expired role の tab を開かずに済む。
+**Applying to several roles in one sitting?** この preflight は目の前の単一 form を確認する。Multi-role session の前、特に scanner entries が `**Verification:** unconfirmed (batch mode)` と marked されている場合は、`pipeline` mode の **Liveness sweep** を先に実行する（`node career-one.mjs liveness --file <urls>`）。これにより `data/pipeline.md` から dead postings がまとめて落ち、expired role の tab を開かずに済む。
 
 ## Step 1 -- Detect the job
 
@@ -134,7 +134,7 @@ Notes:
 ## Step 8 -- Post-apply (optional)
 
 候補者が application を submitted したと確認した場合：
-1. 正規 CLI で status を "Applied" に update: `node set-status.mjs <report#> Applied`（`applications.md` のテーブルを手動編集しない）
+1. 正規 CLI で status を "Applied" に update: `node career-one.mjs set-status <report#> Applied`（`applications.md` のテーブルを手動編集しない）
 2. Report の Section G を final responses で update
 3. Next step として LinkedIn outreach 用の `/career-one contacto` を提案
 

@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { inter, instrumentSerif, instrumentSerifItalic } from "@/lib/fonts";
 import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "择程AI｜AI求职工作台",
+  title: "择程AI｜你的AI求职顾问",
   description: "面向中国大陆用户，由你自己的 Agent 驱动的本地优先 AI 求职工作台。",
   // Home-screen / standalone (iOS): let our theme-color flow up to the status bar
   // + Dynamic Island; safe-area insets handle the layout.
@@ -30,7 +29,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="zh-CN"
       suppressHydrationWarning
-      className={`${inter.variable} ${instrumentSerif.variable} ${instrumentSerifItalic.variable}`}
     >
       <body className="font-sans antialiased">
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />

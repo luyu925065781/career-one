@@ -13,13 +13,13 @@ export async function POST(req: Request) {
   try {
     body = (await req.json()) as { num?: string | number; company?: string; note?: string };
   } catch {
-    return Response.json({ error: "bad json" }, { status: 400 });
+    return Response.json({ error: "请求格式不正确" }, { status: 400 });
   }
   const company = (body.company || "").toString().trim();
-  if (!company) return Response.json({ error: "company required" }, { status: 400 });
+  if (!company) return Response.json({ error: "缺少公司名称" }, { status: 400 });
   const today = new Date().toISOString().slice(0, 10);
   const num = body.num != null ? `#${body.num} ` : "";
-  const note = (body.note || "Followed up").toString().replace(/[\r\n]+/g, " ").trim();
+  const note = (body.note || "已跟进").toString().replace(/[\r\n]+/g, " ").trim();
   const line = `- ${today} · ${num}${company} — ${note}\n`;
 
   const file = path.join(careerOneRoot(), "data", "follow-ups.md");
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     if (!fs.existsSync(file)) fs.writeFileSync(file, "# Follow-ups\n\n", "utf8");
     fs.appendFileSync(file, line, "utf8");
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message : "write failed" }, { status: 500 });
+    return Response.json({ error: e instanceof Error ? e.message : "跟进记录保存失败" }, { status: 500 });
   }
   return Response.json({ ok: true });
 }

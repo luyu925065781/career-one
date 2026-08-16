@@ -192,7 +192,7 @@ export async function POST(req: Request) {
   try {
     body = (await req.json()) as Record<string, unknown>;
   } catch {
-    return Response.json({ error: "bad json" }, { status: 400 });
+    return Response.json({ error: "请求格式不正确" }, { status: 400 });
   }
 
   const root = careerOneRoot();
@@ -217,7 +217,7 @@ export async function POST(req: Request) {
       notes: platform.access,
     }));
   } else if (action === "add-company") {
-    if (!isObj(body.company)) return Response.json({ error: "company required" }, { status: 400 });
+    if (!isObj(body.company)) return Response.json({ error: "缺少公司信息" }, { status: 400 });
     const name = String(body.company.name || "").trim().slice(0, 80);
     const industry = String(body.company.industry || "未分类").trim().slice(0, 80);
     const careersUrl = String(body.company.careersUrl || "").trim();
@@ -252,7 +252,7 @@ export async function POST(req: Request) {
       String(company.name || "").trim().toLowerCase() === name ? { ...company, enabled: body.enabled !== false } : company,
     );
   } else if (action === "save-rules") {
-    if (!isObj(body.rules)) return Response.json({ error: "rules required" }, { status: 400 });
+    if (!isObj(body.rules)) return Response.json({ error: "缺少搜索规则" }, { status: 400 });
     const positive = strings(body.rules.positive);
     if (positive.length === 0) return Response.json({ error: "至少保留一个目标岗位关键词" }, { status: 400 });
     const title = isObj(doc.title_filter) ? { ...doc.title_filter } : {};
@@ -273,7 +273,7 @@ export async function POST(req: Request) {
   } else {
     // Back-compatible onboarding path used by setProfile/setPortals actions.
     const roles = strings(body.roles, 24);
-    if (roles.length === 0) return Response.json({ error: "no roles" }, { status: 400 });
+    if (roles.length === 0) return Response.json({ error: "请至少填写一个目标岗位" }, { status: 400 });
     const title = isObj(doc.title_filter) ? { ...doc.title_filter } : {};
     title.positive = roles;
     doc.title_filter = title;
@@ -287,7 +287,7 @@ export async function POST(req: Request) {
   try {
     writeDocument(root, doc);
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message : "write failed" }, { status: 500 });
+    return Response.json({ error: e instanceof Error ? e.message : "岗位来源设置保存失败" }, { status: 500 });
   }
   return Response.json({ ok: true });
 }

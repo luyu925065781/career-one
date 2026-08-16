@@ -1,30 +1,54 @@
 import Link from "next/link";
-import { ArrowLeft, FileText, ExternalLink, ChevronDown } from "lucide-react";
+import { FileText, ExternalLink, ChevronDown, ArrowRight, Images } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Application } from "@/lib/career-one";
 import { Badge } from "@/components/ui/badge";
-import { scoreTone, scoreNum, legitimacyTone, legitimacyLabel, parseReport } from "@/lib/format";
-import { StatusSelect } from "@/components/status-select";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  scoreTone,
+  scoreNum,
+  legitimacyTone,
+  legitimacyLabel,
+  parseReport,
+  reportSectionPreview,
+} from "@/lib/format";
 import { CompanyLogo } from "@/components/company-logo";
 import { ScoreMethodology } from "@/components/score-methodology";
-import { GeneratePdfButton } from "@/components/generate-pdf-button";
-import { ApplyButton } from "@/components/apply-button";
-import { DeleteFromTracker } from "@/components/delete-from-tracker";
+import { ReportBackButton } from "@/components/pipeline-view";
+import { resolveCompanyIdentity } from "@/lib/company";
 
 // Progressive disclosure of the report. The core writes prose blocks
 // "## F) Verdict (lead)", "## A) Role Summary", "## B) Match with CV", then
 // C–G + machine artifacts (Machine Summary YAML, Application Answers, submit
 // log). A mainstream user deciding "should I apply?" needs the verdict + fit;
-// the rest is depth-on-demand. We lead with the verdict as a callout, keep A/B
-// expanded, collapse C–G as content, and drop machine artifacts to a dimmer
-// "Technical" tier — and strip the bare "F)" author-letters from headings
-// (native <details>, no client JS — this stays a server component).
+// the rest is depth-on-demand. We lead with the verdict as a callout, render A–G
+// as consistent drawers, hide the internal Machine Summary on Web, and strip the
+// bare "F)" author-letters from headings (native <details>, no client JS — this
+// stays a server component).
 
 type Section = { heading: string; letter: string | null; content: string };
 
+const REPORT_SCREENSHOT_PATTERN = /^data\/task-attachments\/[a-zA-Z0-9][a-zA-Z0-9_-]{2,96}\/0[1-3]-[a-f0-9]{12}\.(?:png|jpg|webp)$/;
+
+function reportScreenshotPaths(value: string | undefined): string[] {
+  if (!value) return [];
+  return Array.from(new Set(
+    value.split("|").map((item) => item.trim()).filter((item) => REPORT_SCREENSHOT_PATTERN.test(item)),
+  )).slice(0, 3);
+}
+
 const HEADING_LABELS: Record<string, string> = {
-  "machine summary": "机器摘要",
+  "岗位概览": "岗位预览",
+  "role summary": "岗位预览",
+  "面试开场话术": "打招呼话术",
+  "建议向猎头追问": "向招聘方追问",
+  "建议向招聘者追问": "向招聘方追问",
+  "建议向招聘方追问": "向招聘方追问",
+  "必须追问": "向招聘方追问",
+  "沟通后的分流规则": "沟通后分流规则",
+  "能力缺口与补强": "能力与缺口补强",
+  "能力差距与弥补策略": "能力与缺口补强",
   "application answers": "申请回答",
   submitted: "已提交内容",
   "submit log": "提交记录",
@@ -32,30 +56,22 @@ const HEADING_LABELS: Record<string, string> = {
 
 function cleanHeading(h: string): string {
   const stripped = h
-    .replace(/^\s*(?:Block\s+)?[A-G][).:]\s*/i, "")
+    .replace(/^\s*(?:Block\s+)?[A-G][).:）】]\s*/i, "")
     .replace(/\s*\((?:lead|verdict)\)\s*$/i, "")
     .trim();
   if (!stripped) return h.trim();
   return HEADING_LABELS[stripped.toLowerCase()] ?? stripped;
 }
 
-// Machine artifacts (collapsed because they're for devs, not the mainstream) vs
-// human content C–G (collapsed only for length) — ux's "honest for devs" tier.
-function isMachine(heading: string): boolean {
-  return /machine summary|submitted|submit[-\s]?log/i.test(heading);
+// The Machine Summary is an internal interchange block. Keep it in the source
+// report for local Agent workflows, but do not expose it in the job-seeker UI.
+function isWebHiddenSection(heading: string): boolean {
+  return /machine summary/i.test(heading);
 }
 
-// A one-line teaser for a collapsed content section — drops the interaction cost
-// of "what's in here?" without defeating the collapse.
-function preview(md: string): string {
-  const text = md
-    .replace(/^#+\s.*$/gm, "")
-    .replace(/```[\s\S]*?```/g, "")
-    .replace(/[*_`>#|]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  const sentence = text.split(/(?<=[.!?])\s/)[0] ?? text;
-  return sentence.length > 96 ? sentence.slice(0, 96).trimEnd() + "…" : sentence;
+// Submission artifacts remain available as collapsed supporting records.
+function isMachine(heading: string): boolean {
+  return /submitted|submit[-\s]?log/i.test(heading);
 }
 
 function splitSections(body: string): { intro: string; sections: Section[] } {
@@ -67,7 +83,7 @@ function splitSections(body: string): { intro: string; sections: Section[] } {
     if (h) {
       if (cur) sections.push({ heading: cur.heading, letter: cur.letter, content: cur.lines.join("\n").trim() });
       const heading = h[1].trim();
-      const letter = heading.match(/^(?:Block\s+)?([A-G])[).:\s]/i)?.[1]?.toUpperCase() ?? null;
+      const letter = heading.match(/^(?:Block\s+)?([A-G])[).:）】\s]/i)?.[1]?.toUpperCase() ?? null;
       cur = { heading, letter, lines: [] };
     } else if (cur) {
       cur.lines.push(line);
@@ -79,11 +95,119 @@ function splitSections(body: string): { intro: string; sections: Section[] } {
   return { intro: intro.join("\n").trim(), sections };
 }
 
+function normalizeNestedHeadings(content: string): string {
+  return content
+    .replace(/^###\s+(?:能力缺口与补强|能力差距(?:\s*\([^)]*\))?\s*(?:与弥补策略)?|能力与缺口补强)\s*$/gm, "### 能力与缺口补强")
+    .replace(/^###\s+沟通后的分流规则\s*$/gm, "### 沟通后分流规则")
+    .replace(/^###\s+(?:必须追问|建议向猎头追问|建议向招聘者追问|建议向招聘方追问)\s*$/gm, "### 向招聘方追问");
+}
+
+function insertSubsectionBefore(content: string, title: string, subsectionContent: string): string {
+  const normalized = normalizeNestedHeadings(content);
+  if (!subsectionContent.trim() || new RegExp(`^###\\s+${title}\\s*$`, "m").test(normalized)) return normalized;
+
+  const subsection = `### ${title}\n\n${subsectionContent.trim()}`;
+  const gapHeading = normalized.match(/^###\s+能力与缺口补强\s*$/m);
+  if (gapHeading?.index !== undefined) {
+    return `${normalized.slice(0, gapHeading.index).trimEnd()}\n\n${subsection}\n\n${normalized.slice(gapHeading.index)}`.trim();
+  }
+  return `${normalized.trim()}\n\n${subsection}`.trim();
+}
+
+function moveSectionAfter(
+  sections: Section[],
+  movingPredicate: (section: Section) => boolean,
+  anchorPredicate: (section: Section) => boolean,
+): void {
+  const movingIndex = sections.findIndex(movingPredicate);
+  if (movingIndex < 0) return;
+
+  const [movingSection] = sections.splice(movingIndex, 1);
+  const anchorIndex = sections.findIndex(anchorPredicate);
+  sections.splice(anchorIndex >= 0 ? anchorIndex + 1 : sections.length, 0, movingSection);
+}
+
+function arrangeReportSections(sections: Section[]): Section[] {
+  const working = sections.map((section) => ({ ...section, content: normalizeNestedHeadings(section.content) }));
+  const bExists = working.some((section) => section.letter === "B" || /简历.*匹配/.test(cleanHeading(section.heading)));
+  const gExists = working.some((section) => section.letter === "G" || /职位真实性/.test(cleanHeading(section.heading)));
+  const consumed = new Set<number>();
+
+  const take = (pattern: RegExp, enabled = true): Section | null => {
+    if (!enabled) return null;
+    const index = working.findIndex((section, sectionIndex) => !consumed.has(sectionIndex) && pattern.test(cleanHeading(section.heading)));
+    if (index < 0) return null;
+    consumed.add(index);
+    return working[index];
+  };
+
+  const radar = take(/^匹配雷达$/, bExists);
+  const positiveSignals = take(/^正向信号$/, bExists);
+  const standaloneGap = take(/^(?:能力与缺口补强|能力缺口与补强|能力差距.*)$/, bExists);
+  const risks = take(/^剩余风险$/, gExists);
+  const greeting = take(/^打招呼话术$/);
+  const questions = take(/^向招聘方追问$/);
+  const positioning = take(/^你在这个岗位里的最佳表达$/);
+  const decisionRules = take(/^沟通后分流规则$/);
+
+  const arranged = working.filter((_, index) => !consumed.has(index));
+  const bIndex = arranged.findIndex((section) => section.letter === "B" || /简历.*匹配/.test(cleanHeading(section.heading)));
+  if (bIndex >= 0) {
+    let content = normalizeNestedHeadings(arranged[bIndex].content);
+    if (radar) content = insertSubsectionBefore(content, "匹配雷达", radar.content);
+    const positiveSignalsContent = positiveSignals?.content ?? "";
+    if (positiveSignals) content = insertSubsectionBefore(content, "正向信号", positiveSignalsContent);
+    if (standaloneGap) {
+      if (/^###\s+能力与缺口补强\s*$/m.test(content)) {
+        content = `${content.trim()}\n\n${standaloneGap.content.trim()}`;
+      } else {
+        content = `${content.trim()}\n\n### 能力与缺口补强\n\n${standaloneGap.content.trim()}`;
+      }
+    }
+    arranged[bIndex] = { ...arranged[bIndex], content };
+  }
+
+  let gIndex = arranged.findIndex((section) => section.letter === "G" || /职位真实性/.test(cleanHeading(section.heading)));
+  if (gIndex >= 0 && risks && !/^###\s+剩余风险\s*$/m.test(arranged[gIndex].content)) {
+    arranged[gIndex] = {
+      ...arranged[gIndex],
+      content: `${arranged[gIndex].content.trim()}\n\n### 剩余风险\n\n${risks.content.trim()}`,
+    };
+  }
+
+  moveSectionAfter(
+    arranged,
+    (section) => section.letter === "G" || /职位真实性|posting legitimacy/i.test(cleanHeading(section.heading)),
+    (section) => section.letter === "D" || /薪酬竞争力与市场需求|comp and demand/i.test(cleanHeading(section.heading)),
+  );
+  gIndex = arranged.findIndex((section) => section.letter === "G" || /职位真实性|posting legitimacy/i.test(cleanHeading(section.heading)));
+
+  const deferredSections: Section[] = [];
+  for (const letter of ["E", "F"]) {
+    const deferredIndex = arranged.findIndex((section) => section.letter === letter);
+    if (deferredIndex >= 0) deferredSections.push(...arranged.splice(deferredIndex, 1));
+  }
+
+  const followups = [greeting, questions, positioning, decisionRules]
+    .filter((section): section is Section => section !== null)
+    .map((section) => ({ ...section, heading: cleanHeading(section.heading) }));
+  if (followups.length > 0) arranged.splice(gIndex >= 0 ? gIndex + 1 : arranged.length, 0, ...followups);
+
+  const decisionIndex = arranged.findIndex((section) => /^沟通后分流规则$/.test(cleanHeading(section.heading)));
+  const deferredInsertIndex = decisionIndex >= 0
+    ? decisionIndex + 1
+    : gIndex >= 0
+      ? gIndex + 1 + followups.length
+      : arranged.length;
+  arranged.splice(deferredInsertIndex, 0, ...deferredSections);
+
+  return arranged;
+}
+
 export function ReportView({
   id,
   app,
   report,
-  canDelete = false,
 }: {
   id: string;
   app: Application | null;
@@ -91,7 +215,6 @@ export function ReportView({
   /** kept in the props contract (the page passes it) but no longer surfaced —
    *  the raw .md filename is a dev artifact, not header content. */
   file?: string | null;
-  canDelete?: boolean;
 }) {
   const meta = report ? parseReport(report) : null;
   const field = (label: string) => meta?.fields.find((f) => f.label === label)?.value;
@@ -99,25 +222,32 @@ export function ReportView({
   const date = app?.date || field("Date");
   const archetype = field("Archetype");
   const url = field("URL");
+  const screenshotPaths = reportScreenshotPaths(field("Screenshots"));
+  const reportCompanyLabel = app
+    ? resolveCompanyIdentity(app.company, app.via).label
+    : meta?.title ?? `报告 #${id}`;
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
-      <Link
-        href="/pipeline"
-        className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-brand"
-      >
-        <ArrowLeft className="size-4" /> 求职进度
-      </Link>
+    <div className="page-shell py-8">
+      <div className="flex min-h-11 items-center justify-between gap-4">
+        <ReportBackButton />
+        {app && (
+          <Link href={`/pipeline/${id}`} className={buttonVariants({ variant: "tertiary", size: "sm" })}>
+            查看求职进度
+            <ArrowRight className="size-3.5" aria-hidden="true" />
+          </Link>
+        )}
+      </div>
 
       <header className="mt-5">
-        <div className="flex min-h-8 items-center gap-3">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-faint">#{id}</p>
-        </div>
+        <p className="flex min-h-8 items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-faint">
+          <span>岗位评估报告</span>
+          <span aria-hidden="true">·</span>
+          <span>#{id}</span>
+        </p>
         <div className="mt-2 flex items-center gap-3">
           <CompanyLogo name={app?.company ?? meta?.title ?? `报告 #${id}`} size={40} />
-          <h1 className="font-display text-3xl tracking-tight text-landing">
-            {app?.company ?? meta?.title ?? `报告 #${id}`}
-          </h1>
+          <h1 className="font-display text-3xl tracking-tight text-landing">{reportCompanyLabel}</h1>
         </div>
         {app?.role && <p className="mt-1 text-muted">{app.role}</p>}
 
@@ -131,16 +261,7 @@ export function ReportView({
             return n >= 4.0 ? <Badge tone="good">建议投递</Badge> : <Badge tone="muted">低于投递线</Badge>;
           })()}
           {meta?.legitimacy && <Badge tone={legitimacyTone(meta.legitimacy)}>{legitimacyLabel(meta.legitimacy)}</Badge>}
-          {app && <StatusSelect n={id} current={app.status} />}
-          <GeneratePdfButton n={id} company={app?.company ?? meta?.title ?? id} pdfReady={(app?.pdf ?? "").includes("✅")} />
-          <ApplyButton n={id} url={url && url.startsWith("http") ? url : undefined} company={app?.company ?? meta?.title ?? id} pdfReady={(app?.pdf ?? "").includes("✅")} />
         </div>
-
-        {app && canDelete && (
-          <div className="mt-3">
-            <DeleteFromTracker n={id} />
-          </div>
-        )}
 
         {(archetype || date || (url && url.startsWith("http"))) && (
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
@@ -160,6 +281,37 @@ export function ReportView({
         )}
       </header>
 
+      {screenshotPaths.length > 0 && (
+        <section className="mt-6 rounded-2xl border border-border bg-surface/35 p-4 sm:p-5" aria-labelledby="report-screenshots-title">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-icon-brand">
+              <Images className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 id="report-screenshots-title" className="text-sm font-semibold text-foreground">岗位原始截图</h2>
+              <p className="mt-1 text-xs leading-5 text-muted">截图保存在当前工作区；点击可查看原图。找到工作后可自行清理下列本地文件。</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {screenshotPaths.map((screenshotPath, index) => {
+              const attachmentHref = `/api/agent-runs?attachment=${encodeURIComponent(screenshotPath)}`;
+              return (
+                <figure key={screenshotPath} className="overflow-hidden rounded-xl border border-border bg-background/55">
+                  <a href={attachmentHref} target="_blank" rel="noreferrer" className="block bg-surface/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={attachmentHref} alt={`岗位原始截图 ${index + 1}`} loading="lazy" className="max-h-[36rem] w-full object-contain" />
+                  </a>
+                  <figcaption className="border-t border-border px-3 py-2 text-[11px] leading-5 text-faint">
+                    <span className="font-medium text-muted">截图 {index + 1}</span>
+                    <code className="mt-0.5 block break-all">{screenshotPath}</code>
+                  </figcaption>
+                </figure>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {report ? (
         <>
           {(() => {
@@ -173,14 +325,15 @@ export function ReportView({
                 </article>
               );
             }
-            // Verdict (F) leads as a highlighted callout with no competing heading —
-            // it's THE answer. A/B stay expanded (fit detail); C–G collapse as
-            // content (with a 1-line preview); machine artifacts drop to a dimmer
-            // "Technical" tier so the CLI-DNA is present-but-clearly-secondary.
+            // Verdict leads as a highlighted callout with no competing heading —
+            // it's THE answer. A–G use consistent drawers with a 1-line preview;
+            // internal machine summaries are hidden on Web; submission records
+            // remain available as secondary drawers.
             const verdict = sections.find((s) => /verdict|结论|最终建议/i.test(s.heading));
             const rest = sections.filter((s) => s !== verdict);
-            const machine = rest.filter((s) => isMachine(s.heading));
-            const mainSections = rest.filter((s) => !isMachine(s.heading));
+            const visibleRest = rest.filter((s) => !isWebHiddenSection(s.heading));
+            const machine = visibleRest.filter((s) => isMachine(s.heading));
+            const mainSections = arrangeReportSections(visibleRest.filter((s) => !isMachine(s.heading)));
             const anyAB = mainSections.some((s) => s.letter === "A" || s.letter === "B");
             return (
               <div className="mt-8">
@@ -191,8 +344,8 @@ export function ReportView({
                 )}
 
                 {verdict && (
-                  <div className="rounded-2xl border border-brand/25 bg-brand-soft/50 px-5 py-4">
-                    <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.16em] text-brand/80">结论</p>
+                  <div className="rounded-2xl border border-border bg-surface/30 px-5 py-4">
+                    <p className="mb-2 text-lg font-bold text-foreground">结论</p>
                     <article className="report-prose [&_p]:font-medium [&_p]:text-foreground">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{verdict.content}</ReactMarkdown>
                     </article>
@@ -200,19 +353,25 @@ export function ReportView({
                 )}
 
                 {mainSections.map((s, i) => {
-                  const expanded = s.letter === "A" || s.letter === "B" || (!anyAB && i === 0);
+                  const expanded = !anyAB && i === 0;
                   if (expanded) {
                     return (
                       <article key={i} className="report-prose mt-6">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{`## ${cleanHeading(s.heading)}\n\n${s.content}`}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{`## ${i + 1}. ${cleanHeading(s.heading)}\n\n${s.content}`}</ReactMarkdown>
                       </article>
                     );
                   }
+                  const teaser = reportSectionPreview(s.content);
                   return (
                     <details key={i} className="group mt-3 overflow-hidden rounded-xl border border-border bg-surface/30">
-                      <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-hover">
-                        <span className="text-sm font-medium">{cleanHeading(s.heading)}</span>
-                        <span className="hidden truncate text-xs text-faint sm:inline">{preview(s.content)}</span>
+                      <summary className="flex min-h-[44px] min-w-0 cursor-pointer list-none items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-hover">
+                        <span className="shrink-0 whitespace-nowrap text-sm font-medium">
+                          <span className="tabular-nums">{i + 1}、</span>
+                          {cleanHeading(s.heading)}
+                        </span>
+                        {teaser && (
+                          <span className="hidden min-w-0 flex-1 truncate text-xs text-faint sm:block">{teaser}</span>
+                        )}
                         <ChevronDown className="ml-auto size-4 shrink-0 text-icon-muted transition-transform group-open:rotate-180" />
                       </summary>
                       <div className="report-prose border-t border-border px-4 py-3">
@@ -223,12 +382,7 @@ export function ReportView({
                 })}
 
                 {machine.length > 0 && (
-                  <>
-                    <div className="mt-6 flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-faint">
-                      <span className="h-px flex-1 bg-border" />
-                      技术细节 · 面向开发者
-                      <span className="h-px flex-1 bg-border" />
-                    </div>
+                  <div className="mt-6">
                     {machine.map((s, i) => (
                       <details key={i} className="group mt-2 overflow-hidden rounded-xl border border-border/60 bg-surface/20">
                         <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-2 px-4 py-3 font-mono text-xs text-muted transition-colors hover:bg-surface-hover">
@@ -240,11 +394,16 @@ export function ReportView({
                         </div>
                       </details>
                     ))}
-                  </>
+                  </div>
                 )}
               </div>
             );
           })()}
+          <div className="mt-10 flex items-center gap-3 text-[11px] tracking-[0.14em] text-faint">
+            <span className="h-px flex-1 bg-border" />
+            评估规则-面向求职者
+            <span className="h-px flex-1 bg-border" />
+          </div>
           <ScoreMethodology />
         </>
       ) : (

@@ -89,6 +89,6 @@
 ## Шаг 6 — После отклика (опционально)
 
 Если кандидат подтвердил отправку:
-1. Обновить статус на "Applied" через канонический CLI: `node set-status.mjs <report#> Applied` (не редактировать таблицу `data/applications.md` вручную)
+1. Обновить статус на "Applied" через канонический CLI: `node career-one.mjs set-status <report#> Applied` (не редактировать таблицу `data/applications.md` вручную)
 2. Обновить секцию G отчёта финальными ответами
 3. Предложить: `/career-one contacto` для LinkedIn outreach

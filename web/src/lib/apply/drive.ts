@@ -117,7 +117,7 @@ export async function driveSession(
   const resolved = resolveCli(cliId);
   const steps: DriveStep[] = [];
   if (!resolved || cliId !== "claude") {
-    return { reached: false, turns: 0, reason: "Agentic drive currently needs a browser-driving CLI; use Codex for prefill/drafting and finish the form manually.", steps };
+    return { reached: false, turns: 0, reason: "Agent 浏览器导航当前需要支持浏览器控制的 CLI；可使用 Codex 预填或起草，再手动完成表单。", steps };
   }
   const shot = async () => {
     try {
@@ -191,30 +191,30 @@ Reply ONE action JSON.`;
       if (act.action === "click" && loc) {
         const txt = (await loc.innerText().catch(() => "")) || (await loc.getAttribute("value").catch(() => "")) || "";
         if (SUBMIT_RX.test(txt)) {
-          note = "refused to click a submit control (the human submits)";
-          detail = `blocked submit "${txt.slice(0, 40)}"`;
+          note = "已阻止点击提交按钮，最终提交必须由你本人完成";
+          detail = `已阻止提交“${txt.slice(0, 40)}”`;
         } else {
-          detail = `click "${txt.slice(0, 40)}"`;
+          detail = `点击“${txt.slice(0, 40)}”`;
           await loc.scrollIntoViewIfNeeded().catch(() => {});
           await Promise.all([page.waitForLoadState("domcontentloaded", { timeout: 8000 }).catch(() => {}), loc.click({ timeout: 6000 })]);
         }
       } else if (act.action === "type" && loc) {
-        detail = `type into ${act.ref}`;
+        detail = `输入到 ${act.ref}`;
         await loc.fill(act.text || "").catch(async () => {
           await loc.click();
           await page.keyboard.type(act.text || "");
         });
       } else if (act.action === "select" && loc) {
-        detail = `select "${act.value}"`;
+        detail = `选择“${act.value}”`;
         await loc.selectOption({ label: act.value || "" }).catch(() => loc.selectOption(act.value || ""));
       } else if (act.action === "scroll") {
-        detail = "scroll";
+        detail = "向下滚动";
         await page.evaluate(() => window.scrollBy(0, 700)).catch(() => {});
       } else {
-        detail = `unknown action ${act.action}`;
+        detail = `无法识别的操作：${act.action}`;
       }
     } catch (e) {
-      detail = `${act.action} failed: ${e instanceof Error ? e.message.slice(0, 50) : "err"}`;
+      detail = `${act.action} 执行失败：${e instanceof Error ? e.message.slice(0, 50) : "未知错误"}`;
     }
     await page.waitForTimeout(700);
     const s: DriveStep = { turn, action: act.action, detail, thumb: await shot(), note: note || undefined };

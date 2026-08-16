@@ -29,5 +29,5 @@ jobs:
             Thanks for opening your first issue, @${{ github.actor }}! We'll take a look soon.
 
             In the meantime:
-            - Check [SUPPORT.md](https://github.com/luyu925065781/career-one/blob/main/SUPPORT.md) for setup help
+            - Check the [setup FAQ](https://github.com/luyu925065781/career-one/blob/main/docs/FAQ.md) for setup help
             - Join our [Discord](https://discord.gg/8pRpHETxa4) for quick answers

@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { companyDomain, companyInitials, monogramHue } from "@/lib/company";
+import { Building2 } from "lucide-react";
+import { companyDomain, companyInitials, resolveCompanyIdentity } from "@/lib/company";
 import { cn } from "@/lib/cn";
 
 const CONFIG_KEY = "career-one:config";
 
 // A small company mark: the real favicon on a white tile when logos are enabled
-// and resolvable, otherwise a deterministic colored monogram. The monogram is
-// the always-rendered base layer (SSR-safe + offline floor); the logo fades in
-// on top once loaded, and any failure (404/offline/disabled) just leaves the
-// monogram showing. See lib/company.ts + /api/logo.
+// and resolvable, otherwise semantic initials. Unknown identities use one
+// neutral entity icon instead of manufacturing a brand treatment. The fallback
+// is the always-rendered base layer (SSR-safe + offline floor); the logo fades
+// in on top once loaded. See lib/company.ts + /api/logo.
 export function CompanyLogo({
   name,
   size = 20,
@@ -34,27 +35,35 @@ export function CompanyLogo({
     }
   }, []);
 
+  const identity = resolveCompanyIdentity(name);
   const domain = companyDomain(name);
-  const hue = monogramHue(name);
   const radius = Math.max(4, Math.round(size * 0.28));
-  const showImg = enabled && !!domain && !failed;
+  const showImg = identity.kind === "known" && enabled && !!domain && !failed;
 
   return (
     <span
-      className={cn("relative inline-flex shrink-0 items-center justify-center overflow-hidden ring-1 ring-black/5 dark:ring-white/10", className)}
+      className={cn("relative inline-flex shrink-0 items-center justify-center overflow-hidden ring-1 ring-border", className)}
       style={{ width: size, height: size, borderRadius: radius }}
       aria-hidden="true"
     >
-      <span
-        className="absolute inset-0 flex items-center justify-center font-semibold leading-none text-white"
-        style={{
-          background: `linear-gradient(135deg, hsl(${hue} 55% 48%), hsl(${(hue + 28) % 360} 52% 38%))`,
-          fontSize: Math.round(size * 0.42),
-          letterSpacing: "-0.02em",
-        }}
-      >
-        {companyInitials(name)}
-      </span>
+      {identity.kind !== "known" ? (
+        <span className="absolute inset-0 flex items-center justify-center bg-outline-bg text-icon-muted">
+          <Building2
+            aria-hidden="true"
+            style={{ width: Math.round(size * 0.48), height: Math.round(size * 0.48) }}
+          />
+        </span>
+      ) : (
+        <span
+          className="absolute inset-0 flex items-center justify-center bg-action-secondary font-semibold leading-none text-action-secondary-foreground"
+          style={{
+            fontSize: Math.round(size * 0.4),
+            letterSpacing: "-0.02em",
+          }}
+        >
+          {companyInitials(name)}
+        </span>
+      )}
       {showImg && (
         // eslint-disable-next-line @next/next/no-img-element
         <img

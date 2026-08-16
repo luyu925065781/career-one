@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, X, FileText, Compass, ShieldCheck, Coins } from "lucide-react";
+import { Sparkles, X, FileText, ScanSearch, ShieldCheck, Coins } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { instrumentSerif } from "@/lib/fonts";
 import { parseReport, scoreTone, legitimacyTone } from "@/lib/format";
 import { useJobs, type Job } from "@/components/jobs/job-store";
 
@@ -132,7 +131,7 @@ export function FirstScoreView() {
 
           <div className="mt-4 flex items-start gap-4">
             <div className="min-w-0 flex-1">
-              <h2 className={`${instrumentSerif.className} truncate text-2xl leading-tight text-foreground`}>{role || company}</h2>
+              <h2 className={`font-display truncate text-2xl leading-tight text-foreground`}>{role || company}</h2>
               {role && <p className="truncate text-sm text-muted">{company}</p>}
             </div>
             {score != null && (
@@ -151,7 +150,7 @@ export function FirstScoreView() {
           </div>
 
           {/* THE WHY — the hero. A sentence that read THIS CV against THIS job. */}
-          <blockquote className={`${instrumentSerif.className} mt-5 border-l-2 border-brand/40 pl-4 text-[19px] leading-snug text-foreground`}>
+          <blockquote className={`font-display mt-5 border-l-2 border-brand/40 pl-4 text-[19px] leading-snug text-foreground`}>
             <Sparkles className="mb-1 inline size-4 text-icon-brand" /> {why}
           </blockquote>
 
@@ -167,7 +166,7 @@ export function FirstScoreView() {
           )}
 
           <p className="mt-5 flex items-center gap-1.5 text-[12px] text-faint">
-            <Coins className="size-3.5" /> 本次评估由你自己的 Agent 执行；此前发现岗位的过程免费且不消耗 tokens。
+            <Coins className="size-3.5" /> 本次评估由你自己的 Agent 执行；整理画像与筛选标签不消耗模型额度。
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -183,11 +182,11 @@ export function FirstScoreView() {
             <button
               onClick={() => {
                 close();
-                router.push("/explore");
+                router.push("/cn-diagnose");
               }}
               className="inline-flex items-center gap-1.5 rounded-xl border border-outline-border bg-outline-bg px-4 py-2.5 text-sm font-medium text-outline-text transition hover:border-outline-border-hover hover:bg-outline-bg-hover"
             >
-              <Compass className="size-4" /> 发现更多相似岗位
+              <ScanSearch className="size-4" /> 评估另一个岗位
             </button>
           </div>
         </div>

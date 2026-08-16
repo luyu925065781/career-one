@@ -599,13 +599,13 @@ process_offer() {
 merge_tracker() {
   echo ""
   echo "=== Merging tracker additions ==="
-  node "$PROJECT_DIR/merge-tracker.mjs"
+  node "$PROJECT_DIR/career-one.mjs" merge
   echo ""
   echo "=== Reconciling pipeline.md ==="
-  node "$PROJECT_DIR/reconcile-pipeline.mjs" || echo "⚠️  Pipeline reconcile had issues (see above)"
+  node "$PROJECT_DIR/career-one.mjs" reconcile || echo "⚠️  Pipeline reconcile had issues (see above)"
   echo ""
   echo "=== Verifying pipeline integrity ==="
-  node "$PROJECT_DIR/verify-pipeline.mjs" || echo "⚠️  Verification found issues (see above)"
+  node "$PROJECT_DIR/career-one.mjs" verify || echo "⚠️  Verification found issues (see above)"
 }
 
 # Print summary
@@ -745,11 +745,11 @@ watch_status() {
   echo "Showing final status:"
   print_status_table
 
-  # Chain verify-pipeline.mjs
-  if [[ -f "$PROJECT_DIR/verify-pipeline.mjs" ]]; then
+  # Chain the stable verification entrypoint.
+  if [[ -f "$PROJECT_DIR/career-one.mjs" ]]; then
     echo ""
     echo "=== Running pipeline verification ==="
-    node "$PROJECT_DIR/verify-pipeline.mjs" || echo "⚠️  Verification found issues"
+    node "$PROJECT_DIR/career-one.mjs" verify || echo "⚠️  Verification found issues"
   fi
 }
 

@@ -60,10 +60,10 @@ export async function POST(req: Request) {
   try {
     patch = (await req.json()) as ProfilePatch;
   } catch {
-    return Response.json({ error: "bad json" }, { status: 400 });
+    return Response.json({ error: "请求格式不正确" }, { status: 400 });
   }
   const proposed = patchToProfile(patch);
-  if (Object.keys(proposed).length === 0) return Response.json({ error: "nothing to write" }, { status: 400 });
+  if (Object.keys(proposed).length === 0) return Response.json({ error: "没有需要保存的个人设置" }, { status: 400 });
 
   const root = careerOneRoot();
   const file = path.join(root, "config", "profile.yml");
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     try {
       parsed = yaml.load(fs.readFileSync(file, "utf8"));
     } catch {
-      return Response.json({ error: "config/profile.yml exists but is not valid YAML — refusing to overwrite it." }, { status: 409 });
+      return Response.json({ error: "config/profile.yml 已存在但不是有效的 YAML，为避免数据丢失，本次没有覆盖该文件。" }, { status: 409 });
     }
     base = isObj(parsed) ? (parsed as Record<string, unknown>) : {};
   }
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
     // reformats — comments are not preserved; the .bak is the safety net).
     atomicWriteWithBackup(file, yaml.dump(merged, { lineWidth: 100, noRefs: true }));
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message : "write failed" }, { status: 500 });
+    return Response.json({ error: e instanceof Error ? e.message : "个人设置保存失败" }, { status: 500 });
   }
   return Response.json({ ok: true, seeded });
 }

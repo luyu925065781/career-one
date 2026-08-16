@@ -12,14 +12,14 @@
 // MIRROR, not a replacement backend. data/applications.md stays the canonical
 // source of truth (the web reads it); `export` pushes a read-only snapshot of it
 // to the user's own Notion DB. The core never writes to Notion as primary, and
-// modes are not edited — this lives entirely behind `node plugins.mjs run notion`.
+// modes are not edited — this lives entirely behind `node career-one.mjs plugins run notion`.
 //
 // Setup: a "Career Ops" parent page in Notion containing an "Applications" DB
 // with Company / Role / Status / Score / URL properties, shared with your
 // internal integration. Enable in config/plugins.yml; keys in .env.
 //
-//   node plugins.mjs run notion export            # mirror tracker → Notion
-//   node plugins.mjs run notion search "platform" # read matching records → pipeline
+//   node career-one.mjs plugins run notion export            # mirror tracker → Notion
+//   node career-one.mjs plugins run notion search "platform" # read matching records → pipeline
 
 import { createNotionClient, rich, canonicalStatus } from './_notion.mjs';
 

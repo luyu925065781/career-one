@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ApplyField } from "@/lib/apply/extract";
 import type { ApplyIssue, DriveStep } from "@/lib/apply/issue";
+import { localizeUserMessage } from "@/lib/format";
 
 export type FillStep = { fieldId: string; label: string; ok: boolean; thumb?: string };
 type Meta = { needsConfirmation?: boolean };
@@ -78,7 +79,7 @@ export function ApplyProvider({ children }: { children: React.ReactNode }) {
     try {
       const r = await fetch("/api/apply/drive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: id, cliId: cliId(), goal: "reach" }) });
       if (!r.body) {
-        setError("The agent couldn't start.");
+        setError("Agent 无法启动，请稍后重试。");
         setStatus("error");
         return;
       }
@@ -110,7 +111,7 @@ export function ApplyProvider({ children }: { children: React.ReactNode }) {
             setStatus("ready"); // → the ready-effect auto-prefills if pending
           } else if (ev.t === "error") {
             finished = true;
-            setError(ev.message || "Agent 无法到达可填写的表单。");
+            setError(localizeUserMessage(ev.message || "Agent 无法到达可填写的表单。"));
             setStatus("error");
           }
         }
@@ -143,7 +144,7 @@ export function ApplyProvider({ children }: { children: React.ReactNode }) {
       const r = await fetch("/api/apply/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: u, cliId: cliId() }) });
       const d = await r.json();
       if (d.error) {
-        setError(d.error);
+        setError(localizeUserMessage(d.error));
         setStatus("error");
         return;
       }
@@ -188,7 +189,7 @@ export function ApplyProvider({ children }: { children: React.ReactNode }) {
     try {
       const r = await fetch("/api/apply/prefill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: sessionId.current, cliId: cliId() }) });
       if (!r.body) {
-        setError("Couldn't pre-fill — no response stream.");
+        setError("无法根据简历预填：Agent 没有返回响应。请稍后重试。");
         setStatus("ready");
         return;
       }
@@ -217,19 +218,19 @@ export function ApplyProvider({ children }: { children: React.ReactNode }) {
           } else if (ev.t === "done") {
             got = true;
             applyAnswers(ev.answers ?? {});
-            if ((ev.count ?? 0) === 0) setError("The planner returned 0 answers — see the diagnostics log below.");
-            else if (ev.truncated) setError("The planner was cut off — some fields were recovered, others may be blank. See diagnostics.");
+            if ((ev.count ?? 0) === 0) setError("预填没有生成任何答案，请查看下方诊断记录。");
+            else if (ev.truncated) setError("预填过程提前中断，已恢复部分字段；其他字段可能仍为空，请查看诊断记录。");
           } else if (ev.t === "error") {
             sawError = true;
-            setError(ev.m ? `Couldn't pre-fill: ${ev.m}` : "Couldn't pre-fill from your CV.");
-            setPrefillLog((p) => [...p, `✗ ${ev.m ?? "error"}${ev.raw ? ` — raw tail: ${ev.raw.slice(0, 160)}` : ""}`]);
+            setError(ev.m ? `无法根据简历预填：${localizeUserMessage(ev.m)}` : "无法根据简历预填。");
+            setPrefillLog((p) => [...p, `✗ ${localizeUserMessage(ev.m ?? "未知错误")}${ev.raw ? ` — 原始输出末尾：${ev.raw.slice(0, 160)}` : ""}`]);
           }
         }
       }
-      if (!got && !sawError) setError("Pre-fill ended without answers — see the diagnostics log below.");
+      if (!got && !sawError) setError("预填结束但没有生成答案，请查看下方诊断记录。");
       setStatus("ready");
     } catch (e) {
-      setError(`Couldn't pre-fill from your CV: ${e instanceof Error ? e.message : "stream error"}. See diagnostics.`);
+      setError(`无法根据简历预填：${e instanceof Error ? localizeUserMessage(e.message) : "响应流出错"}。请查看诊断记录。`);
       setStatus("ready");
     }
   }, []);
@@ -302,7 +303,7 @@ export function ApplyProvider({ children }: { children: React.ReactNode }) {
     try {
       const r = await fetch("/api/apply/drive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: sessionId.current, cliId: cliId(), goal: "full", answers: ans }) });
       if (!r.body) {
-        setError("The agent couldn't start filling.");
+        setError("Agent 无法开始填写，请稍后重试。");
         setStatus("error");
         return;
       }
@@ -329,7 +330,7 @@ export function ApplyProvider({ children }: { children: React.ReactNode }) {
             setIssues((prev) => [...prev, { level: "info", code: "ai-filled", message: ev.filled ? "Agent 已完成表单填写，请在真实表单中逐项核对并亲自提交。" : "Agent 未能完成全部填写，请检查真实表单后再提交。" }]);
             setStatus("done");
           } else if (ev.t === "error") {
-            setError(ev.message || "Agent 无法填写表单。");
+            setError(localizeUserMessage(ev.message || "Agent 无法填写表单。"));
             setStatus("error");
           }
         }

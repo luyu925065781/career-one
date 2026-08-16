@@ -1,22 +1,22 @@
-# Writing Samples
+# 写作样本
 
-Drop examples of your professional writing here. The more variety, the more accurately your voice can be captured.
+把你的职业写作样本放在这里。样本类型越丰富，Agent 越能准确把握你的表达方式。
 
-## What counts as a writing sample
+## 哪些内容可以作为写作样本
 
-Anything you've written that sounds like you:
+任何能体现你真实表达方式的内容都可以，例如：
 
-- Emails or messages you were happy with
-- LinkedIn posts or articles
-- Cover letters from past applications
-- Blog posts or case studies
-- Slack or forum posts
-- Notes, memos, or internal docs
-- Social media posts
-- Anything else in your own words
+- 你满意的邮件或消息
+- LinkedIn 帖子或文章
+- 过去求职时使用的求职信
+- 博客文章或案例研究
+- Slack 或论坛帖子
+- 笔记、备忘录或内部文档
+- 社交媒体帖子
+- 其他由你本人撰写的内容
 
-Plain text (`.txt`) and Markdown (`.md`) are preferred — they require no extraction and are read directly. Other formats like `.pdf` or `.docx` work too.
+优先使用纯文本（`.txt`）和 Markdown（`.md`），它们无需抽取即可直接读取；也支持 `.pdf`、`.docx` 等格式。
 
-## After adding samples
+## 添加样本后
 
-Tell Claude Code: "recalibrate my writing style" — it will re-scan the files and update your profile.
+告诉你正在使用的 Agent：“重新校准我的写作风格”。Agent 会重新扫描这些文件，并更新你的个人画像。

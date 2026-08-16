@@ -3,14 +3,14 @@
  * for the web read path.
  *
  * The header-alias table is NOT mirrored here: it is loaded at runtime from
- * `tracker-aliases.json` in the career-one root — the same single source
+ * `config/tracker-aliases.json` in the career-one root — the same single source
  * tracker-parse.mjs exports as HEADER_ALIASES — so the web reader and the Node
  * tracker tooling can never drift (PR #1598 review). A build-time import of the
  * core module is impossible: Turbopack's root is pinned to web/ (see
  * next.config.mjs) and refuses modules outside it, so the shared source is a
  * JSON file read with fs, like every other career-one file this app consumes.
  *
- * Plain .mjs (same pattern as clean-chips.mjs) so tracker-columns-tests.mjs can
+ * Plain .mjs (same pattern as clean-chips.mjs) so tests/tracker/columns.test.mjs can
  * import it directly under Node and regression-test the REAL alias chain.
  */
 import fs from "node:fs";
@@ -21,7 +21,7 @@ import path from "node:path";
  * names the number column `n` (tracker-parse calls it `num`); every other
  * field maps 1:1. This maps FIELDS (a fixed schema, changing only with the
  * Application type itself), not header aliases — the alias table lives only
- * in tracker-aliases.json.
+ * in config/tracker-aliases.json.
  * @type {Record<string, string>}
  */
 const WEB_FIELD = {
@@ -34,7 +34,7 @@ const aliasCache = new Map();
 
 /**
  * Load the shared header-alias table (lowercased header text → canonical field)
- * from `{rootDir}/tracker-aliases.json`. Cached per resolved file path so the
+ * from `{rootDir}/config/tracker-aliases.json`. Cached per resolved file path so the
  * request-time read path (readApplications runs on every API route / page
  * render) doesn't re-read and re-parse the JSON each call — but the cache is
  * keyed on the file's mtime+size (one statSync per call, no full read), so a
@@ -48,7 +48,7 @@ const aliasCache = new Map();
  * @returns {Record<string, string>}
  */
 export function loadHeaderAliases(rootDir) {
-  const file = path.resolve(rootDir, "tracker-aliases.json");
+  const file = path.resolve(rootDir, "config", "tracker-aliases.json");
   try {
     const { mtimeMs, size } = fs.statSync(file);
     const cached = aliasCache.get(file);
@@ -102,13 +102,13 @@ export function detectColumnMap(lines, aliases) {
 /**
  * Parse the tracker markdown (source of truth) into application rows.
  * Columns are mapped by header name via the shared alias table in
- * `{rootDir}/tracker-aliases.json`; the legacy fixed order
+ * `{rootDir}/config/tracker-aliases.json`; the legacy fixed order
  * (# | Date | Company | Role | Score | Status | PDF | Report | Notes)
  * is the fallback when no recognizable header row is present.
  * Rows without a numeric # cell (header, separator, stray pipes) are skipped,
  * mirroring parseTrackerRow in tracker-parse.mjs.
  * @param {string} md - content of data/applications.md.
- * @param {string} rootDir - career-one root holding tracker-aliases.json.
+ * @param {string} rootDir - career-one root holding config/tracker-aliases.json.
  * @returns {{n: string, date: string, company: string, via: string, role: string, score: string, status: string, pdf: string, report: string, notes: string}[]}
  */
 export function parseApplications(md, rootDir) {

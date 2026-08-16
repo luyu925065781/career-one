@@ -1,6 +1,7 @@
 # Personal data (user fills these)
 cv.md
 voice-dna.md
+article-digest.md
 data/applications.md
 data/applications.db
 data/follow-ups.md
@@ -10,6 +11,9 @@ data/scan-history.tsv
 data/scan-runs.tsv
 data/pdf-index.tsv
 data/agent-inbox.md
+data/agent-runs.json
+data/.agent-runs.lock
+data/task-attachments/
 data/reply-candidates.json
 data/parser-output/**/*.json
 !data/parser-output/.gitkeep
@@ -109,11 +113,15 @@ data/model-blacklist.json
 .opencode/memory/
 career-dashboard
 career-dashboard.exe
-package-lock.json
-!web/package-lock.json
 
 # Playwright MCP server run artifacts (ephemeral, machine-local)
 .playwright-mcp/
 
 # Planning (local scratchpad)
 plan/
+task_plan.md
+findings.md
+progress.md
+
+# Root-level browser QA screenshots are local artifacts, not product assets.
+/*.png

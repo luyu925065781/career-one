@@ -10,7 +10,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as yaml from 'js-yaml';
 import { discoverPlugins, pluginRoots, pluginStatus } from './plugins/_engine.mjs';
-import { resolveExtractorMode } from './browser-extract.mjs';
+import { resolveExtractorMode } from './scripts/liveness/browser-extract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -29,15 +29,26 @@ const red = (s) => isTTY ? `\x1b[31m${s}\x1b[0m` : s;
 const yellow = (s) => isTTY ? `\x1b[33m${s}\x1b[0m` : s;
 const dim = (s) => isTTY ? `\x1b[2m${s}\x1b[0m` : s;
 
+const MIN_NODE_VERSION = '20.9.0';
+
+function nodeVersionAtLeast(version, minimum) {
+  const current = version.split('.').map((part) => Number.parseInt(part, 10) || 0);
+  const required = minimum.split('.').map((part) => Number.parseInt(part, 10) || 0);
+  for (let index = 0; index < Math.max(current.length, required.length); index++) {
+    if ((current[index] || 0) > (required[index] || 0)) return true;
+    if ((current[index] || 0) < (required[index] || 0)) return false;
+  }
+  return true;
+}
+
 function checkNodeVersion() {
-  const major = parseInt(process.versions.node.split('.')[0]);
-  if (major >= 18) {
-    return { pass: true, label: `Node.js >= 18 (v${process.versions.node})` };
+  if (nodeVersionAtLeast(process.versions.node, MIN_NODE_VERSION)) {
+    return { pass: true, label: `Node.js >= ${MIN_NODE_VERSION} (v${process.versions.node})` };
   }
   return {
     pass: false,
-    label: `Node.js >= 18 (found v${process.versions.node})`,
-    fix: 'Install Node.js 18 or later from https://nodejs.org',
+    label: `Node.js >= ${MIN_NODE_VERSION} (found v${process.versions.node})`,
+    fix: 'Install Node.js 22 LTS or a newer LTS release from https://nodejs.org',
   };
 }
 
@@ -117,13 +128,15 @@ function playwrightMcpConfigured(root) {
 function checkScanExtractor(root) {
   const mode = resolveExtractorMode(join(root, 'config', 'profile.yml'));
   if (mode === 'cli') {
-    if (existsSync(join(root, 'browser-extract.mjs'))) {
+    const groupedExtractor = join(root, 'scripts', 'liveness', 'browser-extract.mjs');
+    const legacyExtractor = join(root, 'browser-extract.mjs');
+    if (existsSync(groupedExtractor) || existsSync(legacyExtractor)) {
       return { pass: true, label: 'Scan extractor: cli (browser-extract.mjs)' };
     }
     return {
       warn: true,
       label: 'Scan extractor: cli set, but browser-extract.mjs is missing — falls back to MCP',
-      fix: ['Restore browser-extract.mjs, or set `scan.extractor: mcp` in config/profile.yml.'],
+      fix: ['Restore scripts/liveness/browser-extract.mjs, or set `scan.extractor: mcp` in config/profile.yml.'],
     };
   }
   return { pass: true, label: 'Scan extractor: mcp (default)' };
@@ -246,7 +259,7 @@ async function checkPortalSlugs(root) {
     return { pass: true, label: 'ATS slugs: no portals.yml yet (skipped)' };
   }
   try {
-    const { verifyPortalsFile } = await import('./verify-portals.mjs');
+    const { verifyPortalsFile } = await import('./scripts/system/verify-portals.mjs');
     const { results } = await verifyPortalsFile(portalsPath);
     const unresolved = results.filter((r) => r.status === 'missing');
     if (unresolved.length === 0) {
@@ -261,7 +274,7 @@ async function checkPortalSlugs(root) {
           if (r.suggested) line += ` → try ${r.suggested.ats}/${r.suggested.slug}`;
           return line;
         }),
-        'Probe variants with: node verify-portals.mjs --add "<company>"',
+        'Probe variants with: node career-one.mjs verify-portals --add "<company>"',
       ],
     };
   } catch (err) {

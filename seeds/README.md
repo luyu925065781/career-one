@@ -1,97 +1,97 @@
-# seeds/ — VC Portfolio Seed Fetchers
+# 招聘渠道种子抓取器
 
-A complementary discovery path for startup job-seekers: pull a **public VC portfolio company list** and probe each company's ATS for openings, feeding results into the same pipeline as tracked companies in `portals.yml`.
+这是面向创业公司求职者的补充发现路径：读取**公开的风险投资机构被投企业名单**，再检查各公司的 ATS 是否有开放岗位，并将结果送入与 `portals.yml` 跟踪公司相同的管道。
 
-## What this does
+## 功能说明
 
-`scan-ats-full.mjs` normally discovers companies by walking public ATS directories (Greenhouse, Lever, Ashby, Workday). The `seeds/` layer adds a **high-signal starting point for startup roles**: rather than waiting for companies to appear in ATS directories, we seed the universe from well-known VC portfolios — giving you instant coverage of hundreds of YC/a16z-backed companies.
+`scan-ats-full.mjs` 通常通过遍历 Greenhouse、Lever、Ashby、Workday 等公开 ATS 目录来发现公司。`seeds/` 层增加了一个用于寻找创业公司岗位的**高信号起点**：不必等待企业出现在 ATS 目录中，而是从知名投资机构的被投企业名单出发，快速覆盖数百家 YC 或 a16z 支持的公司。
 
-Flow:
+处理流程：
 ```
-VC portfolio API/page
+投资机构被投企业 API/页面
     ↓ seeds/vc-portfolios.mjs
 SeedCompany[]
     ↓ toPortalEntry()
-PortalEntry (careers_url set to best-guess ATS URL)
-    ↓ provider.detect() (same as portals.yml companies)
-ATS provider fetches jobs
+PortalEntry（careers_url 设置为推测的最佳 ATS URL）
+    ↓ provider.detect()（与 portals.yml 中的公司使用相同流程）
+ATS provider 获取岗位
     ↓ title_filter / location_filter / dedup
 data/pipeline.md
 ```
 
-## Usage
+## 用法
 
-### Via scan-ats-full.mjs (recommended)
+### 通过 `scan-ats-full.mjs`（推荐）
 
 ```bash
-# Seed from Y Combinator portfolio, last 7 days
-node scan-ats-full.mjs --seeds yc --since 7
+# 从 Y Combinator 被投企业中查找最近 7 天的岗位
+node career-one.mjs scan-full --seeds yc --since 7
 
-# Seed from both YC and a16z, dry-run preview
-node scan-ats-full.mjs --seeds yc,a16z --dry-run
+# 同时使用 YC 和 a16z 种子，并执行试运行预览
+node career-one.mjs scan-full --seeds yc,a16z --dry-run
 
-# Combine seeds + regular ATS sources
-node scan-ats-full.mjs --seeds yc --ats greenhouse,lever --since 5
+# 组合种子来源与常规 ATS 来源
+node career-one.mjs scan-full --seeds yc --ats greenhouse,lever --since 5
 
-# npm shortcuts
+# npm 快捷命令
 npm run scan:seeds   # yc + a16z
-npm run scan:yc      # YC only
+npm run scan:yc      # 仅 YC
 ```
 
-### Programmatic
+### 通过代码调用
 
 ```js
 import { fetchYCCompanies, fetchA16zCompanies, toPortalEntry, SEED_SOURCES } from './seeds/vc-portfolios.mjs';
 
-// Fetch YC companies
+// 获取 YC 被投企业
 const companies = await fetchYCCompanies();
 console.log(companies[0]);
 // → { name: 'Stripe', slug: 'stripe', url: 'https://stripe.com', source: 'yc', batch: 'W11' }
 
-// Convert to a PortalEntry for ATS provider.detect()
+// 转换为 ATS provider.detect() 使用的 PortalEntry
 const entry = toPortalEntry(companies[0]);
 // → { name: 'Stripe', careers_url: 'https://job-boards.greenhouse.io/stripe', source: 'yc' }
 
-// Using the registry
+// 使用注册表
 for (const [id, source] of Object.entries(SEED_SOURCES)) {
   const companies = await source.fetch();
   console.log(`${source.label}: ${companies.length} companies`);
 }
 ```
 
-## Data sources
+## 数据来源
 
-| Source | URL | Format | Auth |
+| 来源 | URL | 格式 | 认证 |
 |--------|-----|--------|------|
-| Y Combinator | `https://api.ycombinator.com/v0.1/companies` | JSON API | None |
-| a16z | `https://a16z.com/portfolio/` | Public HTML page | None |
+| Y Combinator | `https://api.ycombinator.com/v0.1/companies` | JSON API | 无 |
+| a16z | `https://a16z.com/portfolio/` | 公开 HTML 页面 | 无 |
 
-- **YC**: Fetches up to 3 pages × 1000 companies. Covers all public YC batches.
-- **a16z**: Parses the public portfolio page. Falls back gracefully if the page structure changes.
+- **YC**：最多获取 3 页、每页 1000 家公司，覆盖全部公开 YC 批次。
+- **a16z**：解析公开被投企业页面；页面结构变化时会安全降级。
 
-## Security
+## 安全
 
-- All slugs are validated against `SLUG_RE = /^[A-Za-z0-9._-]+$/` before any URL interpolation — consistent with the guard in `scan-ats-full.mjs`.
-- Constructed ATS URLs go through the existing `entryOnHost()` SSRF guard before reaching any provider.
-- No authentication tokens, no headless browser, no LLM API calls.
+- 任何 URL 插值发生前，所有 slug 都会用 `SLUG_RE = /^[A-Za-z0-9._-]+$/` 验证，与 `scan-ats-full.mjs` 的保护规则一致。
+- 构造出的 ATS URL 在传给 provider 前，必须经过现有 `entryOnHost()` SSRF 保护。
+- 不使用认证令牌、无头浏览器或 LLM API 调用。
 
-## Adding more VC portfolios
+## 添加更多投资机构名单
 
-1. Add a `parseXyzPayload(payload)` pure function (no network — testable with inline fixtures).
-2. Add a `fetchXyzCompanies(opts?)` async function that calls the public endpoint and returns `SeedCompany[]`.
-3. Register it in `SEED_SOURCES`:
+1. 添加纯函数 `parseXyzPayload(payload)`；函数内部不访问网络，以便使用内联夹具测试。
+2. 添加异步函数 `fetchXyzCompanies(opts?)`，调用公开端点并返回 `SeedCompany[]`。
+3. 在 `SEED_SOURCES` 中注册：
 
 ```js
 export const SEED_SOURCES = {
   yc: { fetch: fetchYCCompanies, label: 'Y Combinator Portfolio' },
   a16z: { fetch: fetchA16zCompanies, label: 'Andreessen Horowitz (a16z) Portfolio' },
-  // Add yours:
+  // 在这里添加新来源：
   sequoia: { fetch: fetchSequoiaCompanies, label: 'Sequoia Portfolio' },
 };
 ```
 
-4. Add test cases in `test-all.mjs` covering your `parseXyzPayload()` function.
+4. 在 `test-all.mjs` 中为 `parseXyzPayload()` 添加测试用例。
 
-## Prior art
+## 参考实现
 
-The VC-portfolio seeding approach is inspired by [adityachaudhary99/job-hunt](https://github.com/adityachaudhary99/job-hunt) (`02-seeds/fetch_yc.py`, `fetch_a16z.py`), which was the original companion reference cited in issue #1370.
+投资机构被投企业种子方案参考了 [adityachaudhary99/job-hunt](https://github.com/adityachaudhary99/job-hunt) 中的 `02-seeds/fetch_yc.py` 和 `fetch_a16z.py`；它也是 issue #1370 最初引用的配套实现。

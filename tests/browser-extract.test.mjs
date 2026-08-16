@@ -10,7 +10,7 @@ import { tmpdir } from 'os';
 console.log('\nbrowser-extract.mjs (config + normalizers)');
 
 try {
-  const mod = await import(pathToFileURL(join(ROOT, 'browser-extract.mjs')).href);
+  const mod = await import(pathToFileURL(join(ROOT, 'scripts/liveness/browser-extract.mjs')).href);
   const { resolveExtractorMode, compactText, normalizeJd, normalizeListing, parseArgs } = mod;
 
   // resolveExtractorMode — default mcp, explicit cli, garbage → mcp, missing → mcp

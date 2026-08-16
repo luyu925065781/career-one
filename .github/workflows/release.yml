@@ -1,28 +1,103 @@
-name: Release Readiness
+name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      channel:
+        description: 发布通道
+        required: true
+        type: choice
+        options:
+          - stable
+          - beta
+          - development
+      publish:
+        description: 验证通过后创建 GitHub Release（development 不允许）
+        required: true
+        default: false
+        type: boolean
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  build-distributions:
+  release:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.channel == 'stable' && 'production' || 'preview' }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: 24
       - name: Install root dependencies
-        run: npm install --ignore-scripts
+        run: npm ci --ignore-scripts
+      - name: Audit root production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Verify release channel and synchronized versions
+        run: npm run release:verify -- --channel "${{ inputs.channel }}"
       - name: Verify system contracts
-        run: node test-all.mjs --quick
+        run: node test-all.mjs
+      - name: Verify web application
+        working-directory: web
+        run: |
+          npm ci
+          npm audit --omit=dev --audit-level=high
+          npm test
+          npx tsc --noEmit
+          npm run build
+      - name: Verify distributions
+        run: npm run test:distributions
       - name: Build Codex and WorkBuddy packages
         run: npm run build:distributions
+      - name: Package Codex plugin
+        run: |
+          cd dist/marketplaces/codex
+          zip -qr ../career-one-codex.zip career-one
+      - name: Generate release checksums
+        run: |
+          cp dist/marketplaces/workbuddy/career-one-workbuddy.zip dist/marketplaces/career-one-workbuddy.zip
+          cd dist/marketplaces
+          sha256sum career-one-codex.zip career-one-workbuddy.zip > SHA256SUMS.txt
       - name: Upload marketplace packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: career-one-marketplace-packages
           path: dist/marketplaces/
           if-no-files-found: error
+      - name: Publish GitHub Release
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          if [ "$CHANNEL" = "development" ]; then
+            echo "development 通道只做构建验证，不创建公开 Release"
+            exit 1
+          fi
+          VERSION="$(head -n 1 VERSION | awk '{print $1}')"
+          TAG="v${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG 已存在"
+            exit 1
+          fi
+          if [ "$CHANNEL" = "stable" ]; then
+            gh release create "$TAG" \
+              dist/marketplaces/career-one-workbuddy.zip \
+              dist/marketplaces/career-one-codex.zip \
+              dist/marketplaces/SHA256SUMS.txt \
+              --target "$GITHUB_SHA" \
+              --generate-notes \
+              --latest \
+              --title "择程AI ${VERSION}"
+          else
+            gh release create "$TAG" \
+              dist/marketplaces/career-one-workbuddy.zip \
+              dist/marketplaces/career-one-codex.zip \
+              dist/marketplaces/SHA256SUMS.txt \
+              --target "$GITHUB_SHA" \
+              --generate-notes \
+              --prerelease \
+              --title "择程AI ${VERSION}"
+          fi

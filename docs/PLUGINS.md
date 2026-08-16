@@ -11,15 +11,15 @@ core runs exactly as it always has.
 ## Using plugins
 
 ```bash
-node plugins.mjs list          # what's installed + its trust badge
-node plugins.mjs available     # bundled + community plugins we've approved
-node plugins.mjs add <name>    # install an approved community plugin
-node plugins.mjs enable <id>   # show the capability card (then add --confirm)
-node plugins.mjs skill <id>    # print a plugin's how-to (if it ships one)
+node career-one.mjs plugins list          # what's installed + its trust badge
+node career-one.mjs plugins available     # bundled + community plugins we've approved
+node career-one.mjs plugins add <name>    # install an approved community plugin
+node career-one.mjs plugins enable <id>   # show the capability card (then add --confirm)
+node career-one.mjs plugins skill <id>    # print a plugin's how-to (if it ships one)
 ```
 
 Two gates must both be satisfied for a plugin to run: it must be **enabled**
-(`node plugins.mjs enable <id> --confirm`, which records your consent) **and** its
+(`node career-one.mjs plugins enable <id> --confirm`, which records your consent) **and** its
 keys must be in your `.env`. `node doctor.mjs` shows what's missing.
 
 ### Trust badges
@@ -32,12 +32,12 @@ keys must be in your `.env`. `node doctor.mjs` shows what's missing.
 | `⚠️ off-registry` | Installed commit differs from the approved one. |
 
 If a plugin's files change without a version bump, career-one **blocks it** and
-asks you to review + `node plugins.mjs trust <id>` to re-pin (tamper detection).
+asks you to review + `node career-one.mjs plugins trust <id>` to re-pin (tamper detection).
 
 ## Writing a plugin
 
 ```bash
-node plugins.mjs new my-plugin     # scaffolds plugins.local/my-plugin/
+node career-one.mjs plugins new my-plugin     # scaffolds plugins.local/my-plugin/
 ```
 
 A plugin is a directory with a `manifest.json` (validated before any code is
@@ -65,7 +65,7 @@ trust).
    adds your `plugins-registry/<id>.json` file, pinned to an exact commit. CI
    (`plugin-registry-validate`) checks the naming, manifest, min-files, license,
    egress, and a static audit before a maintainer reviews. Once merged, users can
-   `node plugins.mjs add <name>` and your plugin ships to them via the normal
+   `node career-one.mjs plugins add <name>` and your plugin ships to them via the normal
    update.
 4. **Updates** = one more registry PR bumping your entry's `sha` + `version`
    (your release workflow opens it from your own fork). Users only ever get the
@@ -84,9 +84,9 @@ We **don't take feature PRs against bundled plugins.** If you want to extend one
 1. Publish `career-one-plugin-<id>` with the **same `id`** as the bundled plugin
    (start from the bundled plugin's code — it's MIT and credits its origins).
 2. In your registry PR, set **`"supersedesBundled": true`** on your entry.
-3. Once approved + pinned, anyone who runs `node plugins.mjs add career-one-plugin-<id>`
+3. Once approved + pinned, anyone who runs `node career-one.mjs plugins add career-one-plugin-<id>`
    installs your version, and the engine gives **your maintained successor
-   precedence over the bundled reference** of the same id. `node plugins.mjs available`
+   precedence over the bundled reference** of the same id. `node career-one.mjs plugins available`
    surfaces the link: *"gmail — 🔁 maintained version: career-one-plugin-gmail"*.
 
 This keeps the core lean and **puts the integration in your hands, with your name

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { instrumentSerif } from "@/lib/fonts";
 import { cn } from "@/lib/cn";
 
 // Stat tile with the home's resting gradient corner + lit edge + shadow. The
@@ -32,17 +31,17 @@ export function StatCard({
     <Link
       href={href}
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-border bg-surface/50 bg-origin-border p-5 shadow-lg transition-colors",
+        "group relative overflow-hidden rounded-card border border-border bg-surface/50 bg-origin-border p-5 shadow-raised transition-colors",
         CORNERS[corner],
         "from-brand/10 via-transparent to-transparent",
-        "hover:border-brand/40 hover:bg-surface-hover group-hover:from-brand/20",
+        "hover:bg-surface-hover",
       )}
     >
       <Icon className="size-5 text-icon-brand" />
       <div
         className={cn(
           "mt-3 text-4xl leading-none tabular-nums",
-          featured ? instrumentSerif.className : "font-semibold",
+          featured ? "font-display font-semibold" : "font-semibold",
         )}
       >
         {value}

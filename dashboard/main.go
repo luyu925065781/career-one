@@ -191,7 +191,7 @@ func openCmd(target string) tea.Cmd {
 	}
 }
 
-// runGeneratePDF shells out to node generate-pdf.mjs in the career-one root,
+// runGeneratePDF shells out to node career-one.mjs pdf in the career-one root,
 // opens the resulting PDF on success, and reports the outcome back to the
 // pipeline screen as a PipelinePDFGeneratedMsg. Runs in a tea.Cmd goroutine,
 // so the UI stays responsive while Chromium renders.

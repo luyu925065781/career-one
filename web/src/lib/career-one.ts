@@ -1,6 +1,9 @@
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import * as yaml from "js-yaml";
 import { atomicWrite } from "@/lib/core/safe-write";
+import type { DiscoveredOffer } from "@/lib/explore";
 import { parseApplications } from "@/lib/tracker-table.mjs";
 import { parseStoryBank } from "@/lib/story-bank.mjs";
 
@@ -18,13 +21,47 @@ export function careerOneRoot(): string {
 }
 
 /**
+ * Resolve the system layer that belongs to the currently running Web build.
+ * `CAREER_ONE_ROOT` may intentionally point at an isolated user-data workspace;
+ * it must not silently downgrade the scripts executed by a newer Web process.
+ */
+export function careerOneSystemRoot(): string {
+  const env = process.env.CAREER_ONE_SYSTEM_ROOT?.trim();
+  if (env) return path.resolve(env);
+
+  const cwd = path.resolve(process.cwd());
+  const localRoot = path.basename(cwd) === "web" ? path.resolve(cwd, "..") : cwd;
+  if (
+    fs.existsSync(path.join(localRoot, "career-one.mjs")) ||
+    fs.existsSync(path.join(localRoot, "scripts", "agent", "agent-runs.mjs")) ||
+    fs.existsSync(path.join(localRoot, "agent-runs.mjs"))
+  ) return localRoot;
+  return careerOneRoot();
+}
+
+const GROUPED_SCRIPT_PATHS: Record<string, string> = {
+  "agent-inbox": "scripts/agent/agent-inbox.mjs",
+  "agent-runs": "scripts/agent/agent-runs.mjs",
+  "followup-cadence": "scripts/analysis/followup-cadence.mjs",
+  scan: "scripts/scan/scan.mjs",
+  tracker: "scripts/tracker/tracker.mjs",
+  "verify-portals": "scripts/system/verify-portals.mjs",
+};
+
+/**
  * Absolute path to a core root script (e.g. doctor, verify-portals). The `.mjs`
  * is assembled here from the bare name so the literal never appears as a direct
  * `execFile`/`spawn` argument — Next's bundler statically traces such literals
  * as module imports and fails the production build otherwise.
  */
 export function rootScript(nameNoExt: string): string {
-  return path.join(careerOneRoot(), `${nameNoExt}.mjs`);
+  const root = careerOneSystemRoot();
+  const grouped = GROUPED_SCRIPT_PATHS[nameNoExt];
+  if (grouped) {
+    const groupedPath = path.join(root, ...grouped.split("/"));
+    if (fs.existsSync(groupedPath)) return groupedPath;
+  }
+  return path.join(root, `${nameNoExt}.mjs`);
 }
 
 // Feature-detect the core's `tracker.mjs delete --num` row-delete (#1200) by probing
@@ -116,7 +153,7 @@ export type Application = {
 /**
  * Parse data/applications.md — the tracker table (source of truth).
  * The header-aware parsing lives in tracker-table.mjs, which resolves headers
- * through the SAME alias table the Node tooling uses (tracker-aliases.json,
+ * through the SAME alias table the Node tooling uses (config/tracker-aliases.json,
  * exported by tracker-parse.mjs as HEADER_ALIASES) — one shared source, no
  * web-side mirror to drift (#954, PR #1598 review).
  */
@@ -132,6 +169,49 @@ export type StoryBank = ReturnType<typeof parseStoryBank>;
 /** Read the user-owned STAR+R story bank without creating a web-only copy. */
 export function readStoryBank(): StoryBank {
   return parseStoryBank(read("interview-prep/story-bank.md") ?? "");
+}
+
+export type CareerProfileSnapshot = {
+  config: Record<string, unknown>;
+  strategyMarkdown: string;
+  sources: {
+    config: "ready" | "missing" | "invalid";
+    strategy: "ready" | "missing";
+  };
+};
+
+/**
+ * Read the two user-owned profile sources for a persistent, read-only Web view.
+ * The page deliberately receives raw user-layer data rather than a second Web
+ * profile schema, so Agent and Web can never drift into competing profiles.
+ */
+export function readCareerProfileSnapshot(): CareerProfileSnapshot {
+  const configRaw = read("config/profile.yml");
+  const strategyRaw = read("modes/_profile.md");
+  let config: Record<string, unknown> = {};
+  let configState: CareerProfileSnapshot["sources"]["config"] = configRaw == null ? "missing" : "invalid";
+
+  if (configRaw != null) {
+    try {
+      const parsed = yaml.load(configRaw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        config = parsed as Record<string, unknown>;
+        configState = "ready";
+      }
+    } catch {
+      // Keep the view read-only and surface an invalid state instead of hiding
+      // the problem or attempting to rewrite a user-owned YAML file.
+    }
+  }
+
+  return {
+    config,
+    strategyMarkdown: strategyRaw ?? "",
+    sources: {
+      config: configState,
+      strategy: strategyRaw == null ? "missing" : "ready",
+    },
+  };
 }
 
 /**
@@ -159,6 +239,7 @@ export function doctorState(): {
   missing: string[];
   hasCv: boolean;
   hasData: boolean;
+  profileReady: boolean;
 } {
   const has = (rel: string) => {
     try {
@@ -176,9 +257,12 @@ export function doctorState(): {
   const missing = prereqs.filter(([rel]) => !has(rel)).map(([, label]) => label);
   const hasCv = has("cv.md");
   const hasData = readApplications().length > 0 || readInbox().some((j) => !j.done);
+  const profileReady = !missing.some((file) =>
+    ["config/profile.yml", "modes/_profile.md"].includes(file),
+  );
   const onboardingNeeded = missing.length > 0;
   const phase: LifecyclePhase = !hasCv && !hasData ? "first-run" : onboardingNeeded ? "in-between" : "established";
-  return { phase, onboardingNeeded, missing, hasCv, hasData };
+  return { phase, onboardingNeeded, missing, hasCv, hasData, profileReady };
 }
 
 export type PipelineSummary = {
@@ -199,6 +283,145 @@ export function pipelineSummary(): PipelineSummary {
     inbox: readInbox().map((j) => ({ ...j, postedAt: scanDates.get(j.url) })),
     applications: readApplications(),
   };
+}
+
+export type FollowUpEntry = {
+  num?: number;
+  applicationNums?: number[];
+  company: string;
+  role?: string;
+  status?: string;
+  urgency?: string;
+  appliedDate?: string;
+  notes?: string;
+};
+
+export type FollowupSnapshot = {
+  available: boolean;
+  metadata: {
+    overdue?: number;
+    urgent?: number;
+    actionable?: number;
+  } | null;
+  entries: FollowUpEntry[];
+};
+
+const EMPTY_FOLLOWUP_SNAPSHOT: FollowupSnapshot = {
+  available: false,
+  metadata: null,
+  entries: [],
+};
+
+/**
+ * Read the demand loop through the core cadence calculator. This shared server
+ * function powers both the initial page render and the API, so hydration can
+ * never replace one queue snapshot with another.
+ */
+export async function readFollowupSnapshot(): Promise<FollowupSnapshot> {
+  const script = rootScript("followup-cadence");
+  if (!fs.existsSync(script)) return EMPTY_FOLLOWUP_SNAPSHOT;
+
+  const stdout = await new Promise<string>((resolve) => {
+    const child = spawn(process.execPath, [script, "--json"], {
+      cwd: careerOneRoot(),
+      env: process.env,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    let output = "";
+    let settled = false;
+    let killer: ReturnType<typeof setTimeout> | undefined;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (killer) clearTimeout(killer);
+      resolve(output);
+    };
+    child.stdout.on("data", (chunk: Buffer) => {
+      output += chunk.toString();
+    });
+    child.on("error", finish);
+    child.on("close", finish);
+    killer = setTimeout(() => {
+      child.kill("SIGTERM");
+      finish();
+    }, 12_000);
+  });
+
+  try {
+    const start = stdout.indexOf("{");
+    if (start < 0) return EMPTY_FOLLOWUP_SNAPSHOT;
+    const parsed = JSON.parse(stdout.slice(start));
+    const entries: FollowUpEntry[] = Array.isArray(parsed.entries) ? parsed.entries : [];
+    const due = entries
+      .filter((entry) => /overdue|urgent/i.test(String(entry.urgency)));
+    return {
+      available: true,
+      metadata: parsed.metadata ?? null,
+      entries: due.slice(0, 6),
+    };
+  } catch {
+    return EMPTY_FOLLOWUP_SNAPSHOT;
+  }
+}
+
+const normalizeCompany = (value: string) =>
+  value.toLocaleLowerCase("en-US").replace(/[^a-z0-9]+/g, " ").trim();
+
+/**
+ * Read the supply loop from scan history without running a scan. This is kept
+ * beside the other server-side career-one readers so the page and API use the
+ * exact same filtering rules.
+ */
+export function readFreshOffers(days = 7): DiscoveredOffer[] {
+  const safeDays = Math.min(30, Math.max(1, Number(days) || 7));
+  const cutoff = Date.now() - safeDays * 86_400_000;
+  const history = read("data/scan-history.tsv");
+  if (!history) return [];
+
+  const rows = history.split("\n");
+  const evaluated = new Set(
+    readApplications().map((application) => normalizeCompany(application.company)).filter(Boolean),
+  );
+  const toOffer = (columns: string[]): DiscoveredOffer | null => {
+    const [url, firstSeen, portal, title, company, status, location] = columns;
+    if (!url || !/^https?:\/\//i.test(url)) return null;
+    if (status && /skipped|expired/i.test(status)) return null;
+    if (company && evaluated.has(normalizeCompany(company))) return null;
+    return {
+      url,
+      company: (company || "").trim(),
+      title: (title || "").trim(),
+      location: (location || "").trim(),
+      postedAt: /^\d{4}-\d{2}-\d{2}$/.test(firstSeen || "") ? firstSeen : "",
+      ats: (portal || "").replace(/-full$/, "").trim() || "other",
+      source: "whats-new",
+    };
+  };
+
+  const seen = new Set<string>();
+  const offers: DiscoveredOffer[] = [];
+  let anyDated = false;
+  for (let index = rows.length - 1; index >= 1 && offers.length < 24; index--) {
+    const columns = rows[index].split("\t");
+    const timestamp = Date.parse(columns[1] || "");
+    if (Number.isFinite(timestamp)) anyDated = true;
+    if (!Number.isFinite(timestamp) || timestamp < cutoff) continue;
+    const offer = toOffer(columns);
+    if (!offer || seen.has(offer.url)) continue;
+    seen.add(offer.url);
+    offers.push(offer);
+  }
+
+  if (offers.length === 0 && !anyDated) {
+    for (let index = rows.length - 1; index >= 1 && offers.length < 12; index--) {
+      const offer = toOffer(rows[index].split("\t"));
+      if (!offer || seen.has(offer.url)) continue;
+      seen.add(offer.url);
+      offers.push(offer);
+    }
+  }
+
+  return offers;
 }
 
 export type ReportData = { content: string; file: string };

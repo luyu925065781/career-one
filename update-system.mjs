@@ -30,14 +30,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
 
 const CANONICAL_REPO = 'https://github.com/luyu925065781/career-one.git';
-const RAW_VERSION_URL = 'https://raw.githubusercontent.com/luyu925065781/career-one/main/VERSION';
-const RELEASES_API = 'https://api.github.com/repos/luyu925065781/career-one/releases/latest';
+const RAW_VERSION_URL = (ref) => `https://raw.githubusercontent.com/luyu925065781/career-one/${encodeURIComponent(ref)}/VERSION`;
+const RELEASES_LATEST_API = 'https://api.github.com/repos/luyu925065781/career-one/releases/latest';
+const RELEASES_API = 'https://api.github.com/repos/luyu925065781/career-one/releases?per_page=30';
 
 // Matches a semver, with or without a leading `v` and an optional
 // Release Please component prefix (e.g. `career-one-v1.9.0` → `1.9.0`).
 // Anchoring on `(?:^|-)` lets the releases-API fallback parse our tags,
 // which Release Please always prefixes with the component name.
-export const SEMVER_RE = /(?:^|-)v?(\d+\.\d+\.\d+)$/i;
+export const SEMVER_RE = /(?:^|-)v?(\d+\.\d+\.\d+(?:-(?:dev|next|alpha|beta|rc)(?:\.[0-9A-Za-z-]+)*)?)$/i;
 // 120s: local git commands are normally instant, but a cloud-evicted working
 // tree (iCloud "optimize storage", OneDrive dehydration) can stall a plain
 // `git status` for a minute of pure I/O wait re-materializing files (#1393).
@@ -112,79 +113,28 @@ const SYSTEM_PATHS = [
   'CODEX.md',
   'OPENCODE.md',
   'AGENTS.md',
+  'DESIGN.md',
   'GEMINI.md',
   'KIMI.md',
-  'build-dashboard.mjs',
-  'generate-pdf.mjs',
-  'generate-latex.mjs',
-  'archive-posting.mjs',
-  'application-answers.mjs',
-  'generate-cover-letter.mjs',
-  'merge-tracker.mjs',
-  'tracker-links.mjs',
-  'tracker.mjs',
-  'find.mjs',
-  'verify-pipeline.mjs',
-  'reconcile-pipeline.mjs',
-  'dedup-tracker.mjs',
-  'add-entry.mjs',
-  'role-matcher.mjs',
-  'tracker-utils.mjs',
-  'tracker-parse.mjs',
-  'tracker-aliases.json',
-  'set-status.mjs',
-  'set-status-tests.mjs',
-  'normalize-statuses.mjs',
-  'cv-sync-check.mjs',
+  'career-one.mjs',
+  'scripts/',
+  'start-web.mjs',
+  '启动择程AI.command',
+  'web/src/',
+  'web/public/',
+  'web/package.json',
+  'web/package-lock.json',
+  'web/release.config.json',
+  'web/next.config.mjs',
+  'web/postcss.config.mjs',
+  'web/tsconfig.json',
+  'config/tracker-aliases.json',
   'update-system.mjs',
-  'reserve-report-num.mjs',
-  'scan.mjs',
-  'market-cn.mjs',
-  'classify-tier.mjs',
-  'scan-ats-full.mjs',
-  'match-star.mjs',
-  'prepare-application.mjs',
   'providers/',
   'seeds/',
   'tests/',
   'doctor.mjs',
-  'check-liveness.mjs',
-  'liveness-core.mjs',
-  'liveness-api.mjs',
-  'liveness-browser.mjs',
-  'browser-extract.mjs',
-  'analyze-patterns.mjs',
-  'stats.mjs',
-  'detect-reposts.mjs',
-  'fingerprint-core.mjs',
-  'process-quality.mjs',
-  'process-quality.test.mjs',
-  'salary-gap.mjs',
-  'followup-cadence.mjs',
-  'followup-cadence.test.mjs',
-  'invite-match.mjs',
-  'invite-match.test.mjs',
-  'agent-inbox.mjs',
-  'followup-seed.mjs',
-  'followup-seed-tests.mjs',
-  'gemini-eval.mjs',
-  'ollama-eval.mjs',
-  'openai-eval.mjs',
-  'openrouter-runner.mjs',
   'test-all.mjs',
-  'career-one-migration-tests.mjs',
-  'detect-reposts.test.mjs',
-  'test-salary-filter.mjs',
-  'test-trust-validator.mjs',
-  'tracker-columns-tests.mjs',
-  'agent-inbox-tests.mjs',
-  'validate-portals.mjs',
-  'verify-portals.mjs',
-  'updater-migration-tests.mjs',
-  'validate-system-paths-coverage.mjs',
-  'reply-matcher.mjs',
-  'reply-matcher.test.mjs',
-  'reply-watch.mjs',
   'batch/batch-prompt.md',
   'batch/batch-runner.sh',
   'batch/README.md',
@@ -209,6 +159,7 @@ const SYSTEM_PATHS = [
   '.trae/skills/',
   'docs/',
   'writing-samples/README.md',
+  'release.config.json',
   'VERSION',
   'DATA_CONTRACT.md',
   'CONTRIBUTING.md',
@@ -218,13 +169,15 @@ const SYSTEM_PATHS = [
   'CHANGELOG.md',
   'CODE_OF_CONDUCT.md',
   'LEGAL_DISCLAIMER.md',
+  'PRIVACY.md',
+  'TERMS.md',
   'SECURITY.md',
   'LICENSE',
   'CITATION.cff',
   '.editorconfig',
   '.github/',
   'package.json',
-  'build-cv-latex.mjs',
+  'package-lock.json',
   'scaffolder/',
   'Dockerfile',
   'docker-compose.yml',
@@ -232,17 +185,16 @@ const SYSTEM_PATHS = [
   'career-one-docker',
   'DOCKER.md',
   'plugins/',
-  'plugins.mjs',
   'plugins-registry/',
   'plugins-registry.json',
-  'plugin-install.mjs',
-  'plugin-audit.mjs',
-  'validate-plugin-registry.mjs',
   'config/plugins.example.yml',
 ];
 
 const BOOTSTRAP_PATHS = [
   '.agents/',
+  'career-one.mjs',
+  'scripts/',
+  'tests/',
   'distribution/',
   'packages/codex-plugin/',
   '.opencode/skills/',
@@ -251,27 +203,91 @@ const BOOTSTRAP_PATHS = [
   '.kimi/skills/',
   '.trae/skills/',
   'providers/',
-  'liveness-browser.mjs',
-  'tracker-links.mjs',
-  'role-matcher.mjs',
-  'tracker-utils.mjs',
-  'tracker-parse.mjs',
-  'tracker-aliases.json',
+  'config/tracker-aliases.json',
   'scaffolder/',
-  'reserve-report-num.mjs',
-  'updater-migration-tests.mjs',
-  'validate-portals.mjs',
-  'tracker-columns-tests.mjs',
   'plugins/',
-  'plugins.mjs',
   'plugins-registry/',
   'plugins-registry.json',
-  'plugin-install.mjs',
-  'plugin-audit.mjs',
-  'validate-plugin-registry.mjs',
   'config/plugins.example.yml',
-  'agent-inbox.mjs',
+  'release.config.json',
+];
+
+// Explicitly system-owned legacy files removed by the grouped scripts/tests
+// layout. The updater may delete only these tracked paths, and only when the
+// fetched target no longer contains them.
+const OBSOLETE_SYSTEM_PATHS = [
+  'add-entry.mjs',
   'agent-inbox-tests.mjs',
+  'agent-inbox.mjs',
+  'agent-runs.mjs',
+  'analyze-patterns.mjs',
+  'application-answers.mjs',
+  'archive-posting.mjs',
+  'browser-extract.mjs',
+  'build-cv-latex.mjs',
+  'build-dashboard.mjs',
+  'career-one-migration-tests.mjs',
+  'check-liveness.mjs',
+  'classify-tier.mjs',
+  'cv-sync-check.mjs',
+  'dedup-tracker.mjs',
+  'detect-reposts.mjs',
+  'detect-reposts.test.mjs',
+  'find.mjs',
+  'fingerprint-core.mjs',
+  'followup-cadence.mjs',
+  'followup-cadence.test.mjs',
+  'followup-seed-tests.mjs',
+  'followup-seed.mjs',
+  'gemini-eval.mjs',
+  'generate-cover-letter.mjs',
+  'generate-latex.mjs',
+  'generate-pdf.mjs',
+  'invite-match.mjs',
+  'invite-match.test.mjs',
+  'liveness-api.mjs',
+  'liveness-browser.mjs',
+  'liveness-core.mjs',
+  'market-cn.mjs',
+  'match-star.mjs',
+  'merge-tracker.mjs',
+  'normalize-statuses.mjs',
+  'ollama-eval.mjs',
+  'openai-eval.mjs',
+  'openrouter-runner.mjs',
+  'plugin-audit.mjs',
+  'plugin-install.mjs',
+  'plugins.mjs',
+  'prepare-application.mjs',
+  'process-quality.mjs',
+  'process-quality.test.mjs',
+  'reconcile-pipeline.mjs',
+  'release.mjs',
+  'reply-matcher.mjs',
+  'reply-matcher.test.mjs',
+  'reply-watch.mjs',
+  'reserve-report-num.mjs',
+  'role-matcher.mjs',
+  'salary-gap.mjs',
+  'scan-ats-full.mjs',
+  'scan.mjs',
+  'set-status-tests.mjs',
+  'set-status.mjs',
+  'stats.mjs',
+  'test-salary-filter.mjs',
+  'test-trust-validator.mjs',
+  'tracker-columns-tests.mjs',
+  'tracker-aliases.json',
+  'tracker-links.mjs',
+  'tracker-parse.mjs',
+  'tracker-utils.mjs',
+  'tracker.mjs',
+  'updater-migration-tests.mjs',
+  'validate-plugin-registry.mjs',
+  'validate-portals.mjs',
+  'validate-system-paths-coverage.mjs',
+  'verify-pipeline.mjs',
+  'verify-portals.mjs',
 ];
 
 // User layer paths — NEVER touch these (safety check)
@@ -307,14 +323,52 @@ function localVersion() {
   return existsSync(vPath) ? parseVersionFile(readFileSync(vPath, 'utf-8')) : '0.0.0';
 }
 
-function compareVersions(a, b) {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
+function parseSemver(value) {
+  const match = String(value || '').match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/);
+  if (!match) return null;
+  return {
+    core: match.slice(1, 4).map(Number),
+    prerelease: match[4] ? match[4].split('.') : [],
+  };
+}
+
+export function compareVersions(a, b) {
+  const pa = parseSemver(a);
+  const pb = parseSemver(b);
+  if (!pa || !pb) throw new Error(`Invalid semver comparison: ${a} vs ${b}`);
   for (let i = 0; i < 3; i++) {
-    if ((pa[i] || 0) < (pb[i] || 0)) return -1;
-    if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+    if (pa.core[i] < pb.core[i]) return -1;
+    if (pa.core[i] > pb.core[i]) return 1;
+  }
+  if (pa.prerelease.length === 0 && pb.prerelease.length === 0) return 0;
+  if (pa.prerelease.length === 0) return 1;
+  if (pb.prerelease.length === 0) return -1;
+  const length = Math.max(pa.prerelease.length, pb.prerelease.length);
+  for (let i = 0; i < length; i++) {
+    const left = pa.prerelease[i];
+    const right = pb.prerelease[i];
+    if (left === undefined) return -1;
+    if (right === undefined) return 1;
+    if (left === right) continue;
+    const leftNumeric = /^\d+$/.test(left);
+    const rightNumeric = /^\d+$/.test(right);
+    if (leftNumeric && rightNumeric) return Number(left) < Number(right) ? -1 : 1;
+    if (leftNumeric !== rightNumeric) return leftNumeric ? -1 : 1;
+    return left < right ? -1 : 1;
   }
   return 0;
+}
+
+function configuredReleaseChannel() {
+  const override = process.env.CAREER_ONE_UPDATE_CHANNEL;
+  if (['stable', 'beta', 'development'].includes(override)) return override;
+  try {
+    const config = JSON.parse(readFileSync(join(ROOT, 'release.config.json'), 'utf8'));
+    if (['stable', 'beta', 'development'].includes(config.channel)) return config.channel;
+  } catch {
+    // Older installations predate release.config.json and are stable by default.
+  }
+  return 'stable';
 }
 
 function updateBackupBranchName(version, date = new Date()) {
@@ -496,6 +550,30 @@ function repoPath(root, path) {
   return join(root, ...path.split('/'));
 }
 
+function pruneObsoleteSystemPaths(ref, updated) {
+  const remoteFiles = new Set(
+    git('ls-tree', '-r', '--name-only', ref)
+      .split('\n')
+      .filter(Boolean)
+      .map((path) => path.replace(/\\/g, '/')),
+  );
+
+  for (const legacyPath of OBSOLETE_SYSTEM_PATHS) {
+    if (remoteFiles.has(legacyPath)) continue;
+    const trackedFiles = git('ls-files', '--', legacyPath).split('\n').filter(Boolean);
+    for (const file of trackedFiles) {
+      const absolute = repoPath(ROOT, file);
+      try {
+        if (existsSync(absolute)) unlinkSync(absolute);
+        if (!updated.includes(file)) updated.push(file);
+        console.log(`Pruned obsolete system file: ${file}`);
+      } catch (error) {
+        console.error(`Failed to prune obsolete system file ${file}: ${error.message}`);
+      }
+    }
+  }
+}
+
 export function prepareMaterializedSkillEntrypointsForStage(paths, root = ROOT) {
   const prepared = [];
   for (const path of paths) {
@@ -591,6 +669,61 @@ function curlGet(url, extraArgs = []) {
   });
 }
 
+function parseRemoteVersion(raw) {
+  const token = parseVersionFile(String(raw || ''));
+  return token.match(SEMVER_RE)?.[1] || '';
+}
+
+function releaseTarget(release, acceptedPrerelease) {
+  if (!release || release.draft || Boolean(release.prerelease) !== acceptedPrerelease) return null;
+  const ref = String(release.tag_name || '').trim();
+  const version = ref.match(SEMVER_RE)?.[1] || '';
+  if (!version) return null;
+  if (acceptedPrerelease && !/-(?:alpha|beta|rc)(?:\.|$)/i.test(version)) return null;
+  if (!acceptedPrerelease && version.includes('-')) return null;
+  return {
+    version,
+    ref,
+    changelog: String(release.body || ''),
+  };
+}
+
+async function resolveUpdateTarget(channel = configuredReleaseChannel()) {
+  if (channel === 'development') {
+    const raw = await curlGet(RAW_VERSION_URL('develop'));
+    if (raw === null) return { status: 'offline', channel };
+    const version = parseRemoteVersion(raw);
+    if (!version) return { status: 'no-remote-version', channel };
+    return { status: 'ok', channel, version, ref: 'develop', changelog: '' };
+  }
+
+  const url = channel === 'beta' ? RELEASES_API : RELEASES_LATEST_API;
+  const raw = await curlGet(url, [
+    '--header', 'Accept: application/vnd.github.v3+json',
+    '--header', 'User-Agent: career-one-update-checker',
+  ]);
+  if (raw === null) return { status: 'offline', channel };
+
+  try {
+    const payload = JSON.parse(raw);
+    if (channel === 'stable') {
+      const target = releaseTarget(payload, false);
+      return target
+        ? { status: 'ok', channel, ...target }
+        : { status: 'no-remote-version', channel };
+    }
+    const targets = (Array.isArray(payload) ? payload : [])
+      .map((release) => releaseTarget(release, true))
+      .filter(Boolean)
+      .sort((a, b) => compareVersions(b.version, a.version));
+    return targets[0]
+      ? { status: 'ok', channel, ...targets[0] }
+      : { status: 'no-remote-version', channel };
+  } catch {
+    return { status: 'no-remote-version', channel };
+  }
+}
+
 async function check() {
   // Respect dismiss flag
   if (existsSync(join(ROOT, '.update-dismissed'))) {
@@ -599,73 +732,30 @@ async function check() {
   }
 
   const local = localVersion();
-  let remote = '';
-  let releaseVersion = '';
-  let changelog = '';
-
-  // Use curl instead of fetch() so the check works inside the Claude Code
-  // sandbox (see curlGet() above for rationale).  Two sources are tried;
-  // both failing is the only true-offline signal.
-  const [rawVersion, releaseRaw] = await Promise.all([
-    curlGet(RAW_VERSION_URL),
-    curlGet(RELEASES_API, [
-      '--header', 'Accept: application/vnd.github.v3+json',
-      '--header', 'User-Agent: career-one-update-checker',
-    ]),
-  ]);
-
-  if (rawVersion !== null) {
-    try {
-      const raw = parseVersionFile(rawVersion);
-      const match = raw.match(SEMVER_RE);
-      remote = match ? match[1] : '';
-    } catch {
-      // Unparseable body; treat as no VERSION source
-    }
-  }
-
-  if (releaseRaw !== null) {
-    try {
-      const release = JSON.parse(releaseRaw);
-      changelog = release.body || '';
-      const rawTag = String(release.tag_name || '').trim();
-      const match = rawTag.match(SEMVER_RE);
-      releaseVersion = match ? match[1] : '';
-    } catch {
-      // Unparseable body; treat as no release source
-    }
-  }
-
-  if (!remote && !releaseVersion) {
-    // Both curl calls returned null → genuine network failure.
-    // If one returned non-null but unparseable, remote/releaseVersion are
-    // empty strings, which still reaches the offline branch — that's the
-    // right conservative behaviour (no version = can't determine status).
-    const bothNetworkFailed = rawVersion === null && releaseRaw === null;
-    const status = bothNetworkFailed ? 'offline' : 'no-remote-version';
-    console.log(JSON.stringify({ status, local }));
+  const target = await resolveUpdateTarget();
+  if (target.status !== 'ok') {
+    console.log(JSON.stringify({ status: target.status, local, channel: target.channel }));
     return;
   }
 
-  // Use the higher version between VERSION file and GitHub Release
-  // (handles cases where VERSION file is not bumped after a release,
-  // or the raw host is unreachable but the API is).
-  if (!remote) {
-    remote = releaseVersion;
-  } else if (releaseVersion && compareVersions(releaseVersion, remote) > 0) {
-    remote = releaseVersion;
-  }
-
-  if (compareVersions(local, remote) >= 0) {
-    console.log(JSON.stringify({ status: 'up-to-date', local, remote }));
+  if (compareVersions(local, target.version) >= 0) {
+    console.log(JSON.stringify({
+      status: 'up-to-date',
+      local,
+      remote: target.version,
+      channel: target.channel,
+      ref: target.ref,
+    }));
     return;
   }
 
   console.log(JSON.stringify({
     status: 'update-available',
     local,
-    remote,
-    changelog: changelog.slice(0, 500),
+    remote: target.version,
+    channel: target.channel,
+    ref: target.ref,
+    changelog: target.changelog.slice(0, 500),
   }));
 }
 
@@ -689,6 +779,14 @@ async function apply() {
   }
 
   try {
+    const forcedRef = process.env.CAREER_ONE_UPDATE_REF;
+    const target = forcedRef
+      ? { status: 'ok', ref: forcedRef, channel: configuredReleaseChannel() }
+      : await resolveUpdateTarget();
+    if (target.status !== 'ok' || !target.ref) {
+      throw new Error(`No ${target.channel || configuredReleaseChannel()} update target is available.`);
+    }
+
     // 1. Backup: create branch + stash uncommitted work (#915 bug 3).
     // The branch only captures committed state; any uncommitted edits are
     // invisible to `git branch` and can be lost if the update aborts.
@@ -710,8 +808,8 @@ async function apply() {
     }
 
     // 2. Fetch from canonical repo
-    console.log('Fetching latest from upstream...');
-    git('fetch', CANONICAL_REPO, 'main');
+    console.log(`Fetching ${target.channel} update from upstream (${target.ref})...`);
+    git('fetch', CANONICAL_REPO, target.ref);
 
     if (!isReexec) {
       const timeout = reexecTimeoutMs();
@@ -730,6 +828,7 @@ async function apply() {
             ...process.env,
             CAREER_ONE_UPDATE_REEXEC: '1',
             CAREER_ONE_UPDATE_BACKUP_BRANCH: backupBranch,
+            CAREER_ONE_UPDATE_REF: target.ref,
           },
         });
         return;
@@ -767,6 +866,8 @@ async function apply() {
         // File may not exist in remote (new additions), skip
       }
     }
+
+    pruneObsoleteSystemPaths('FETCH_HEAD', updated);
 
     // tests/ is auto-discovered and EXECUTED (tests/**/*.test.mjs), so stale
     // files left behind by upstream renames would run twice or crash the
@@ -893,6 +994,13 @@ async function apply() {
       execSync('npm install --silent', { cwd: ROOT, timeout: NPM_INSTALL_TIMEOUT_MS });
     } catch {
       console.log('npm install skipped (may need manual run)');
+    }
+    try {
+      if (existsSync(join(ROOT, 'web', 'package.json'))) {
+        execSync('npm install --silent', { cwd: join(ROOT, 'web'), timeout: NPM_INSTALL_TIMEOUT_MS });
+      }
+    } catch {
+      console.log('web npm install skipped (run manually: cd web && npm install)');
     }
 
     // 5b. Ensure Playwright browser binary is up to date after npm install

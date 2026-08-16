@@ -22,13 +22,13 @@ Local-first, human-in-the-loop: **nothing here auto-updates without user confirm
 Run the reply-watch command:
 
 ```bash
-node reply-watch.mjs
+node career-one.mjs reply-watch
 ```
 
 Or pass a custom candidates file path:
 
 ```bash
-node reply-watch.mjs path/to/candidates.json
+node career-one.mjs reply-watch path/to/candidates.json
 ```
 
 ## Step 1 — Review the Digest

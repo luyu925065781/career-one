@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Check, Clock, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { CompanyLogo } from "@/components/company-logo";
+import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { resolveCompanyIdentity } from "@/lib/company";
 
 export type FollowUp = { num?: number; company: string; role?: string; status?: string; appliedDate?: string; notes?: string };
 
@@ -12,6 +15,7 @@ export type FollowUp = { num?: number; company: string; role?: string; status?: 
 // a client dismiss. The cadence is the core's — we just surface + record.
 export function FollowUpCard({ followup, onLogged }: { followup: FollowUp; onLogged?: () => void }) {
   const [state, setState] = useState<"idle" | "logging" | "done" | "snoozed">("idle");
+  const companyIdentity = resolveCompanyIdentity(followup.company);
   if (state === "snoozed" || state === "done") return null;
 
   const log = async () => {
@@ -20,7 +24,7 @@ export function FollowUpCard({ followup, onLogged }: { followup: FollowUp; onLog
       await fetch("/api/followups/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ num: followup.num, company: followup.company, note: "Followed up" }),
+        body: JSON.stringify({ num: followup.num, company: followup.company, note: "已跟进" }),
       });
     } catch {
       /* best-effort */
@@ -30,12 +34,12 @@ export function FollowUpCard({ followup, onLogged }: { followup: FollowUp; onLog
   };
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-surface/40 px-3.5 py-3 transition hover:border-brand/30">
+    <Card compact className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
       <div className="flex min-w-0 flex-[1_1_55%] items-center gap-3">
         <CompanyLogo name={followup.company} size={22} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm">
-            <span className="font-medium text-foreground">{followup.company}</span>
+            <span className="font-medium text-foreground">{companyIdentity.label}</span>
             {followup.role && <span className="text-muted"> · {followup.role}</span>}
           </p>
           <p className="flex items-center gap-1 text-[11px] text-faint">
@@ -48,12 +52,12 @@ export function FollowUpCard({ followup, onLogged }: { followup: FollowUp; onLog
           type="button"
           disabled={state === "logging"}
           onClick={log}
-          className={cn("inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-outline-border bg-outline-bg px-2.5 py-1.5 text-xs font-medium text-outline-text transition hover:border-outline-border-hover hover:bg-outline-bg-hover max-sm:min-h-[44px]")}
+          className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "whitespace-nowrap")}
         >
           {state === "logging" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} <span className="hidden sm:inline">标记已跟进</span><span className="sm:hidden">已跟进</span>
         </button>
         {followup.num != null && (
-          <a href={`/pipeline/${followup.num}`} title="打开报告" className="inline-flex shrink-0 items-center justify-center rounded p-1 text-faint transition hover:text-brand max-sm:min-h-[44px] max-sm:min-w-[44px]">
+          <a href={`/pipeline/${followup.num}?view=report`} title="打开报告" className="inline-flex shrink-0 items-center justify-center rounded p-1 text-faint transition hover:text-brand max-sm:min-h-[44px] max-sm:min-w-[44px]">
             <FileText className="size-4" />
           </a>
         )}
@@ -61,6 +65,6 @@ export function FollowUpCard({ followup, onLogged }: { followup: FollowUp; onLog
           稍后提醒
         </button>
       </div>
-    </div>
+    </Card>
   );
 }

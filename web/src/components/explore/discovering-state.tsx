@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { ApplyBackdrop } from "@/components/apply/apply-backdrop";
-import { instrumentSerif } from "@/lib/fonts";
 import { ATS_LABEL, ATS_SOURCES, type AtsSource } from "@/lib/explore";
 import { useExplore, type SourceState } from "./explore-provider";
 
@@ -85,7 +84,7 @@ export function DiscoveringState() {
         </div>
 
         <div>
-          <div className={`${instrumentSerif.className} co-disc__counter text-foreground`}>{shown}</div>
+          <div className={`font-display co-disc__counter text-foreground`}>{shown}</div>
           <p className="mt-1 text-sm text-muted">
             {phase === "revealing" ? "已发现新岗位 · 免费" : matchCount > 0 ? "持续发现新岗位…" : "正在检查公开招聘官网…"}
           </p>

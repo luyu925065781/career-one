@@ -1,9 +1,12 @@
 @import "tailwindcss";
+@import "yet-another-react-lightbox/styles.css";
+@import "yet-another-react-lightbox/plugins/counter.css";
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Design tokens — warm yellow/orange brand system derived from the supplied
-   Digital Supermind design system, with the existing neutral surfaces intact.
+   择程AI design tokens. Fixed primitives live in @theme; runtime semantic
+   roles live in :root/.dark and are exposed to Tailwind through @theme inline.
+   Components consume these roles instead of palette color or shadow utilities.
    ────────────────────────────────────────────────────────────────────────── */
 @theme {
   --color-brand: #facc15;
@@ -12,10 +15,15 @@
   --color-brand-soft: rgb(250 204 21 / 0.12);
   --color-brand-secondary: #fde047;
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
-  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+  --font-serif: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  --radius-button: 9999px;
+  --radius-control: 0.5rem;
+  --radius-card: 1rem;
+  --radius-panel: 1.5rem;
 }
 
 /* Semantic surfaces reference runtime vars so they swap with the theme class. */
@@ -29,6 +37,18 @@
   --color-faint: var(--faint);
   --color-landing: var(--landing);
   --color-brand-text: var(--brand-text);
+  --color-accent-yellow: var(--accent-yellow);
+  --color-accent-orange: var(--accent-orange);
+  --color-accent-red: var(--accent-red);
+  --color-accent-green: var(--accent-green);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-purple: var(--accent-purple);
+  --color-metric-brand: var(--metric-brand);
+  --color-metric-warning: var(--metric-warning);
+  --color-metric-info: var(--metric-info);
+  --color-metric-success: var(--metric-success);
+  --color-metric-danger: var(--metric-danger);
+  --color-metric-purple: var(--metric-purple);
   --color-icon-default: var(--icon-default);
   --color-icon-muted: var(--icon-muted);
   --color-icon-brand: var(--icon-brand);
@@ -37,14 +57,38 @@
   --color-icon-danger: var(--icon-danger);
   --color-icon-info: var(--icon-info);
   --color-icon-on-brand: var(--icon-on-brand);
+  --color-action-secondary: var(--action-secondary);
+  --color-action-secondary-hover: var(--action-secondary-hover);
+  --color-action-secondary-active: var(--action-secondary-active);
+  --color-action-secondary-foreground: var(--action-secondary-foreground);
   --color-outline-bg: var(--outline-bg);
   --color-outline-bg-hover: var(--outline-bg-hover);
   --color-outline-border: var(--outline-border);
   --color-outline-border-hover: var(--outline-border-hover);
   --color-outline-text: var(--outline-text);
+  --color-success: var(--state-success);
+  --color-success-solid: var(--state-success-solid);
+  --color-success-surface: var(--state-success-surface);
+  --color-success-border: var(--state-success-border);
+  --color-warning: var(--state-warning);
+  --color-warning-solid: var(--state-warning-solid);
+  --color-warning-surface: var(--state-warning-surface);
+  --color-warning-border: var(--state-warning-border);
+  --color-danger: var(--state-danger);
+  --color-danger-solid: var(--state-danger-solid);
+  --color-danger-surface: var(--state-danger-surface);
+  --color-danger-border: var(--state-danger-border);
+  --color-info: var(--state-info);
+  --color-info-solid: var(--state-info-solid);
+  --color-info-surface: var(--state-info-surface);
+  --color-info-border: var(--state-info-border);
+  --shadow-raised: var(--elevation-raised);
+  --shadow-floating: var(--elevation-floating);
+  --shadow-overlay: var(--elevation-overlay);
 }
 
 :root {
+  --layout-page-max: 72rem;
   --gradient-primary: linear-gradient(135deg, #facc15 0%, #fde047 100%);
   --gradient-primary-hover: linear-gradient(135deg, #fbbf24 0%, #facc15 100%);
   --gradient-primary-active: linear-gradient(135deg, #d97706 0%, #eab308 100%);
@@ -60,6 +104,22 @@
   --landing: #111827;
   --brand-text: #111827;
   --brand-accent-text: #ca8a04;
+  --accent-yellow: #facc15;
+  --accent-orange: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-green: #22c55e;
+  --accent-blue: #3b82f6;
+  --accent-purple: #4d44d6;
+  --metric-brand: #b48300;
+  --metric-warning: #ea580c;
+  --metric-info: #2563eb;
+  --metric-success: #059669;
+  --metric-danger: #e11d48;
+  --metric-purple: #4d44d6;
+  --action-secondary: #f3f4f6;
+  --action-secondary-hover: #e5e7eb;
+  --action-secondary-active: #d1d5db;
+  --action-secondary-foreground: #111827;
   --icon-default: #374151;
   --icon-muted: #6b7280;
   --icon-brand: #ca8a04;
@@ -68,11 +128,30 @@
   --icon-danger: #b91c1c;
   --icon-info: #1d4ed8;
   --icon-on-brand: #111827;
-  --outline-bg: rgb(17 24 39 / 0.05);
-  --outline-bg-hover: rgb(17 24 39 / 0.11);
+  --outline-bg: rgb(17 24 39 / 0.025);
+  --outline-bg-hover: rgb(17 24 39 / 0.05);
   --outline-border: rgb(17 24 39 / 0.16);
-  --outline-border-hover: rgb(17 24 39 / 0.32);
+  --outline-border-hover: rgb(17 24 39 / 0.22);
   --outline-text: #111827;
+  --state-success: #15803d;
+  --state-success-solid: var(--accent-green);
+  --state-success-surface: rgb(34 197 94 / 0.12);
+  --state-success-border: rgb(34 197 94 / 0.3);
+  --state-warning: #b45309;
+  --state-warning-solid: var(--accent-orange);
+  --state-warning-surface: rgb(245 158 11 / 0.12);
+  --state-warning-border: rgb(245 158 11 / 0.3);
+  --state-danger: #b91c1c;
+  --state-danger-solid: var(--accent-red);
+  --state-danger-surface: rgb(239 68 68 / 0.1);
+  --state-danger-border: rgb(239 68 68 / 0.28);
+  --state-info: #1d4ed8;
+  --state-info-solid: var(--accent-blue);
+  --state-info-surface: rgb(59 130 246 / 0.1);
+  --state-info-border: rgb(59 130 246 / 0.28);
+  --elevation-raised: 0 1px 2px rgb(17 24 39 / 0.05), 0 4px 12px rgb(17 24 39 / 0.05);
+  --elevation-floating: 0 8px 24px rgb(17 24 39 / 0.1);
+  --elevation-overlay: 0 20px 48px rgb(17 24 39 / 0.16);
   --dot: 40 8% 42% / 0.09;
   --pre-bg: #f2f1ed;
   color-scheme: light;
@@ -89,6 +168,16 @@
   --landing: #ffffff;
   --brand-text: #ffffff;
   --brand-accent-text: #facc15;
+  --metric-brand: #facc15;
+  --metric-warning: #fb923c;
+  --metric-info: #60a5fa;
+  --metric-success: #10b981;
+  --metric-danger: #fb7185;
+  --metric-purple: #a5b4fc;
+  --action-secondary: rgb(255 255 255 / 0.12);
+  --action-secondary-hover: rgb(255 255 255 / 0.18);
+  --action-secondary-active: rgb(255 255 255 / 0.24);
+  --action-secondary-foreground: #ffffff;
   --icon-default: #d1d5db;
   --icon-muted: #9ca3af;
   --icon-brand: #facc15;
@@ -97,11 +186,30 @@
   --icon-danger: #f87171;
   --icon-info: #60a5fa;
   --icon-on-brand: #111827;
-  --outline-bg: rgb(255 255 255 / 0.07);
-  --outline-bg-hover: rgb(255 255 255 / 0.14);
+  --outline-bg: rgb(255 255 255 / 0.05);
+  --outline-bg-hover: rgb(255 255 255 / 0.1);
   --outline-border: rgb(255 255 255 / 0.18);
-  --outline-border-hover: rgb(255 255 255 / 0.34);
+  --outline-border-hover: rgb(255 255 255 / 0.26);
   --outline-text: #ffffff;
+  --state-success: #4ade80;
+  --state-success-solid: var(--accent-green);
+  --state-success-surface: rgb(74 222 128 / 0.12);
+  --state-success-border: rgb(74 222 128 / 0.28);
+  --state-warning: #fbbf24;
+  --state-warning-solid: var(--accent-orange);
+  --state-warning-surface: rgb(251 191 36 / 0.12);
+  --state-warning-border: rgb(251 191 36 / 0.28);
+  --state-danger: #f87171;
+  --state-danger-solid: var(--accent-red);
+  --state-danger-surface: rgb(248 113 113 / 0.12);
+  --state-danger-border: rgb(248 113 113 / 0.28);
+  --state-info: #60a5fa;
+  --state-info-solid: var(--accent-blue);
+  --state-info-surface: rgb(96 165 250 / 0.12);
+  --state-info-border: rgb(96 165 250 / 0.28);
+  --elevation-raised: 0 1px 2px rgb(0 0 0 / 0.24), 0 4px 12px rgb(0 0 0 / 0.18);
+  --elevation-floating: 0 8px 24px rgb(0 0 0 / 0.32);
+  --elevation-overlay: 0 20px 48px rgb(0 0 0 / 0.46);
   --dot: 240 5% 65% / 0.10;
   --pre-bg: #111111;
   color-scheme: dark;
@@ -113,8 +221,16 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-html {
-  scrollbar-gutter: stable;
+
+/* Action controls have one product-wide silhouette. Disclosure rows and tabs
+   own their container/selection geometry, so neither inherits the action-button
+   pill. !important prevents other page-local radius utilities from drifting
+   ordinary action buttons away from the semantic token. */
+button:not([data-button-shape="container"]):not([role="tab"]),
+input[type="submit"],
+input[type="button"],
+input[type="reset"] {
+  border-radius: var(--radius-button) !important;
 }
 
 /* Form controls use a border-only focus treatment. This deliberately removes
@@ -127,7 +243,52 @@ select:focus,
   box-shadow: none !important;
 }
 
+/* Native scrollbar thumbs derive their length from each engine and OS. Hide
+   only the browser-owned chrome; the list remains the real scroll container,
+   while the shared overlay below gives Chrome, Edge, and Safari one shape. */
+.agent-task-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.agent-task-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.agent-task-scroll-thumb {
+  width: 3px;
+  background-color: color-mix(in srgb, var(--faint) 18%, transparent);
+  border-radius: var(--radius-button);
+  transition: background-color 150ms ease;
+  will-change: transform;
+}
+
+.agent-task-scroll-shell:hover .agent-task-scroll-thumb {
+  background-color: color-mix(in srgb, var(--faint) 34%, transparent);
+}
+
+/* One typography contract for every top-level workbench destination. Keep this
+   semantic class unlayered so it is emitted immediately during CSS hot reload. */
+.page-title {
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  letter-spacing: -0.025em;
+  color: var(--landing);
+}
+
 @layer utilities {
+  /* Shared application canvas. All user-facing pages align to the same
+     72rem width and 1.5rem gutter as 求职进度 and 我的简历. */
+  .page-shell {
+    width: 100%;
+    max-width: var(--layout-page-max);
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+
   /* Exact solid brand surfaces become the product gradient. Opacity variants
      such as bg-brand/15 remain translucent colors for overlays and badges. */
   [class~="bg-brand"] {
@@ -148,10 +309,6 @@ select:focus,
   [class~="bg-brand-soft"][class~="text-brand"] {
     color: var(--brand-text);
   }
-  .font-serif-italic {
-    font-family: var(--font-instrument-serif-italic), var(--font-serif);
-    font-style: italic;
-  }
   /* Ambient dot grid — adapts to the theme via --dot. Pure CSS, 0 DOM. */
   .dot-bg {
     background-image: radial-gradient(circle, hsl(var(--dot)) 1px, transparent 1px);
@@ -159,13 +316,44 @@ select:focus,
   }
 }
 
-/* ── Animations ported from the docs home ───────────────────────────────── */
-@keyframes fade-in-delayed {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* Component-level hero atmosphere. Keep these selectors outside Tailwind's
+   utility layer so development and production builds both emit them eagerly. */
+.hero-glow-ambient {
+  background-image:
+    radial-gradient(
+      72% 118% at 34% 118%,
+      color-mix(in srgb, var(--color-brand-200) 42%, transparent) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      62% 112% at 69% -18%,
+      color-mix(in srgb, var(--color-brand-200) 36%, transparent) 0%,
+      transparent 70%
+    );
 }
-.animate-fade-in-delayed { animation: fade-in-delayed 700ms ease 200ms both; }
+.hero-glow-glass {
+  background: color-mix(in srgb, var(--surface) 48%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+  backdrop-filter: blur(16px) saturate(125%);
+}
+.dark .hero-glow-ambient {
+  background-image:
+    radial-gradient(
+      72% 118% at 34% 118%,
+      color-mix(in srgb, var(--color-brand-200) 30%, transparent) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      62% 112% at 69% -18%,
+      color-mix(in srgb, var(--color-brand-200) 26%, transparent) 0%,
+      transparent 70%
+    );
+}
+.dark .hero-glow-glass {
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
+}
 
+/* ── Animations ported from the docs home ───────────────────────────────── */
 @keyframes cli-cursor-pulse {
   0%, 50% { opacity: 1; }
   50.01%, 100% { opacity: 0; }
@@ -196,8 +384,9 @@ select:focus,
 @media (prefers-reduced-motion: reduce) {
   .cli-cursor,
   .animate-terminal-popup,
-  .animate-fade-in-delayed {
+  .liquid-glass-control {
     animation: none;
+    transition: none;
   }
   .job-indeterminate::after { animation: none; width: 100%; opacity: 0.35; }
 }

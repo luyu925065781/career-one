@@ -344,7 +344,7 @@ function PlatformPanel({ platforms, saving, onToggle, onSave }: { platforms: Pla
               </div>
               <p className="mt-0.5 text-xs leading-relaxed text-muted">{platform.description}</p>
             </div>
-            <a href={platform.url} target="_blank" rel="noreferrer" aria-label={`打开${platform.name}`} title={`打开${platform.name}`} className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-brand">
+            <a href={platform.url} target="_blank" rel="noreferrer" aria-label={`打开${platform.name}`} title={`打开${platform.name}`} className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-button text-muted transition-colors hover:bg-surface-hover hover:text-brand">
               <ExternalLink className="size-4" />
             </a>
             <Toggle checked={platform.enabled} label={`${platform.name}${platform.enabled ? "已启用" : "已停用"}`} onClick={() => onToggle(platform.id)} />

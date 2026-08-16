@@ -22,16 +22,18 @@ These files contain your personal data, customizations, and work product. Update
 | `plugins.local/` | Your own / private plugins (never auto-updated) |
 | `plugins.lock` | Integrity pins + recorded consent for your enabled plugins (generated; never auto-updated) |
 | `data/applications.md` | Your application tracker (source of truth) |
-| `data/applications.db` | Derived query index over `applications.md` (SQLite, rebuilt by `node tracker.mjs sync` — safe to delete) |
+| `data/applications.db` | Derived query index over `applications.md` (SQLite, rebuilt by `node career-one.mjs tracker sync` — safe to delete) |
 | `data/pipeline.md` | Your URL inbox |
 | `data/scan-history.tsv` | Your scan history |
 | `data/scan-runs.tsv` | Your per-run scan counters (appended by `scan.mjs`, read by `stats.mjs`) |
 | `data/follow-ups.md` | Your follow-up history |
+| `data/agent-runs.json` | Local Agent/Web task history, progress, artifacts, and approval references |
+| `data/task-attachments/*` | Local screenshots attached to Agent tasks; retained for report traceability until the user removes them |
 | `data/offers/*` | Your received offers/contracts, promise notes, prep reports, and reply drafts (PII — gitignored, written by the `offer-prep` mode) |
 | `data/salary-observations.tsv` | Your append-only compensation observation log: `{tracker#}\t{date}\t{desired\|advertised\|actual}\t{amount}\t{currency}\t{source}\t{note}`. Written by interactive modes when a figure is stated/confirmed; never edited in place. Advertised figures come from reports' `advertised_comp` instead — reports are themselves observation sources. Read by `salary-gap.mjs` |
 | `writing-samples/*` | Your personal writing samples for style calibration (except `writing-samples/README.md`, which is system-owned documentation delivered by updates) |
 | `reports/*` | Your evaluation reports |
-| `output/*` | Your generated PDFs |
+| `output/*` | Your generated PDFs and local pending-change proposal drafts |
 | `jds/*` | Your saved job descriptions |
 
 ## System Layer (safe to auto-update)
@@ -74,15 +76,18 @@ These files contain system logic, scripts, templates, and instructions that impr
 | `OPENCODE.md` | Agent instructions (OpenCode) |
 | `GEMINI.md` | Legacy no-op context guard (prevents Antigravity duplicate imports) |
 | `AGENTS.md` | Canonical agent instructions (imported by CLI-specific wrappers) |
-| `*.mjs` | Utility scripts |
+| `career-one.mjs`, `doctor.mjs`, `start-web.mjs`, `test-all.mjs`, `update-system.mjs` | Stable root entrypoints |
+| `scripts/*` | Grouped implementation scripts for Agent tasks, analysis, applications, generation, liveness, plugins, scan, system and tracker operations |
 | `plugins/` | Bundled plugins + the plugin engine (opt-in external integrations) |
-| `plugins.mjs` | Plugin CLI (list/run/available/add/new/enable/skill/trust/remove) |
+| `scripts/plugins/plugins.mjs` | Plugin CLI implementation (public command: `node career-one.mjs plugins`) |
 | `plugins-registry/` | Curated community plugins, one `<id>.json` per plugin (the trust root) |
-| `plugin-install.mjs` / `plugin-audit.mjs` / `validate-plugin-registry.mjs` | Plugin install/audit/registry-validation utilities |
+| `scripts/plugins/plugin-install.mjs`, `scripts/plugins/plugin-audit.mjs`, `scripts/plugins/validate-plugin-registry.mjs` | Plugin install/audit/registry-validation utilities |
 | `config/plugins.example.yml` | Plugin activation template (seed for `config/plugins.yml`) |
 | `batch/batch-prompt.md` | Batch worker prompt |
 | `batch/batch-runner.sh` | Batch orchestrator |
 | `dashboard/*` | Go TUI dashboard |
+| `start-web.mjs` | Local Web workbench launcher and contextual page opener |
+| `web/src/*`, `web/public/*`, `web/package*.json`, `web/*.mjs`, `web/tsconfig.json` | Web workbench source, assets, configuration, and dependency lockfile |
 | `templates/*` | Base templates |
 | `fonts/*` | Self-hosted fonts |
 | `.agents/skills/*` | Canonical open Agent Skill definitions |
