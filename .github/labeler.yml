@@ -4,7 +4,7 @@
           - AGENTS.md
           - CLAUDE.md
           - OPENCODE.md
-          - DATA_CONTRACT.md
+          - docs/DATA_CONTRACT.md
           - modes/_shared.md
 
 "⚠️ agent-behavior":
@@ -29,10 +29,10 @@
       - any-glob-to-any-file:
           - docs/**
           - "README*.md"
-          - CONTRIBUTING.md
+          - .github/CONTRIBUTING.md
           - GOVERNANCE.md
-          - CODE_OF_CONDUCT.md
-          - SECURITY.md
+          - .github/CODE_OF_CONDUCT.md
+          - .github/SECURITY.md
 
 "🌐 i18n":
   - changed-files:

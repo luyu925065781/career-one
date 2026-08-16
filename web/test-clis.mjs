@@ -54,7 +54,7 @@ const primaryNavSource = readSource("./src/lib/nav-items.ts");
 const releaseSource = readSource("./src/lib/release.ts");
 const reportViewSource = readSource("./src/components/report-view.tsx");
 const gitIgnoreSource = readSource("../.gitignore");
-const dataContractSource = readSource("../DATA_CONTRACT.md");
+const dataContractSource = readSource("../docs/DATA_CONTRACT.md");
 const pipelineDetailPageSource = readSource("./src/app/pipeline/[id]/page.tsx");
 const todayDashboardSource = readSource("./src/components/home/today-dashboard.tsx");
 const followUpCardSource = readSource("./src/components/home/follow-up-card.tsx");
@@ -851,7 +851,7 @@ test("evaluation reports exclude resume generation while Agent history keeps eve
 
 test("action page headers share one responsive title and controls layout", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
   const desktopRule = globalsSource.match(/\[data-ui-page-header\]\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
   assert.match(desktopRule, /display:\s*grid;/);
@@ -1062,7 +1062,7 @@ test("primary destination headings reuse the exact sidebar icon mapping", () => 
     assert.match(source, /<PageIcon className="[^"]*\btext-icon-brand\b[^"]*" aria-hidden="true" \/>/);
   }
 
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
   assert.match(designSystemSource, /主导航页面的一级标题图标必须复用 `PRIMARY_NAV_ITEMS`/);
   assert.match(
     primaryNavSource,
@@ -1095,7 +1095,7 @@ test("page title icons are vertically centered with their heading text", () => {
 
 test("top-level workbench pages share one semantic title style", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
   const pageTitleRule = globalsSource.match(/\.page-title\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
   assert.match(pageTitleRule, /font-family:\s*var\(--font-display\);/);
@@ -1140,7 +1140,7 @@ test("feature maturity remains behavior-only and exposes no visible label system
   const navItemsSource = readSource("./src/lib/nav-items.ts");
   const desktopShellSource = readSource("./src/components/app-shell.tsx");
   const mobileNavSource = readSource("./src/components/mobile-nav.tsx");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
 
   assert.doesNotMatch(navItemsSource, /featureStageLabel|\bchip\??:/);
   assert.doesNotMatch(desktopShellSource, /NAV_ITEMS\.map\(\(\{[^}]*\bchip\b|\{chip\s*&&/);
@@ -1269,8 +1269,8 @@ test("Agent history table uses legible semantic hover colors", () => {
 
 test("ordinary text and table rows share one visible global hover contract", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
-  const designTokenSource = readSource("../DESIGN.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
+  const designTokenSource = readSource("../docs/DESIGN.md");
 
   assert.match(globalsSource, /--color-interactive-hover:\s*var\(--interactive-hover\)/);
   assert.match(globalsSource, /--interactive-hover:\s*#1d4ed8/);
@@ -1413,8 +1413,8 @@ test("career-one semantic tokens own status, radius, elevation, and controls", (
 
 test("native form fields opt into one density-aware visual contract", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
-  const designTokenSource = readSource("../DESIGN.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
+  const designTokenSource = readSource("../docs/DESIGN.md");
 
   assert.match(globalsSource, /--control-height-comfortable:\s*2\.75rem;/);
   assert.match(globalsSource, /--control-height-compact:\s*2\.25rem;/);
@@ -1449,7 +1449,7 @@ test("native form fields opt into one density-aware visual contract", () => {
 
 test("all action buttons use one global pill-shaped radius without changing form controls", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
 
   assert.match(globalsSource, /--radius-button:\s*9999px;/);
   assert.match(globalsSource, /--radius-control:\s*0\.5rem;/);
@@ -1487,8 +1487,8 @@ test("all action buttons use one global pill-shaped radius without changing form
 
 test("dashboard metrics use vivid dedicated semantic tokens", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designTokenSource = readSource("../DESIGN.md");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designTokenSource = readSource("../docs/DESIGN.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
   const lightThemeSource = globalsSource.match(/:root \{([\s\S]*?)\n\}/)?.[1] ?? "";
   const darkThemeSource = globalsSource.match(/\.dark \{([\s\S]*?)\n\}/)?.[1] ?? "";
   const metricColors = {
@@ -1602,8 +1602,8 @@ test("dashboard metrics use vivid dedicated semantic tokens", () => {
 
 test("multi-hue accent tokens preserve yellow as the brand and keep status aliases semantic", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designTokenSource = readSource("../DESIGN.md");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designTokenSource = readSource("../docs/DESIGN.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
   const lightThemeSource = globalsSource.match(/:root \{([\s\S]*?)\n\}/)?.[1] ?? "";
   const accentColors = {
     yellow: "#facc15",
@@ -1688,7 +1688,7 @@ test("only whole-card interactions receive a card hover state", () => {
 
 test("semantic card surfaces share one cross-element visual contract", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
 
   assert.match(
     globalsSource,
@@ -1747,7 +1747,7 @@ test("semantic card surfaces share one cross-element visual contract", () => {
 
 test("empty states share one placement-aware visual contract", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
 
   assert.match(
     globalsSource,
@@ -1799,7 +1799,7 @@ test("empty states share one placement-aware visual contract", () => {
 
 test("standard dialogs share one backdrop and surface contract", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
 
   assert.match(
     globalsSource,
@@ -1870,7 +1870,7 @@ test("shared status UI consumes career-one semantic tokens instead of palette co
 
 test("feedback surfaces and read-only status badges use one semantic contract", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
 
   assert.match(
     globalsSource,
@@ -1909,8 +1909,8 @@ test("feedback surfaces and read-only status badges use one semantic contract", 
 
 test("buttons expose one shared three-level action hierarchy", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
-  const designTokenSource = readSource("../DESIGN.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
+  const designTokenSource = readSource("../docs/DESIGN.md");
   for (const token of [
     "action-secondary",
     "action-secondary-hover",
@@ -2055,7 +2055,7 @@ test("all native buttons are shared actions or explicit structural controls", ()
 });
 
 test("structural controls use one state-driven appearance contract", () => {
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
   const globalsSource = readSource("./src/app/globals.css");
   const allowedAppearances = new Set([
     "tab-line",
@@ -2140,7 +2140,7 @@ test("structural controls use one state-driven appearance contract", () => {
 });
 
 test("button-shaped links compose the shared action variants", () => {
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
   assert.match(
     designSystemSource,
     /按钮式链接必须调用 `buttonVariants`/,
@@ -2206,7 +2206,7 @@ test("Today first render receives all queue data from one server snapshot", () =
 
 test("Today glass effect is present in server HTML from the first paint", () => {
   const globalsSource = readSource("./src/app/globals.css");
-  const designSystemSource = readSource("../DESIGN_SYSTEM.md");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
   const heroShell = todayDashboardSource.match(/<section className="dot-bg[^"]*"/)?.[0] ?? "";
 
   assert.match(heroGlowSource, /hero-glow-ambient/);
@@ -2225,6 +2225,7 @@ test("Today glass effect is present in server HTML from the first paint", () => 
 });
 
 test("dashboard puts analytics first and arranges compact charts in a responsive two-column grid", () => {
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
   const statsPosition = todayDashboardSource.indexOf("data-dashboard-stats");
   const heroPosition = todayDashboardSource.indexOf('<section className="dot-bg');
 
@@ -2242,15 +2243,22 @@ test("dashboard puts analytics first and arranges compact charts in a responsive
   assert.match(todayDashboardSource, /<AnalyticsSection title="评分分布">/);
   assert.match(todayDashboardSource, /<AnalyticsSection title="重点公司" id="companies">/);
   assert.match(todayDashboardSource, /<Card compact/);
-  assert.match(todayDashboardSource, /const BAR_TONE_CLASSES/);
-  assert.match(todayDashboardSource, /brand:\s*"bg-brand-200\/80"/);
-  assert.match(todayDashboardSource, /info:\s*"bg-icon-info\/80"/);
-  assert.match(todayDashboardSource, /success:\s*"bg-icon-success\/80"/);
-  assert.match(todayDashboardSource, /warning:\s*"bg-icon-warning\/80"/);
-  assert.match(todayDashboardSource, /danger:\s*"bg-icon-danger\/80"/);
-  assert.match(todayDashboardSource, /\{ key: "OFFER", label: "已获 Offer", tone: "success" \}/);
-  assert.match(todayDashboardSource, /\{ label: "4\.5 – 5\.0", tone: "success"/);
-  assert.match(todayDashboardSource, /analytics\.topCompanies\.map[\s\S]*tone="brand"/);
+  const chartToneContract = todayDashboardSource.match(/const CHART_TONE_CLASSES[\s\S]*?\n\};/)?.[0] ?? "";
+  assert.ok(chartToneContract, "missing the shared chart color map");
+  for (const hue of ["yellow", "orange", "red", "green", "blue", "purple"]) {
+    assert.match(chartToneContract, new RegExp(`${hue}: "bg-accent-${hue}"`));
+  }
+  assert.match(chartToneContract, /neutral: "bg-faint"/);
+  assert.doesNotMatch(chartToneContract, /\/\d+|bg-(?:icon|metric|warning-solid|brand)/);
+  assert.match(todayDashboardSource, /\{ key: "RESPONDED", label: "已回复", tone: "purple" \}/);
+  assert.match(todayDashboardSource, /\{ key: "DISCARDED", label: "已放弃", tone: "neutral" \}/);
+  assert.match(todayDashboardSource, /\{ label: "4\.5 – 5\.0", tone: "green"/);
+  assert.match(todayDashboardSource, /\{ label: "4\.0 – 4\.4", tone: "yellow"/);
+  assert.match(todayDashboardSource, /\{ label: "3\.0 – 3\.9", tone: "orange"/);
+  assert.match(todayDashboardSource, /\{ label: "< 3\.0", tone: "red"/);
+  assert.match(todayDashboardSource, /analytics\.topCompanies\.map[\s\S]*tone="purple"/);
+  assert.match(designSystemSource, /评分分布固定为绿、黄、橙、红/);
+  assert.match(designSystemSource, /单序列排名图保持同一色相/);
   assert.match(
     todayDashboardSource,
     /<Stat[\s\S]*?value=\{analytics\.total\}[\s\S]*?label="已评估"[\s\S]*?tone="brand"/,

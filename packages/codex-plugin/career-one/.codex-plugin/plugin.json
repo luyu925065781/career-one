@@ -25,8 +25,8 @@
     "category": "Productivity",
     "capabilities": [],
     "websiteURL": "https://github.com/luyu925065781/career-one",
-    "privacyPolicyURL": "https://github.com/luyu925065781/career-one/blob/develop/PRIVACY.md",
-    "termsOfServiceURL": "https://github.com/luyu925065781/career-one/blob/develop/TERMS.md",
+    "privacyPolicyURL": "https://github.com/luyu925065781/career-one/blob/develop/docs/PRIVACY.md",
+    "termsOfServiceURL": "https://github.com/luyu925065781/career-one/blob/develop/docs/TERMS.md",
     "brandColor": "#FACC15",
     "defaultPrompt": [
       "使用 $career-one 在本地建立我的中文求职工作区。",

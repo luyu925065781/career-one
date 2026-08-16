@@ -16,7 +16,7 @@ reviews:
       instructions: "This file controls agent behavior (OpenCode). Review changes very carefully for conflicts with existing instructions."
     - path: "modes/_shared.md"
       instructions: "This file controls the scoring system. Any changes affect ALL evaluations. Flag anything that modifies scoring logic."
-    - path: "DATA_CONTRACT.md"
+    - path: "docs/DATA_CONTRACT.md"
       instructions: "This file defines system vs user file boundaries. Changes here are critical — reject if user-layer files are being reclassified."
     - path: "**/*.mjs"
       instructions: "Check for command injection, path traversal, and SSRF. Ensure scripts handle missing data/ directories gracefully."

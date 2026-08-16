@@ -106,4 +106,4 @@ career-one 评估岗位时，应识别 JD 面向哪个职业原型，并选择�
 - `../cv-example.md`：用于对照的单轨 CV 示例。
 - `../../config/profile.example.yml`：本示例所扩展的规范画像结构。
 - `../../modes/_profile.template.md`：用户特定职业原型与叙事的模板。
-- `../../CONTRIBUTING.md`：本示例按照“为不同岗位添加示例简历”的贡献范围提交。
+- `../../.github/CONTRIBUTING.md`：本示例按照“为不同岗位添加示例简历”的贡献范围提交。

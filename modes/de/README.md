@@ -105,7 +105,7 @@ Wenn du Modi anpasst oder erweiterst, halte dich an dieses Vokabular — so blei
 
 Wenn du eine Übersetzung verbessern oder einen weiteren Modus eindeutschen willst:
 
-1. Öffne ein Issue mit dem Vorschlag (laut `CONTRIBUTING.md`)
+1. Öffne ein Issue mit dem Vorschlag (laut `.github/CONTRIBUTING.md`)
 2. Halte dich an das Vokabular oben, um den Ton konsistent zu halten
 3. Übersetze sinngemäß und idiomatisch — keine wörtlichen Wort-für-Wort-Übersetzungen
 4. Behalte die strukturellen Elemente (Block A-F, Tabellen, Code-Blöcke, Tool-Anweisungen) exakt bei

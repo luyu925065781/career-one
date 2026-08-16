@@ -13,7 +13,7 @@ body:
     attributes:
       label: Code of Conduct
       options:
-        - label: I agree to follow the [Code of Conduct](https://github.com/luyu925065781/career-one/blob/main/CODE_OF_CONDUCT.md)
+        - label: I agree to follow the [Code of Conduct](https://github.com/luyu925065781/career-one/blob/main/.github/CODE_OF_CONDUCT.md)
           required: true
   - type: input
     id: repo

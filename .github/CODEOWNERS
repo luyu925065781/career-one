@@ -10,8 +10,8 @@
 
 # Repo docs & governance
 /README*.md            @luyu925065781
-/CONTRIBUTING.md       @luyu925065781
-/ARCHITECTURE.md       @luyu925065781
+/.github/CONTRIBUTING.md @luyu925065781
+/docs/ARCHITECTURE.md  @luyu925065781
 /.github/CODEOWNERS    @luyu925065781
 
 # Agent behavior & the multi-CLI contract (prompt layer — CI-blind)
@@ -23,18 +23,18 @@
 
 # Scoring & the system/user data contract (CI-blind; silent-danger)
 /modes/_shared.md      @luyu925065781
-/DATA_CONTRACT.md      @luyu925065781
+/docs/DATA_CONTRACT.md @luyu925065781
 
 # The self-updater (catastrophic if wrong — touches user installs)
 /update-system.mjs     @luyu925065781
-/updater-migration-tests.mjs  @luyu925065781
+/tests/system/updater-migration.test.mjs @luyu925065781
 
 # Plugin governance chokepoint (a bad change here ships unreviewed code to
 # every user — the registry pin, the gates, and the CI must stay single-owner).
 /plugins-registry.json         @luyu925065781
-/validate-plugin-registry.mjs  @luyu925065781
-/plugin-install.mjs            @luyu925065781
-/plugin-audit.mjs              @luyu925065781
+/scripts/plugins/validate-plugin-registry.mjs @luyu925065781
+/scripts/plugins/plugin-install.mjs @luyu925065781
+/scripts/plugins/plugin-audit.mjs @luyu925065781
 /plugins/_engine.mjs           @luyu925065781
 /plugins/_lock.mjs             @luyu925065781
 /plugins/_net.mjs              @luyu925065781

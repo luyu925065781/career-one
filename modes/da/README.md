@@ -96,7 +96,7 @@ For at holde tonen konsistent, hvis du ændrer eller udvider modes:
 
 For at forbedre en oversættelse eller tilføje en mode:
 
-1. Åbn en Issue med dit forslag (se `CONTRIBUTING.md`)
+1. Åbn en Issue med dit forslag (se `.github/CONTRIBUTING.md`)
 2. Følg ordlisten ovenfor for at holde tonen konsistent
 3. Oversæt idiomatisk -- ingen ord-for-ord-oversættelse
 4. Bevar de strukturelle elementer (Blok A-F, tabeller, kodeblokke, værktøjsinstruktioner) uændret

@@ -1,7 +1,7 @@
 name: No user data in PRs
 
 # Hard-blocks any PR that adds or modifies user-layer (private data) files.
-# These live ONLY on the candidate's machine per DATA_CONTRACT.md and must never
+# These live ONLY on the candidate's machine per docs/DATA_CONTRACT.md and must never
 # enter the repo — they are personal job-search data. Sample/fixture data belongs
 # under examples/. Tracked scaffolding (.gitkeep keepers, dir READMEs) is exempt.
 # Paths mirror USER_PATHS in update-system.mjs. Uses the API (listFiles) so it
@@ -55,7 +55,7 @@ jobs:
             if (bad.length) {
               core.setFailed(
                 'This PR adds/modifies user-layer (private data) files. These live ONLY on your ' +
-                'machine per DATA_CONTRACT.md and must never be committed — use examples/ for ' +
+                'machine per docs/DATA_CONTRACT.md and must never be committed — use examples/ for ' +
                 'sample data.\nOffending files:\n  ' + bad.join('\n  ')
               );
             } else {

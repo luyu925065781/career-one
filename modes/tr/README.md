@@ -111,7 +111,7 @@ Modları özelleştirirken veya genişletirken bu kelime dağarcığına uy — 
 
 Bir çeviriyi iyileştirmek veya başka bir modu Türkçeleştirmek istersen:
 
-1. `CONTRIBUTING.md`'ye göre bir Issue aç
+1. `.github/CONTRIBUTING.md`'ye göre bir Issue aç
 2. Yukarıdaki kelime kılavuzuna uy — tutarlı ton için
 3. Kelimesi kelimesine çeviri değil, anlam ve deyim bakımından doğal çeviri yap
 4. Yapısal öğeleri (Blok A-G, tablolar, kod blokları, araç talimatları) aynen koru
