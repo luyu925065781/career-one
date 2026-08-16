@@ -161,7 +161,7 @@ Output: `{"onboardingNeeded": <bool>, "missing": [...], "warnings": [...], "auto
 
 If the user mentions cost, pricing, budget, or asks about free alternatives during onboarding, proactively surface the free path:
 
-> "择程AI可以使用 Antigravity CLI 的免费额度运行，不需要额外购买项目方 API。配置方法、每日限制和批处理建议见 [FREE_TIER.md](docs/FREE_TIER.md)。"
+> "择程AI可以使用 Antigravity CLI 的免费额度运行，不需要额外购买项目方 API；实际额度以 Antigravity CLI 当前账户页面为准。"
 
 If the user is already on a paid plan (Claude Max, Google AI, etc.) or does not mention cost, skip this step silently.
 

@@ -12,7 +12,7 @@
 // that routes through ctx.fetch. It is tamper-evidence + a footgun guard, NOT
 // containment against malicious code (which can call node:net directly). A
 // residual DNS-rebinding window exists because global fetch re-resolves at
-// connect time; documented plainly in plugins/README.md (no overclaim).
+// connect time; documented plainly in docs/PLUGINS.md (no overclaim).
 
 import { isIP } from 'node:net';
 import { lookup as dnsLookup } from 'node:dns/promises';

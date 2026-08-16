@@ -155,7 +155,7 @@ Agrega a `interview-prep/{company-slug}-{role-slug}.md`:
 
 ## Step 9 — Write Session Transcript
 
-Después del análisis, escribe también una transcripción de la sesión legible por máquina en `interview-prep/sessions/{company-slug}-{role-slug}-{round}-{YYYY-MM-DD}.md`. Este es un registro estructurado de la ronda para modos de análisis posteriores; los turnos etiquetados por hablante permiten a un consumidor leer cualquier lado sin tener que volver a inferir quién habló. El contrato completo vive en `interview-prep/sessions/README.md`.
+Después del análisis, escribe también una transcripción de la sesión legible por máquina en `interview-prep/sessions/{company-slug}-{role-slug}-{round}-{YYYY-MM-DD}.md`. Este es un registro estructurado de la ronda para modos de análisis posteriores; los turnos etiquetados por hablante permiten a un consumidor leer cualquier lado sin tener que volver a inferir quién habló. El formato completo y las reglas aparecen a continuación.
 
 Formato:
 

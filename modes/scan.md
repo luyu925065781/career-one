@@ -124,7 +124,7 @@ During the agent's scan, keep the **`local_parser_ok`** set in memory. This set 
 For companies with a public API or structured feed **that are not in `local_parser_ok`**, use the JSON/XML response as a fast complement to Level 1. This is faster than Playwright and reduces visual scraping errors.
 
 **Current Support (variables inside `{}`):**
-- Full provider table: [Supported job boards](../docs/SUPPORTED_JOB_BOARDS.md)
+- Provider source of truth: `providers/`
 
 - **Greenhouse**: `https://boards-api.greenhouse.io/v1/boards/{company}/jobs`
 - **Ashby**: `https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true`

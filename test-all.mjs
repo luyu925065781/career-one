@@ -564,7 +564,7 @@ console.log('\n5. Data contract validation');
 
 // Check system files exist
 const systemFiles = [
-  'CLAUDE.md', 'CODEX.md', 'OPENCODE.md', 'VERSION', 'docs/DATA_CONTRACT.md', 'docs/CODEX.md',
+  'CLAUDE.md', 'CODEX.md', 'OPENCODE.md', 'VERSION', 'docs/DATA_CONTRACT.md',
   'modes/_shared.md', 'modes/_profile.template.md',
   'modes/oferta.md', 'modes/pdf.md', 'modes/scan.md',
   'modes/heuristics/recruiter-side.md',
@@ -2251,18 +2251,6 @@ if (/^@(?:\.\/)?AGENTS\.md/m.test(codexWrapper)) {
   fail('CODEX.md is not a thin AGENTS.md wrapper');
 }
 
-const codexGuideDoc = fileExists('docs/CODEX.md') ? readFile('docs/CODEX.md') : '';
-if (
-  /AGENTS\.md/.test(codexGuideDoc) &&
-  /CODEX\.md/.test(codexGuideDoc) &&
-  /codex exec/.test(codexGuideDoc) &&
-  /Codex/i.test(codexGuideDoc)
-) {
-  pass('docs/CODEX.md is a complete Codex guide');
-} else {
-  fail('docs/CODEX.md is missing required content');
-}
-
 // ── 12. SKILL SYMLINK INTEGRITY ─────────────────────────────
 
 console.log('\n12. Skill symlink integrity');
@@ -2328,25 +2316,13 @@ console.log('\n12c. Codex documentation guidance');
 
 const readmeDoc = readFile('README.md');
 if (
-  /CODEX\.md/.test(readmeDoc) &&
   /codex exec/.test(readmeDoc) &&
   /Codex/i.test(readmeDoc) &&
   /(slash commands?.*not guaranteed|plain language|prompt|中文自然语言)/i.test(readmeDoc)
 ) {
-  pass('README documents CODEX.md and Codex interactive/headless usage');
+  pass('README documents Codex interactive/headless usage');
 } else {
   fail('README is missing required Codex usage guidance');
-}
-
-const setupDoc = readFile('docs/SETUP.md');
-if (
-  /codex exec/.test(setupDoc) &&
-  /Codex/i.test(setupDoc) &&
-  /(slash commands?.*not guaranteed|plain language|prompt)/i.test(setupDoc)
-) {
-  pass('docs/SETUP.md explains the Codex invocation model');
-} else {
-  fail('docs/SETUP.md is missing Codex invocation guidance');
 }
 
 const agentsDoc = readFile('AGENTS.md');
@@ -6018,8 +5994,8 @@ try {
 
 console.log('\n52. Interview session producer (#1242 transcript contract)');
 
-// Scaffold is system-owned and MUST ship (tracked) so the updater can deliver it.
-for (const f of ['interview-prep/sessions/.gitkeep', 'interview-prep/sessions/README.md']) {
+// The empty marker is system-owned and MUST ship so the updater can create the directory.
+for (const f of ['interview-prep/sessions/.gitkeep']) {
   if (!fileExists(f)) {
     fail(`Missing session scaffold: ${f}`);
   } else if (run('git', ['ls-files', f])) {
@@ -6039,8 +6015,8 @@ for (const f of ['interview-prep/sessions/.gitkeep', 'interview-prep/sessions/RE
   }
 }
 
-// ...but the scaffold itself must be force-included past that ignore rule.
-for (const f of ['interview-prep/sessions/.gitkeep', 'interview-prep/sessions/README.md']) {
+// ...but the empty marker itself must be force-included past that ignore rule.
+for (const f of ['interview-prep/sessions/.gitkeep']) {
   if (run('git', ['check-ignore', f])) {
     fail(`Session scaffold is gitignored (won't ship): ${f}`);
   } else {
@@ -6048,11 +6024,11 @@ for (const f of ['interview-prep/sessions/.gitkeep', 'interview-prep/sessions/RE
   }
 }
 
-// The scaffold must be in SYSTEM_PATHS (the updater delivers/refreshes it).
+// The empty marker must be in SYSTEM_PATHS (the updater delivers/refreshes it).
 {
   const updater = readFile('update-system.mjs');
   const sysBlock = (updater.match(/SYSTEM_PATHS\s*=\s*\[([\s\S]*?)\]/) || [, ''])[1];
-  for (const p of ['interview-prep/sessions/.gitkeep', 'interview-prep/sessions/README.md']) {
+  for (const p of ['interview-prep/sessions/.gitkeep']) {
     if (sysBlock.includes(`'${p}'`)) {
       pass(`Session scaffold in SYSTEM_PATHS: ${p}`);
     } else {
@@ -6082,20 +6058,13 @@ for (const mode of ['modes/interview/debrief.md', 'modes/interview/practice.md']
   }
 }
 
-// The README is the consumer contract — it must document speaker labels + tag format.
-if (!fileExists('interview-prep/sessions/README.md')) {
-  fail('sessions/README.md missing — cannot verify the consumer contract');
-} else {
-  const readme = readFile('interview-prep/sessions/README.md');
-  if (readme.includes('**Interviewer:**') && readme.includes('**Candidate:**')) {
-    pass('sessions/README documents Interviewer/Candidate speaker labels');
+// Producer modes are the executable contract; avoid a duplicate sidecar README.
+for (const mode of ['modes/interview/debrief.md', 'modes/interview/practice.md']) {
+  const body = readFile(mode);
+  if (body.includes('**Interviewer:**') && body.includes('**Candidate:**')) {
+    pass(`${mode} documents Interviewer/Candidate speaker labels`);
   } else {
-    fail('sessions/README missing speaker-label contract');
-  }
-  if (readme.includes('<!-- competency:')) {
-    pass('sessions/README documents the competency tag format');
-  } else {
-    fail('sessions/README missing competency tag format');
+    fail(`${mode} is missing the speaker-label contract`);
   }
 }
 

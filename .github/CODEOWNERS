@@ -11,7 +11,6 @@
 # Repo docs & governance
 /README*.md            @luyu925065781
 /.github/CONTRIBUTING.md @luyu925065781
-/docs/ARCHITECTURE.md  @luyu925065781
 /.github/CODEOWNERS    @luyu925065781
 
 # Agent behavior & the multi-CLI contract (prompt layer — CI-blind)
@@ -40,7 +39,6 @@
 /plugins/_net.mjs              @luyu925065781
 /plugins/_registry.mjs         @luyu925065781
 /.github/workflows/            @luyu925065781
-/docs/PLUGIN_REVIEW.md         @luyu925065781
 
 # The experimental web UI — owned by the web track (dual-track review with the
 # core maintainer on any PR that also touches root files).

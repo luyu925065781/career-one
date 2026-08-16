@@ -92,7 +92,7 @@
 | faint | gray-500 | `#6b7280` |
 | selected-text | gray-900 | `#111827` |
 | brand-text | secondary-600 | `#ca8a04` |
-| interactive-hover | info-700 | `#1d4ed8` |
+| interactive-hover | warm amber | `#ffb24d` |
 | action-secondary | white / 64% | `rgb(255 255 255 / 0.64)` |
 | action-secondary-hover | gray-900 / 7% | `rgb(17 24 39 / 0.07)` |
 | action-secondary-active | gray-900 / 11% | `rgb(17 24 39 / 0.11)` |
@@ -117,7 +117,7 @@
 | faint | `#9ca3af` |
 | selected-text | `#ffffff` |
 | brand-text | `#facc15` |
-| interactive-hover | `#60a5fa` |
+| interactive-hover | `#ffb24d` |
 | action-secondary | `rgb(255 255 255 / 0.07)` |
 | action-secondary-hover | `rgb(255 255 255 / 0.14)` |
 | action-secondary-active | `rgb(255 255 255 / 0.20)` |
@@ -282,7 +282,7 @@
 ## 7. 交互状态
 
 - Hover：150–200ms，使用 hover 渐变或 gray-100 背景。
-- 普通交互 Hover：文字统一使用清晰的深蓝 `interactive-hover`（浅色 `#1d4ed8`、深色 `#60a5fa`），列表行同时使用 `surface-hover`；黄色仅保留给品牌主动作、明确选中态和品牌标识，普通链接、表格行与图标按钮不得在 hover 时变黄或与静止态无差别。
+- 普通交互 Hover：需要强调打开动作的主文本使用暖黄色 `interactive-hover`（浅色与深色均为 `#ffb24d`），列表行同时使用 `surface-hover`。Tab 文案与列表中的辅助实体信息（如公司名称）保持静止态文字颜色，只使用容器背景反馈；该颜色只表达短暂交互反馈，不替代品牌主动作或明确选中态。
 - Active：使用 active 渐变，不改变布局尺寸。
 - 按钮、链接等非表单交互控件的 Focus visible：2px 品牌黄色轮廓，2px offset。
 - 输入框、搜索框、文本域和下拉框聚焦时禁止阴影、光晕和发光轮廓；仅通过边框颜色变化显示焦点。
