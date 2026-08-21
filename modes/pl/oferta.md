@@ -79,7 +79,7 @@ Top 5 zmian w CV + Top 5 zmian na LinkedIn, aby zmaksymalizować dopasowanie.
 
 Kolumna **Reflection** ujmuje, czego się nauczono lub co zrobiono by inaczej. To sygnalizuje seniority -- juniorzy opisują, co się wydarzyło, seniorzy wyciągają z tego wnioski.
 
-**Story Bank:** Jeśli `interview-prep/story-bank.md` istnieje, sprawdź, czy te historie już tam są. Jeśli nie, dodaj nowe. Z czasem buduje to wielokrotnego użytku bank 5-10 historii master, które można dopasować do każdego pytania na rozmowie.
+**Story Bank:** Najpierw dopasuj i wykorzystaj ponownie istniejące historie z `interview-prep/story-bank.md`. Proponuj dodanie tylko wtedy, gdy zweryfikowane fakty użytkownika ujawniają prawdziwe doświadczenie, którego jeszcze nie ma w banku i które nadaje się do różnych ról. Sformułowania, pytania i punkty rozmowy właściwe dla stanowiska pozostają w bieżącym raporcie lub `interview-prep/{company}-{role}.md`. Jeśli nie ma kwalifikującego się nowego doświadczenia, pozostaw bank bez zmian i nie twórz brakującego pliku tylko dlatego, że ocena się zakończyła. Każde dodanie pozostaje propozycją do wyraźnej zgody użytkownika.
 
 **Wyselekcjonowane i sformowane według archetypu:**
 - FDE -> podkreśl szybkość dostarczania i bliskość klienta

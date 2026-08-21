@@ -6,8 +6,8 @@
  * Where scan.mjs scans the companies you track in portals.yml, this script
  * inverts the direction: it walks public directories of companies per ATS
  * (Greenhouse, Lever, Ashby, Workday) and surfaces fresh postings that match
- * your portals.yml `title_filter` / `location_filter` — no manual company
- * curation needed.
+ * the reusable role/location intent in config/profile.yml — no manual company
+ * curation or portals.yml required.
  *
  * Company directories come from the public job-board-aggregator dataset
  * (github.com/Feashliaa/job-board-aggregator), cached in data/cache/ for 24h.
@@ -31,14 +31,12 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from 'fs';
 import { pathToFileURL } from 'url';
 import path from 'path';
-import * as yaml from 'js-yaml';
-
 import { makeHttpCtx, fetchJson } from '../../providers/_http.mjs';
 import greenhouse from '../../providers/greenhouse.mjs';
 import lever from '../../providers/lever.mjs';
 import ashby from '../../providers/ashby.mjs';
 import workday from '../../providers/workday.mjs';
-import { buildTitleFilter, buildLocationFilter, loadSeenUrls, appendToPipeline, appendToScanHistory } from './scan.mjs';
+import { buildTitleFilter, buildLocationFilter, loadSearchConfig, loadSeenUrls, appendToPipeline, appendToScanHistory } from './scan.mjs';
 const systemSeedsUrl = new URL('../../system/seeds/vc-portfolios.mjs', import.meta.url);
 const seedsUrl = existsSync(systemSeedsUrl)
   ? systemSeedsUrl
@@ -406,15 +404,21 @@ async function main() {
   const log = opts.json ? (...a) => console.error(...a) : (...a) => console.log(...a);
   const progress = (s) => { if (!opts.json) process.stdout.write(s); };
 
-  if (!existsSync(PORTALS_PATH)) {
-    console.error('Error: portals.yml not found. Run onboarding first — the reverse scan reuses its title_filter/location_filter.');
+  let config;
+  try {
+    config = loadSearchConfig({
+      portalsPath: PORTALS_PATH,
+      preferPortals: Boolean(process.env.CAREER_ONE_PORTALS),
+      requirePortals: Boolean(process.env.CAREER_ONE_PORTALS),
+    });
+  } catch (err) {
+    console.error(`Error: failed to read job-search configuration: ${err.message}`);
     process.exit(1);
   }
-  const config = yaml.load(readFileSync(PORTALS_PATH, 'utf-8'));
   const titleFilter = buildTitleFilter(config?.title_filter);
   const locationFilter = buildLocationFilter(config?.location_filter);
   if (!config?.title_filter?.positive?.length) {
-    console.error('⚠️  portals.yml has no title_filter.positive — every fresh posting on every board will match. Consider adding keywords.');
+    console.error('⚠️  求职画像中没有目标岗位关键词 — every fresh posting on every board will match. Consider completing target_roles.primary.');
   }
   // Attach filters to opts so runSeedScan can use them without extra parameters.
   opts.titleFilter = titleFilter;

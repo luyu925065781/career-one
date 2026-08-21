@@ -79,7 +79,7 @@ Top 5 ændringer i CV'et + Top 5 ændringer på LinkedIn for at maksimere matche
 
 Kolonnen **Reflection** indfanger, hvad der blev lært, eller hvad der ville blive gjort anderledes. Det signalerer senioritet -- juniorer beskriver, hvad der skete, seniorer drager læring af det.
 
-**Story Bank:** Hvis `interview-prep/story-bank.md` findes, så tjek om disse stories allerede er der. Hvis ikke, så tilføj de nye. Med tiden opbygger det en genbrugelig bank på 5-10 master-stories, der kan tilpasses ethvert samtalespørgsmål.
+**Story Bank:** Match og genbrug først eksisterende historier i `interview-prep/story-bank.md`. Foreslå kun en tilføjelse, når verificerede brugerfakta viser en reel erfaring, som ikke allerede er dækket, og som kan genbruges på tværs af roller. Rollespecifik framing, spørgsmål og talepunkter bliver i den aktuelle rapport eller `interview-prep/{company}-{role}.md`. Hvis der ikke er en kvalificerende ny erfaring, skal banken forblive uændret, og en manglende fil må ikke oprettes alene fordi evalueringen er afsluttet. Enhver tilføjelse forbliver et forslag indtil brugerens udtrykkelige godkendelse.
 
 **Udvalgt og rammesat efter arketypen:**
 - FDE -> fremhæv leveringstempo og kundenærhed

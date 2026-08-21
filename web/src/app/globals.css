@@ -135,10 +135,10 @@
   --metric-danger: #e11d48;
   --metric-purple: #4d44d6;
   --action-secondary: rgb(255 255 255 / 0.64);
-  --action-secondary-hover: rgb(17 24 39 / 0.07);
-  --action-secondary-active: rgb(17 24 39 / 0.11);
+  --action-secondary-hover: rgb(255 178 77 / 0.18);
+  --action-secondary-active: rgb(255 178 77 / 0.28);
   --action-secondary-border: rgb(17 24 39 / 0.14);
-  --action-secondary-border-hover: rgb(17 24 39 / 0.28);
+  --action-secondary-border-hover: rgb(202 138 4 / 0.38);
   --action-secondary-foreground: #111827;
   --icon-default: #374151;
   --icon-muted: #6b7280;
@@ -202,10 +202,10 @@
   --metric-danger: #fb7185;
   --metric-purple: #a5b4fc;
   --action-secondary: rgb(255 255 255 / 0.07);
-  --action-secondary-hover: rgb(255 255 255 / 0.14);
-  --action-secondary-active: rgb(255 255 255 / 0.2);
+  --action-secondary-hover: rgb(255 178 77 / 0.22);
+  --action-secondary-active: rgb(255 178 77 / 0.32);
   --action-secondary-border: rgb(255 255 255 / 0.16);
-  --action-secondary-border-hover: rgb(255 255 255 / 0.42);
+  --action-secondary-border-hover: rgb(250 204 21 / 0.46);
   --action-secondary-foreground: #ffffff;
   --icon-default: #d1d5db;
   --icon-muted: #9ca3af;
@@ -736,7 +736,7 @@ select:focus,
 }
 
 /* Shared glass actions: neutral translucent fill, a restrained hairline and a
-   soft radial hover wash. Keep text and icons above the effect through the
+   clean warm radial hover wash. Keep text and icons above the effect through the
    isolated stacking context; no page-local color or blur values are needed. */
 .glass-secondary {
   isolation: isolate;
@@ -752,6 +752,21 @@ select:focus,
 .glass-secondary:not([class~="fixed"]):not([class~="absolute"]):not([class~="sticky"]) {
   position: relative;
 }
+
+/* Component styles live outside Tailwind's cascade layers. Mirror positioning
+   utilities here so the glass surface can never downgrade a floating action. */
+.glass-secondary[class~="fixed"] {
+  position: fixed;
+}
+
+.glass-secondary[class~="absolute"] {
+  position: absolute;
+}
+
+.glass-secondary[class~="sticky"] {
+  position: sticky;
+}
+
 .glass-secondary::after {
   content: "";
   position: absolute;

@@ -9,13 +9,15 @@ import {
   ContactRound,
   MapPin,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
 } from "lucide-react";
 import { ProfileAgentAction } from "@/components/onboarding-banner";
 import { CopyTagValuesButton } from "@/components/explore/explorer-view";
-import { doctorState, readCareerProfileSnapshot } from "@/lib/career-one";
+import { doctorState, readCareerProfileSnapshot, readStoryBank } from "@/lib/career-one";
 import { cn } from "@/lib/cn";
 import { PRIMARY_NAV_ITEMS } from "@/lib/nav-items";
+import { assessStoryReadiness } from "@/lib/story-bank.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -62,11 +64,14 @@ function stripDocumentTitle(markdown: string): string {
 export default function CareerProfilePage() {
   const { config, strategyMarkdown, sources } = readCareerProfileSnapshot();
   const { missing, profileReady } = doctorState();
+  const { stories } = readStoryBank();
+  const storyBankComplete = stories.length > 0 && stories.every((story) => assessStoryReadiness(story).ready);
   const candidate = asRecord(config.candidate);
   const targetRoles = asRecord(config.target_roles);
   const narrative = asRecord(config.narrative);
   const compensation = asRecord(config.compensation);
   const location = asRecord(config.location);
+  const jobSearch = asRecord(config.job_search);
   const archetypes = Array.isArray(targetRoles.archetypes)
     ? targetRoles.archetypes.map(asRecord)
     : [];
@@ -119,6 +124,17 @@ export default function CareerProfilePage() {
         { label: "办公方式", values: asValues(location.onsite_availability) },
         { label: "地点与迁居策略", values: asValues(compensation.location_flexibility) },
         { label: "时区", values: asValues(location.timezone), compact: true },
+      ],
+    },
+    {
+      title: "岗位发现偏好",
+      description: "岗位推荐与公开来源扫描统一读取这里，不再依赖单独的渠道配置才能开始。",
+      icon: SlidersHorizontal,
+      rows: [
+        { label: "排除岗位", values: asValues(jobSearch.excluded_titles), compact: true, copyable: true },
+        { label: "优先地点", values: asValues(jobSearch.preferred_locations), compact: true, copyable: true },
+        { label: "排除地点", values: asValues(jobSearch.excluded_locations), compact: true },
+        { label: "始终包含", values: asValues(jobSearch.always_include_locations), compact: true },
       ],
     },
     {
@@ -187,6 +203,15 @@ export default function CareerProfilePage() {
         />
       </header>
 
+      {profileReady && !storyBankComplete && (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-card border border-brand/20 bg-brand-soft/35 px-4 py-3">
+          <p className="text-sm text-foreground">求职画像已准备好，可以继续整理面试故事库。</p>
+          <Link href="/interview" className={cn("min-h-11", "font-semibold", "text-brand-text", "underline", "underline-offset-4")}>
+            继续整理面试故事 <ArrowRight className="inline size-4" aria-hidden="true" />
+          </Link>
+        </div>
+      )}
+
       <section data-ui-card="solid" className="mt-8 overflow-hidden" aria-labelledby="profile-summary-title">
         <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0">
@@ -216,6 +241,9 @@ export default function CareerProfilePage() {
             数据保存在当前电脑
           </span>
           <span>更新必须经过 Agent 草稿和你的确认</span>
+          <Link href="/portals" className="font-medium text-interactive hover:underline">
+            高级岗位来源（可选）
+          </Link>
           {sources.config === "invalid" && <span className="font-semibold text-warning">结构化画像格式需要检查</span>}
         </div>
       </section>
@@ -246,16 +274,18 @@ export default function CareerProfilePage() {
         )}
       </section>
 
-      <nav className="mt-6 grid gap-3 sm:grid-cols-2" aria-label="求职材料流程">
-        <Link href="/cv" data-ui-card="solid" data-card-interactive="true" className="group p-4">
-          <span className="flex items-center gap-2 text-xs text-faint"><ArrowLeft className="size-3.5" /> 上一环节</span>
-          <span className="mt-1 block text-sm font-semibold text-foreground">我的简历</span>
-        </Link>
-        <Link href="/interview" data-ui-card="solid" data-card-interactive="true" className="group p-4 text-right">
-          <span className="flex items-center justify-end gap-2 text-xs text-faint">下一环节 <ArrowRight className="size-3.5" /></span>
-          <span className="mt-1 block text-sm font-semibold text-foreground">面试故事库</span>
-        </Link>
-      </nav>
+      {!storyBankComplete && (
+        <nav className="mt-6 grid gap-3 sm:grid-cols-2" aria-label="求职材料流程">
+          <Link href="/cv" data-ui-card="solid" data-card-interactive="true" className="group p-4">
+            <span className="flex items-center gap-2 text-xs text-faint"><ArrowLeft className="size-3.5" /> 上一环节</span>
+            <span className="mt-1 block text-sm font-semibold text-foreground">我的简历</span>
+          </Link>
+          <Link href="/interview" data-ui-card="solid" data-card-interactive="true" className="group p-4 text-right">
+            <span className="flex items-center justify-end gap-2 text-xs text-faint">下一环节 <ArrowRight className="size-3.5" /></span>
+            <span className="mt-1 block text-sm font-semibold text-foreground">面试故事库</span>
+          </Link>
+        </nav>
+      )}
     </div>
   );
 }

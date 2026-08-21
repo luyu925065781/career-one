@@ -8,6 +8,7 @@ export type JobResult = { score: number | null; summary: string; tone: "good" | 
 export type JobArtifact = { path: string; label: string; page?: string; available?: boolean };
 export type JobProposal = { id: string; title: string; summary: string; target: string; status: "pending" | "applied" | "rejected" | "stale"; createdAt: string; updatedAt: string };
 export type AgentTaskAttachmentInput = { name: string; type: string; dataUrl: string };
+export type AgentTaskTextAttachmentInput = { name: string; text: string };
 export type SharedRunStatus = "queued" | "running" | "waiting_input" | "waiting_approval" | "completed" | "failed" | "cancelled";
 
 export type Job = {
@@ -53,6 +54,7 @@ type StartOpts = {
   page?: string;
   batchId?: string;
   attachments?: AgentTaskAttachmentInput[];
+  textAttachment?: AgentTaskTextAttachmentInput;
   attachmentPaths?: string[];
 };
 
@@ -181,7 +183,7 @@ export function buildQueuedTaskInstruction(opts: StartOpts, id: string): string 
     return `${continuation} 请使用择程AI继续优化面试故事 ${storyId}，并以达到“已完善”标准为目标。只处理 interview-prep/story-bank.md 中这一条故事，基于允许的本地事实来源完成 STAR+Reflection，不得虚构经历、指标或个人贡献。请先充分利用已经确认的事实进行排序、归纳和结构化表达，不要主动增加非必要的“待确认”项；关键事实确实缺失、导致完善标准无法满足时，先用最少的问题向我追问，不要把问题清单直接当成优化结果。没有必要待确认项后，提案中的状态直接写为“已完善”，但仍须等我确认提案后才能保存；只有我明确选择跳过关键问题时，才保留“待完善”。先给我查看修改摘要和完整草稿，等我确认后再保存。请继续这个任务，不要创建新任务。`;
   }
   if (opts.kind === "discovery-setup") {
-    return `${continuation} 请使用择程AI为我生成第一版岗位搜索条件。先读取 cv.md；如果 interview-prep/story-bank.md 存在，也读取其中已经确认的事实。只使用允许的本地事实来源，提炼目标岗位、相邻岗位、排除关键词和地区规则；不得把未出现的信息当作用户偏好，不得虚构技能、经历或求职红线。排除关键词和地区偏好只能作为建议，信息不足时标为“待确认”并用最少的问题向我确认。先给出事实摘要和完整的搜索条件草稿；我确认内容后，再创建针对 portals.yml 的待确认提案，等我确认后再保存。请继续这个任务，不要创建新任务。`;
+    return `${continuation} 请使用择程AI为我生成第一版岗位搜索条件。先读取 cv.md 和 config/profile.yml；如果 interview-prep/story-bank.md 存在，也读取其中已经确认的事实。只使用允许的本地事实来源，提炼目标岗位、相邻岗位、排除关键词和地区规则；不得把未出现的信息当作用户偏好，不得虚构技能、经历或求职红线。排除关键词和地区偏好只能作为建议，信息不足时标为“待确认”并用最少的问题向我确认。先给出事实摘要和完整的搜索条件草稿；我确认内容后，再创建针对 config/profile.yml 的待确认提案，等我确认后再保存。请继续这个任务，不要创建新任务。`;
   }
   if (opts.kind === "discover") {
     return `${continuation} 请使用择程AI根据以下目标搜索公开岗位：“${opts.input.trim()}”。请按 modes/scan.md 执行 Agent 搜索和岗位活性验证，将通过验证且符合条件的新岗位加入 data/pipeline.md，并同步更新 data/scan-history.tsv。完成后告诉我搜索范围、新增岗位数量和下一步建议。请继续这个任务，不要创建新任务。`;
@@ -196,13 +198,16 @@ export function buildQueuedTaskInstruction(opts: StartOpts, id: string): string 
         : "";
       return `${continuation} ${EVALUATION_PREFLIGHT}请使用择程AI评估本次招聘截图${screenshotNames ? `（记录名：${screenshotNames}）` : ""}。${stored}只使用截图中可见的岗位事实和允许的本地事实来源，不得虚构候选人经历或岗位要求；先提取岗位信息并标出截图无法确认的内容。如果截图中包含可访问链接，再用真实浏览器验证；没有链接时请明确标注无法验证。生成岗位匹配评估报告并更新求职记录后，告诉我得分、关键依据和是否建议投递。请继续这个任务，不要创建新任务。`;
     }
+    if (screenshotInput === "jd:attachment") {
+      return `${continuation} ${EVALUATION_PREFLIGHT}请使用择程AI评估随本任务保存的完整 JD 附件。先读取任务附件中的文本文件，只使用其中可见的岗位事实和允许的本地事实来源，不得虚构候选人经历或岗位要求；标出 JD 中没有提供的信息。生成岗位匹配评估报告并更新求职记录后，告诉我得分、关键依据和是否建议投递。请继续这个任务，不要创建新任务。`;
+    }
     return `${continuation} ${EVALUATION_PREFLIGHT}请使用择程AI评估这个岗位：${screenshotInput}。请先用真实浏览器确认岗位有效性，再根据 cv.md、config/profile.yml、modes/_profile.md 和允许的本地事实来源完成岗位匹配评估；不得虚构候选人经历。生成评估报告并更新求职记录后，告诉我得分、关键依据和是否建议投递。请继续这个任务，不要创建新任务。`;
   }
   if (opts.kind === "profile") {
-    return `${continuation} 请使用择程AI帮我补全本地求职画像。目前需要处理：${opts.input.trim()}。先读取 cv.md、article-digest.md、config/profile.yml、modes/_profile.md、writing-samples/ 和 interview-prep/ 中允许使用的事实，已有且明确的内容直接预填，不要重复询问。在第一条回复中一次性列出所有仍需用户确认的项目，并按编号包含：1. 姓名和联系方式；2. 所在城市、时区；3. 目标岗位与职级；4. 地点、工作方式与迁居意愿；5. 目标薪资范围与最低接受值；6. 核心优势与代表成果；7. 动力来源、理想工作方式与求职红线；8. 公开项目、文章、案例或作品集。不得从记忆或其他项目猜测个人事实，不得拆分为多轮逐项追问；允许用户一次回答全部项目，没有回答的项目保留为“待确认”。收到这一次回答后，直接整理 config/profile.yml 和 modes/_profile.md 的完整候选稿并创建待确认提案；提案经用户明确批准前不得写入目标文件。请继续这个任务，不要创建新任务。`;
+    return `${continuation} 请使用择程AI帮我补全本地求职画像。目前需要处理：${opts.input.trim()}。先读取 cv.md、article-digest.md、config/profile.yml、modes/_profile.md、writing-samples/ 和 interview-prep/ 中允许使用的事实，已有且明确的内容直接预填，不要重复询问。在第一条回复中一次性列出所有仍需用户确认的项目，并按编号包含：1. 姓名和联系方式；2. 所在城市、时区；3. 目标岗位与职级；4. 排除岗位、优先/排除地区、工作方式与迁居意愿；5. 目标薪资范围与最低接受值；6. 核心优势与代表成果；7. 动力来源、理想工作方式与求职红线；8. 公开项目、文章、案例或作品集。不得从记忆或其他项目猜测个人事实，不得拆分为多轮逐项追问；允许用户一次回答全部项目，没有回答的项目保留为“待确认”。收到这一次回答后，直接整理 config/profile.yml 和 modes/_profile.md 的完整候选稿并创建待确认提案；提案经用户明确批准前不得写入目标文件。请继续这个任务，不要创建新任务。`;
   }
   if (opts.kind === "portals") {
-    return `${continuation} 请使用择程AI帮我配置岗位来源。目前需要处理：${opts.input.trim()}。请基于我已确认的目标岗位和地区，通过中文对话确认搜索关键词、排除关键词、优先渠道与目标公司；不得从记忆或其他项目猜测个人偏好。先展示拟写入内容并创建针对 portals.yml 的待确认提案，等我确认后再保存；已经存在的配置不要覆盖或重复询问。请继续这个任务，不要创建新任务。`;
+    return `${continuation} 请使用择程AI帮我配置可选的高级岗位来源。目前需要处理：${opts.input.trim()}。目标岗位、排除岗位和地点偏好必须读取 config/profile.yml，不得在 portals.yml 重复维护；这里只确认招聘平台开关、目标公司招聘页、ATS provider 和高级查询来源。不得从记忆或其他项目猜测个人偏好。先展示拟写入内容并创建针对 portals.yml 的待确认提案，等我确认后再保存；已经存在的配置不要覆盖或重复询问。请继续这个任务，不要创建新任务。`;
   }
   if (opts.kind === "fix-portal") {
     return `${continuation} 请使用择程AI检查并修复“${opts.input.trim()}”的公开招聘来源配置。请先验证公司官方招聘入口，再给出修改摘要，等我确认后更新 portals.yml。请继续这个任务，不要创建新任务。`;
@@ -362,6 +367,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
           page: opts.page,
           instruction,
           attachments: opts.attachments,
+          textAttachment: opts.textAttachment,
         }),
       })
         .then(async (response) => {
@@ -414,7 +420,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
     const response = await fetch("/api/agent-runs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "attach", id, instruction, attachments: opts.attachments }),
+      body: JSON.stringify({ action: "attach", id, instruction, attachments: opts.attachments, textAttachment: opts.textAttachment }),
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "保存招聘截图失败");

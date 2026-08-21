@@ -2,17 +2,16 @@
 
 ## Purpose
 
-The scanner only surfaces what `portals.yml` `title_filter.positive` matches —
-and that list is written from the titles the user already knows to search for.
+The scanner only surfaces what the profile's `target_roles.primary` matches —
+and that list starts from the titles the user already knows to search for.
 The same job ships under many names (Solutions Architect / Forward Deployed
 Engineer / Customer Engineer), so the search is silently narrower than the CV
 justifies. This mode reads the CV and proposes adjacent titles the user isn't
 searching for yet — then, only after explicit confirmation, writes the accepted
-keywords into `title_filter.positive` so the very next `scan` casts the wider net.
+keywords into `config/profile.yml` so the very next `scan` casts the wider net.
 
 `patterns` Step 1b makes the same kind of retargeting recommendation
-("consider adding archetype X and reweighting `portals.yml`
-`title_filter.positive`"), but only after ≥5 progressed applications and only
+("consider adding archetype X and broadening `target_roles.primary`"), but only after ≥5 progressed applications and only
 from interview-session signal. This mode is the day-zero, CV-driven complement.
 It is also the inverse of `upskill`: upskill finds skills missing for current
 targets; this finds new targets reachable from current skills.
@@ -20,9 +19,8 @@ targets; this finds new targets reachable from current skills.
 ## Inputs
 
 - `cv.md` — the **only** source of evidence for suggestions (required)
-- `config/profile.yml` — `archetypes` (name / level / fit) for what's already targeted
+- `config/profile.yml` — `target_roles.primary`, `archetypes`, and `job_search.excluded_titles`
 - `modes/_profile.md` — target roles, framing, and any deal-breakers the user has recorded
-- `portals.yml` — the current `title_filter.positive` (and `negative`) keywords
 - Optional: if `data/applications.md` has ≥5 entries progressed beyond
   `Evaluated`, note which suggestions the outcome data supports (e.g. an axis
   that is already converting) — cross-reference `patterns` rather than
@@ -68,7 +66,7 @@ list — this system optimizes for quality, not quantity.
 2. **Deal-breaker filter.** Never suggest titles that violate the
    deal-breakers recorded in `modes/_profile.md` (e.g. "no people management"
    rules out Engineering Manager; "no on-site" rules out field roles). Titles
-   matching `title_filter.negative` keywords are also off the table — the user
+   matching `job_search.excluded_titles` keywords are also off the table — the user
    already excluded them.
 3. **Never invent experience.** Every suggestion must be traceable to quoted
    `cv.md` lines — the source-of-truth boundary applies to suggestions exactly
@@ -88,21 +86,21 @@ When the user accepts one or more suggestions:
    would also match Data Architect, Enterprise Architect, Security Architect.
    If the user insists on a broad keyword, warn once and comply.
 3. Skip keywords that duplicate existing coverage (same dedup rule as above);
-   preserve the casing style already used in the user's `portals.yml`.
-4. Show the **exact YAML diff** against `portals.yml` `title_filter.positive`
+   preserve the casing style already used in the user's `config/profile.yml`.
+4. Show the **exact YAML diff** against `config/profile.yml` `target_roles.primary`
    before touching anything.
-5. **Never write to `portals.yml` without explicit user confirmation.**
+5. **Never write to `config/profile.yml` without explicit user confirmation.**
    "Show me the diff" is not a yes. Silence is not a yes.
-6. `portals.yml` (user layer) is **the only file this mode writes by
+6. `config/profile.yml` (user layer) is **the only file this mode writes by
    default**. This mode proposes no negative keywords — precision guards for
    noisy keywords are deferred to #1353's seniority-tier helper.
 7. **Separately-confirmed exception:** accepted titles can additionally become
-   `fit: adjacent` archetypes in `config/profile.yml` (an existing schema
+   `fit: adjacent` archetypes in the same profile (an existing schema
    field — see `system/config/profile.example.yml`). Mention that this is possible,
    but do it **only if the user asks** — never write archetypes by default.
    When the user does ask, that write gets its **own YAML diff and its own
-   separate confirmation**; never bundle the `portals.yml` and
-   `config/profile.yml` writes into one confirmation.
+   separate confirmation**; never bundle a role-keyword change and an archetype
+   change into one confirmation.
 
 ## After the Write
 
@@ -112,14 +110,12 @@ When the user accepts one or more suggestions:
 
 ## Error Handling
 
-- `cv.md` missing → stop and point at onboarding (`node doctor.mjs --json`).
+- `cv.md` missing → stop and point at onboarding (`node career-one.mjs doctor --json`).
   There is no evidence base to suggest from, and inventing one is forbidden.
-- `portals.yml` missing, or `title_filter.positive` empty → offer to create it
-  from `system/templates/portals.example.yml` first, then re-run this mode. (An empty
-  positive list means the scanner matches everything — nothing to broaden.)
 - `config/profile.yml` or `modes/_profile.md` missing → **hard stop**: do not
-  generate suggestions. Point at onboarding (`node doctor.mjs --json`) and
-  stop, then re-run this mode once both files exist — the same
-  fix-first-then-re-run behavior as a missing `portals.yml` above.
+  generate suggestions. Point at onboarding (`node career-one.mjs doctor --json`) and
+  stop, then re-run this mode once both files exist.
   Deal-breakers live in `modes/_profile.md` — suggestions generated without
   them can propose exactly what the user excluded.
+- `target_roles.primary` empty → ask the user to confirm at least one target role
+  in the profile before broadening it. A missing `portals.yml` is irrelevant.

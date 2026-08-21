@@ -48,16 +48,6 @@ const STAGES: { key: string; label: string; tone: ChartTone }[] = [
   { key: "REJECTED", label: "被拒", tone: "red" },
   { key: "DISCARDED", label: "已放弃", tone: "neutral" },
 ];
-const PROGRESS_STARTED_STATES = new Set([
-  "APPLIED",
-  "RESPONDED",
-  "INTERVIEW",
-  "OFFER",
-  "REJECTED",
-  "DISCARDED",
-  "SKIP",
-]);
-
 function summarizeApplications(applications: Application[]) {
   const total = applications.length;
   const stageCounts = STAGES.map((stage) => ({
@@ -207,20 +197,6 @@ export function TodayDashboard({
       href: "/interview",
       icon: PRIMARY_NAV_ITEMS.interviewStories.icon,
       complete: storyCount > 0,
-    },
-    {
-      title: "岗位评估",
-      description: "用五维评分判断是否值得投递",
-      href: "/cn-diagnose",
-      icon: PRIMARY_NAV_ITEMS.jobDiagnosis.icon,
-      complete: applications.length > 0,
-    },
-    {
-      title: "求职进度",
-      description: "跟踪投递、回复、面试与 Offer",
-      href: "/pipeline",
-      icon: PRIMARY_NAV_ITEMS.pipeline.icon,
-      complete: applications.some((application) => PROGRESS_STARTED_STATES.has(canonStatus(application.status))),
     },
   ];
   const guideComplete = guideSteps.every((step) => step.complete);
@@ -475,12 +451,12 @@ function GettingStartedCard({
           <div className="min-w-0">
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-brand-text">新用户教程</p>
             <h2 id="getting-started-title" className="font-display mt-1 text-2xl text-landing">
-              {complete ? "求职流程已完成" : "完成你的求职闭环"}
+              {complete ? "求职建档已完成" : "完成三步求职建档"}
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted">
               {complete
-                ? "五个关键环节均有进展，可随时返回复盘或继续更新。"
-                : "五个关键环节可按需推进；工作台只推荐当前动作，不限制您进入其他环节。"}
+                ? "简历、画像和故事库已建立，可以直接评估岗位。"
+                : "依次建立简历、画像和故事库；已有完整 JD 时也可以提前评估。"}
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-brand-soft px-3 py-1.5 text-sm font-semibold tabular-nums text-brand-text">
@@ -491,7 +467,7 @@ function GettingStartedCard({
 
       <ol
         aria-label="新用户求职流程"
-        className="grid gap-y-2 border-t border-border px-5 py-2 md:px-7 md:py-7 lg:grid-cols-5 lg:gap-x-2 lg:gap-y-0"
+        className="grid gap-y-2 border-t border-border px-5 py-2 md:px-7 md:py-7 lg:grid-cols-3 lg:gap-x-2 lg:gap-y-0"
       >
         {steps.map((step, index) => {
           const current = index === currentIndex;

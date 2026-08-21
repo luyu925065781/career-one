@@ -2363,14 +2363,14 @@ if (
 
 const agentsDoc = readFile('AGENTS.md');
 if (
-  /CODEX\.md/.test(agentsDoc) &&
+  /system\/compat\/agents\/\*/.test(agentsDoc) &&
   /codex exec/.test(agentsDoc) &&
   /Codex/i.test(agentsDoc) &&
   /(slash commands?.*not guaranteed|prompt|\/career-one.*unavailable)/i.test(agentsDoc)
 ) {
-  pass('AGENTS.md includes CODEX.md and Codex-specific command guidance');
+  pass('AGENTS.md includes compact-layout Agent compatibility docs and Codex-specific command guidance');
 } else {
-  fail('AGENTS.md is missing CODEX.md or Codex command guidance');
+  fail('AGENTS.md is missing compact-layout Agent compatibility docs or Codex command guidance');
 }
 
 console.log('\n12a. Skill entrypoint materialization');
@@ -2781,7 +2781,50 @@ try {
     shouldDedupScanHistoryRow,
     formatPipelineOffer,
     formatScanHistoryRow,
+    mergeProfileSearchConfig,
+    profileSearchConfig,
   } = await import(pathToFileURL(join(ROOT, 'scripts/scan/scan.mjs')).href);
+
+  const profileOwnedSearch = mergeProfileSearchConfig(
+    {
+      title_filter: { positive: ['Legacy Role'], negative: ['Legacy Exclusion'] },
+      location_filter: { allow: ['Legacy Region'], block: ['Legacy Block'], always_allow: ['Legacy Home'] },
+      tracked_companies: [{ name: 'Acme' }],
+    },
+    {
+      target_roles: { primary: ['AI Agent Engineer'] },
+      location: { city: '深圳' },
+      job_search: {
+        excluded_titles: [],
+        preferred_locations: ['深圳', 'Remote'],
+        excluded_locations: [],
+        always_include_locations: [],
+      },
+    },
+  );
+  if (
+    JSON.stringify(profileOwnedSearch.title_filter) === JSON.stringify({ positive: ['AI Agent Engineer'], negative: [] }) &&
+    JSON.stringify(profileOwnedSearch.location_filter) === JSON.stringify({ allow: ['深圳', 'Remote'], block: [], always_allow: ['深圳'] }) &&
+    profileOwnedSearch.tracked_companies?.[0]?.name === 'Acme'
+  ) {
+    pass('profile search intent overrides legacy portals filters while advanced source plumbing is preserved');
+  } else {
+    fail(`profile-owned search merge drifted: ${JSON.stringify(profileOwnedSearch)}`);
+  }
+
+  const derivedSearch = profileSearchConfig({
+    target_roles: { primary: ['Backend Engineer'], archetypes: [{ name: 'Platform Engineer' }] },
+    location: { city: '待确认' },
+    job_search: { excluded_titles: ['Frontend'], preferred_locations: ['上海'] },
+  });
+  if (
+    JSON.stringify(derivedSearch.title_filter) === JSON.stringify({ positive: ['Backend Engineer'], negative: ['Frontend'] }) &&
+    JSON.stringify(derivedSearch.location_filter) === JSON.stringify({ allow: ['上海'], block: [], always_allow: [] })
+  ) {
+    pass('profile search config uses confirmed primary roles and does not treat adjacent archetypes or placeholder cities as search facts');
+  } else {
+    fail(`profile search derivation drifted: ${JSON.stringify(derivedSearch)}`);
+  }
 
   const filter = buildLocationFilter({
     always_allow: ['belgium', 'brussels'],
@@ -4626,31 +4669,31 @@ try {
 console.log('\n12. Cold-start trigger (deterministic onboarding state)');
 
 try {
-  // Virgin env: none of the 4 user-layer prerequisites present → must onboard.
+  // Virgin env: none of the 3 user-layer prerequisites present → must onboard.
   const virgin = mkdtempSync(join(tmpdir(), 'co-cold-'));
   const v = JSON.parse(run(NODE, [sourcePath('doctor.mjs'), '--json', '--target', virgin]) || '{}');
   if (
     v.onboardingNeeded === true &&
     Array.isArray(v.missing) &&
-    v.missing.length === 4 &&
+    v.missing.length === 3 &&
     Array.isArray(v.warnings)
   ) {
-    pass('Virgin env → onboarding triggered (4 prerequisites missing)');
+    pass('Virgin env → onboarding triggered (3 prerequisites missing)');
   } else {
     fail(`Virgin env not flagged for onboarding: ${JSON.stringify(v)}`);
   }
   rmSync(virgin, { recursive: true, force: true });
 
-  // Fully provisioned env: all 4 present → must NOT onboard.
+  // Fully provisioned env: CV + profile are enough; portals.yml is optional.
   const ready = mkdtempSync(join(tmpdir(), 'co-ready-'));
   mkdirSync(join(ready, 'config'), { recursive: true });
   mkdirSync(join(ready, 'modes'), { recursive: true });
-  for (const f of ['cv.md', 'config/profile.yml', 'modes/_profile.md', 'portals.yml']) {
+  for (const f of ['cv.md', 'config/profile.yml', 'modes/_profile.md']) {
     writeFileSync(join(ready, f), 'x');
   }
   const r = JSON.parse(run(NODE, [sourcePath('doctor.mjs'), '--json', '--target', ready]) || '{}');
   if (r.onboardingNeeded === false && Array.isArray(r.warnings)) {
-    pass('Provisioned env → no onboarding');
+    pass('Provisioned env without portals.yml → no onboarding');
   } else {
     fail(`Provisioned env falsely flagged for onboarding: ${JSON.stringify(r)}`);
   }
@@ -4661,7 +4704,7 @@ try {
   const autoCopy = mkdtempSync(join(tmpdir(), 'co-autocopy-'));
   mkdirSync(join(autoCopy, 'config'), { recursive: true });
   mkdirSync(join(autoCopy, 'modes'), { recursive: true });
-  for (const f of ['cv.md', 'config/profile.yml', 'portals.yml']) {
+  for (const f of ['cv.md', 'config/profile.yml']) {
     writeFileSync(join(autoCopy, f), 'x');
   }
   writeFileSync(join(autoCopy, 'modes/_profile.template.md'), '# profile template\n');
@@ -4688,7 +4731,7 @@ try {
   const claudeDoc = readFile('CLAUDE.md');
   const agentsDoc = readFile('AGENTS.md');
   if (
-    /node\s+doctor\.mjs\s+--json/.test(claudeDoc) &&
+    /node\s+career-one\.mjs\s+doctor\s+--json/.test(claudeDoc) &&
     /warnings/.test(claudeDoc) &&
     /autoCopied/.test(claudeDoc) &&
     /"autoCopied"\s*:\s*\[\.\.\.\]/.test(agentsDoc) &&
@@ -6596,13 +6639,13 @@ try {
 
   if (
     titlesFlat.includes('exact YAML diff') &&
-    titlesFlat.includes('Never write to `portals.yml` without explicit user confirmation') &&
+    titlesFlat.includes('Never write to `config/profile.yml` without explicit user confirmation') &&
     titlesFlat.includes('the only file this mode writes by default') &&
     titlesFlat.includes('keywords, not raw titles')
   ) {
-    pass('titles mode confirm gate: exact YAML diff, explicit confirmation, portals.yml default-only, keywords not raw titles');
+    pass('titles mode confirm gate: exact YAML diff, explicit confirmation, profile default-only, keywords not raw titles');
   } else {
-    fail('titles mode missing the confirm-gate contract (diff preview / explicit confirmation / portals.yml default-only / keywords)');
+    fail('titles mode missing the confirm-gate contract (diff preview / explicit confirmation / profile default-only / keywords)');
   }
 
   if (
@@ -6628,11 +6671,11 @@ try {
   if (
     titlesMode.includes('cv.md') &&
     titlesMode.includes('config/profile.yml') &&
-    titlesMode.includes('title_filter.positive')
+    titlesMode.includes('target_roles.primary')
   ) {
-    pass('titles mode reads cv.md, profile archetypes, and the current title_filter.positive');
+    pass('titles mode reads cv.md, profile archetypes, and the current target_roles.primary');
   } else {
-    fail('titles mode missing required inputs (cv.md / config/profile.yml / title_filter.positive)');
+    fail('titles mode missing required inputs (cv.md / config/profile.yml / target_roles.primary)');
   }
 
   if (
@@ -6647,9 +6690,9 @@ try {
   if (
     titlesFlat.includes('Separately-confirmed exception') &&
     titlesFlat.includes('own YAML diff and its own separate confirmation') &&
-    titlesFlat.includes('never bundle the `portals.yml` and `config/profile.yml` writes into one confirmation')
+    titlesFlat.includes('never bundle a role-keyword change and an archetype change into one confirmation')
   ) {
-    pass('titles mode gates config/profile.yml archetype writes behind a separate diff + confirmation (never bundled)');
+    pass('titles mode gates profile archetype writes behind a separate diff + confirmation (never bundled)');
   } else {
     fail('titles mode missing the separately-confirmed exception for config/profile.yml archetype writes');
   }
@@ -6680,11 +6723,11 @@ try {
 
   if (
     titlesMode.includes('onboarding') &&
-    titlesMode.includes('templates/portals.example.yml')
+    titlesMode.includes('A missing `portals.yml` is irrelevant')
   ) {
-    pass('titles mode handles missing cv.md (onboarding) and missing portals.yml (create from template)');
+    pass('titles mode handles missing CV/profile and treats portals.yml as optional');
   } else {
-    fail('titles mode missing error handling for absent cv.md / portals.yml');
+    fail('titles mode missing error handling for absent CV/profile or still requires portals.yml');
   }
 } catch (e) {
   fail(`modes/titles.md missing or unreadable: ${e.message}`);

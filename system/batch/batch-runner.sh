@@ -6,11 +6,19 @@ set -euo pipefail
 # tracks state in batch-state.tsv for resumability.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-BATCH_DIR="$SCRIPT_DIR"
+SOURCE_LAYOUT="runtime/batch"
+if [[ -f "$SCRIPT_DIR/../../career-one.mjs" && "$(basename "$(dirname "$SCRIPT_DIR")")" == "system" ]]; then
+  SOURCE_LAYOUT="system/batch"
+  PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+  BATCH_DIR="$PROJECT_DIR/batch"
+  PROMPT_FILE="$SCRIPT_DIR/batch-prompt.md"
+else
+  PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+  BATCH_DIR="$SCRIPT_DIR"
+  PROMPT_FILE="$SCRIPT_DIR/batch-prompt.md"
+fi
 INPUT_FILE="$BATCH_DIR/batch-input.tsv"
 STATE_FILE="$BATCH_DIR/batch-state.tsv"
-PROMPT_FILE="$BATCH_DIR/batch-prompt.md"
 LOGS_DIR="$BATCH_DIR/logs"
 TRACKER_DIR="$BATCH_DIR/tracker-additions"
 REPORTS_DIR="$PROJECT_DIR/reports"

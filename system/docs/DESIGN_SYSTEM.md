@@ -94,10 +94,10 @@
 | brand-text | secondary-600 | `#ca8a04` |
 | interactive-hover | warm amber | `#ffb24d` |
 | action-secondary | white / 64% | `rgb(255 255 255 / 0.64)` |
-| action-secondary-hover | gray-900 / 7% | `rgb(17 24 39 / 0.07)` |
-| action-secondary-active | gray-900 / 11% | `rgb(17 24 39 / 0.11)` |
+| action-secondary-hover | warm amber / 18% | `rgb(255 178 77 / 0.18)` |
+| action-secondary-active | warm amber / 28% | `rgb(255 178 77 / 0.28)` |
 | action-secondary-border | gray-900 / 14% | `rgb(17 24 39 / 0.14)` |
-| action-secondary-border-hover | gray-900 / 28% | `rgb(17 24 39 / 0.28)` |
+| action-secondary-border-hover | secondary-600 / 38% | `rgb(202 138 4 / 0.38)` |
 | action-secondary-foreground | gray-900 | `#111827` |
 | outline-bg | gray-900 / 2.5% | `rgb(17 24 39 / 0.025)` |
 | outline-bg-hover | gray-900 / 5% | `rgb(17 24 39 / 0.05)` |
@@ -119,10 +119,10 @@
 | brand-text | `#facc15` |
 | interactive-hover | `#ffb24d` |
 | action-secondary | `rgb(255 255 255 / 0.07)` |
-| action-secondary-hover | `rgb(255 255 255 / 0.14)` |
-| action-secondary-active | `rgb(255 255 255 / 0.20)` |
+| action-secondary-hover | `rgb(255 178 77 / 0.22)` |
+| action-secondary-active | `rgb(255 178 77 / 0.32)` |
 | action-secondary-border | `rgb(255 255 255 / 0.16)` |
-| action-secondary-border-hover | `rgb(255 255 255 / 0.42)` |
+| action-secondary-border-hover | `rgb(250 204 21 / 0.46)` |
 | action-secondary-foreground | `#ffffff` |
 | outline-bg | `rgb(255 255 255 / 0.05)` |
 | outline-bg-hover | `rgb(255 255 255 / 0.1)` |
@@ -177,6 +177,8 @@
 ### 3.6 玻璃表面
 
 玻璃效果用于 Hero 聚合面板和玻璃副按钮，不作为所有卡片的默认样式。它由半透明中性表面、`12px` 背景模糊、118% 饱和度、细描边和顶部 1px 内高光共同建立；不依赖厚重阴影，也不得降低正文对比度。
+
+玻璃副按钮默认建立 `relative` 定位上下文承载内部 Hover 洗色；当组件显式使用 `fixed`、`absolute` 或 `sticky` 定位时，外部定位意图优先，玻璃表面不得将其降级为 `relative`。
 
 | Token | 浅色模式 | 深色模式 | 用途 |
 |---|---:|---:|---|

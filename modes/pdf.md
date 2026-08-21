@@ -44,7 +44,7 @@
 ## PDF Design
 
 - **Fonts**: Space Grotesk (headings, 600-700) + DM Sans (body, 400-500)
-- **Fonts self-hosted**: `fonts/`
+- **Fonts self-hosted**: `system/fonts/`
 - **Header**: name in Space Grotesk 24px bold + gradient line `linear-gradient(to right, hsl(187,74%,32%), hsl(270,70%,45%))` 2px + contact row
 - **Section headers**: Space Grotesk 13px, uppercase, letter-spacing 0.05em, color cyan primary
 - **Body**: DM Sans 11px, line-height 1.5

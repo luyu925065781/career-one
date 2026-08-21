@@ -27,7 +27,7 @@ If the fetch fails, stop Step 2 and tell the user you couldn't preview the chang
 Then, only if the fetch succeeded, for each System Layer file category show a summary:
 
 ```bash
-git diff HEAD..FETCH_HEAD --stat -- modes/ CLAUDE.md AGENTS.md *.mjs batch/ dashboard/ templates/ docs/ VERSION
+git diff HEAD..FETCH_HEAD --stat -- .agents/ .github/ AGENTS.md CLAUDE.md LICENSE README.md VERSION career-one.mjs update-system.mjs modes/ plugins/ providers/ scripts/ system/ tests/ web/ package.json package-lock.json
 ```
 
 Present to the user as a clear summary:
@@ -75,7 +75,7 @@ If yes:
    - If non-zero, treat apply as failed. Show the captured output and offer:
      > "⚠️ Update apply failed. Want me to show the full error, or try `/career-one update rollback`?"
    - Stop the flow here if apply failed — do not run doctor or reconciliation on a partially-applied update.
-6. Run `node doctor.mjs` to validate the installation
+6. Run `node career-one.mjs doctor` to validate the installation
    - If the command exits with a non-zero code, treat validation as failed. Show the captured output and offer:
      > "⚠️ Validation failed after update. Want me to show the full error, or roll back with `/career-one update rollback`?"
    - Stop the flow here if validation failed — do not run reconciliation or show the success message.
@@ -93,7 +93,7 @@ If yes:
      - For removals:
        > "Your _profile.md references archetype '{old_name}' which was removed in the new _shared.md. Want me to delete the reference or replace it with another archetype?"
 8. Show final status:
-   > "✅ Updated to v{version}. Run `node doctor.mjs` anytime to verify setup."
+   > "✅ Updated to v{version}. Run `node career-one.mjs doctor` anytime to verify setup."
 
 If no:
 1. Run `node update-system.mjs dismiss`

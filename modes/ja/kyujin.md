@@ -94,7 +94,7 @@ JD requirements に mapping した 6-10 STAR+R stories（STAR + **Reflection**�
 
 **Reflection** column は、何を学んだか、または次に何を変えるかを捉える。これは seniority の signal。Junior candidates は起きたことを説明する。Senior candidates は lessons を抽出する。
 
-**Story Bank:** `interview-prep/story-bank.md` が存在する場合、これらの stories がすでにあるか確認する。なければ新しいものを append する。時間とともに、どの interview question にも適応できる 5-10 master stories の reusable bank を作る。
+**Story Bank:** まず `interview-prep/story-bank.md` の既存ストーリーを照合して再利用する。許可されたユーザー事実から、未収録かつ複数職種で再利用できる実体験が確認できた場合に限り、追加候補を提案する。職種固有の見せ方、質問、トークポイントは現在のレポートまたは `interview-prep/{company}-{role}.md` に残す。条件を満たす新しい経験がなければストーリーバンクを変更せず、評価完了だけを理由に新規作成しない。追加はユーザーの明示的な承認を得るまで提案のままとする。
 
 **Selected and framed according to the archetype:**
 - FDE → delivery speed と client-facing を強調

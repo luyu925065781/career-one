@@ -1,19 +1,15 @@
-// The exported name stays stable for internal imports; the visible mark follows
-// the Chinese product brand.
+// The exported name stays stable for internal imports. The rendered asset is
+// mirrored from the canonical artwork at ../../../Logo/logo.svg.
 export function CoMark({ size = 28 }: { size?: number }) {
   return (
-    <span
+    <img
+      src="/icon.svg"
+      alt=""
       aria-hidden="true"
-      className="inline-flex shrink-0 items-center justify-center rounded-md bg-brand font-sans font-bold text-brand-foreground"
-      style={{
-        width: size,
-        height: size,
-        fontSize: Math.round(size * 0.57),
-        letterSpacing: 0,
-        lineHeight: 1,
-      }}
-    >
-      择
-    </span>
+      draggable={false}
+      width={Math.round(size * 1.1)}
+      height={size}
+      className="block shrink-0 object-contain"
+    />
   );
 }

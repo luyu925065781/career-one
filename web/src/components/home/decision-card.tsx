@@ -20,6 +20,7 @@ export function DecisionCard({ app }: { app: Application }) {
   const [done, setDone] = useState<string | null>(null);
   const score = scoreNum(app.score);
   const tone = scoreTone(app.score);
+  const lowFit = Number.isFinite(score) && score < 4;
   const companyIdentity = resolveCompanyIdentity(app.company, app.via);
 
   const setStatus = async (status: "Applied" | "Discarded") => {
@@ -51,17 +52,42 @@ export function DecisionCard({ app }: { app: Application }) {
           </Badge>
         )}
       </div>
+      {lowFit && (
+        <p className="text-xs leading-5 text-warning" role="note">
+          匹配分低于 4.0，建议先查看报告；如仍要投递，请明确确认覆盖理由。
+        </p>
+      )}
       <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={!!busy}
-          onClick={() => setStatus("Applied")}
-          className="flex-1"
-        >
-          {busy === "Applied" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} 标记已投递
-        </Button>
+        {lowFit ? (
+          <a
+            href={`/pipeline/${app.n}`}
+            className={cn(buttonVariants({ variant: "primary", size: "sm" }), "flex-1")}
+          >
+            <FileText className="size-3.5" /> 查看报告
+          </a>
+        ) : (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={!!busy}
+            onClick={() => setStatus("Applied")}
+            className="flex-1"
+          >
+            {busy === "Applied" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} 标记已投递
+          </Button>
+        )}
+        {lowFit && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={!!busy}
+            onClick={() => setStatus("Applied")}
+          >
+            {busy === "Applied" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} 仍要投递
+          </Button>
+        )}
         <Button
           type="button"
           variant="tertiary"
@@ -72,14 +98,16 @@ export function DecisionCard({ app }: { app: Application }) {
         >
           {busy === "Discarded" ? <Loader2 className="size-3.5 animate-spin" /> : <X className="size-3.5" />} 放弃
         </Button>
-        <a
-          href={`/pipeline/${app.n}`}
-          title="打开报告"
-          aria-label="打开报告"
-          className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "shrink-0 text-faint")}
-        >
-          <FileText className="size-4" />
-        </a>
+        {!lowFit && (
+          <a
+            href={`/pipeline/${app.n}`}
+            title="打开报告"
+            aria-label="打开报告"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "shrink-0 text-faint")}
+          >
+            <FileText className="size-4" />
+          </a>
+        )}
       </div>
     </Card>
   );

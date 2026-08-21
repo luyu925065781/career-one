@@ -29,6 +29,61 @@ function listFrom(v: unknown): string[] {
   return cleanChips(v);
 }
 
+function hasOwn(object: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+/** Profile-owned intent wins; legacy portals filters fill only unconfirmed keys. */
+function mergeProfileSearchConfig(
+  profile: Record<string, unknown> | null,
+  portals: Record<string, unknown> | null,
+): { filters: FilterLists; seededFrom: string[] } {
+  const filters: FilterLists = { positive: [], negative: [], allow: [], block: [], alwaysAllow: [] };
+  const seededFrom: string[] = [];
+  const sourceTitle = (portals?.title_filter ?? {}) as Record<string, unknown>;
+  const sourceLocation = (portals?.location_filter ?? {}) as Record<string, unknown>;
+  filters.positive = listFrom(sourceTitle.positive);
+  filters.negative = listFrom(sourceTitle.negative);
+  filters.allow = listFrom(sourceLocation.allow);
+  filters.block = listFrom(sourceLocation.block);
+  filters.alwaysAllow = listFrom(sourceLocation.always_allow);
+
+  const roles = (profile?.target_roles ?? {}) as Record<string, unknown>;
+  const search = (profile?.job_search ?? {}) as Record<string, unknown>;
+  const profileRoles = listFrom(roles.primary);
+  if (profileRoles.length > 0) filters.positive = profileRoles;
+  if (hasOwn(search, "excluded_titles")) filters.negative = listFrom(search.excluded_titles);
+  if (hasOwn(search, "preferred_locations")) filters.allow = listFrom(search.preferred_locations);
+  if (hasOwn(search, "excluded_locations")) filters.block = listFrom(search.excluded_locations);
+
+  const profileLocation = (profile?.location ?? {}) as Record<string, unknown>;
+  const rawCity = typeof profileLocation.city === "string" ? profileLocation.city.trim() : "";
+  const city = /^(?:tbd|待填写|待确认|未知|unknown)$/i.test(rawCity) ? "" : rawCity;
+  const profileAlways = hasOwn(search, "always_include_locations")
+    ? listFrom(search.always_include_locations)
+    : [];
+  filters.alwaysAllow = listFrom([
+    ...(hasOwn(search, "always_include_locations") ? [] : filters.alwaysAllow),
+    ...profileAlways,
+    ...(city ? [city] : []),
+  ]);
+
+  const profileUsed = profileRoles.length > 0
+    || hasOwn(search, "excluded_titles")
+    || hasOwn(search, "preferred_locations")
+    || hasOwn(search, "excluded_locations")
+    || hasOwn(search, "always_include_locations")
+    || Boolean(city);
+  const portalsUsed = (profileRoles.length === 0 && listFrom(sourceTitle.positive).length > 0)
+    || (!hasOwn(search, "excluded_titles") && listFrom(sourceTitle.negative).length > 0)
+    || (!hasOwn(search, "preferred_locations") && listFrom(sourceLocation.allow).length > 0)
+    || (!hasOwn(search, "excluded_locations") && listFrom(sourceLocation.block).length > 0)
+    || (!hasOwn(search, "always_include_locations") && listFrom(sourceLocation.always_allow).length > 0);
+  if (profileUsed) seededFrom.push("profile.yml");
+  if (portalsUsed) seededFrom.push("portals.yml");
+  return { filters, seededFrom };
+}
+
 /** Serialize filters into a minimal, valid portals.yml. Scalars go through
  *  JSON.stringify (a valid YAML double-quoted scalar) so arbitrary keywords —
  *  colons, quotes, leading dashes — can never break the document or inject YAML. */
@@ -98,50 +153,18 @@ function loadYaml(rel: string): Record<string, unknown> | null {
 }
 
 /**
- * Tolerantly seed first-search defaults from the user's real config. Reads
- * portals.yml (title_filter / location_filter) and falls back to
- * config/profile.yml (target_roles, location) for the positive keywords when
- * portals has none. Never throws — a bare checkout just yields DEFAULT_FILTERS.
+ * Tolerantly seed first-search defaults from the user's real config. Candidate
+ * intent comes from config/profile.yml; legacy portals filters remain a fallback
+ * for fields not yet confirmed in the profile. Never throws.
  */
 export function seedExploreFilters(): { filters: ExploreFilters; seededFrom: string[] } {
   const filters: ExploreFilters = { ...DEFAULT_FILTERS, ats: [...DEFAULT_FILTERS.ats] };
   const seededFrom: string[] = [];
   const profile = loadYaml("config/profile.yml");
-
   const portals = loadYaml("portals.yml");
-  if (portals) {
-    const tf = (portals.title_filter ?? {}) as Record<string, unknown>;
-    const lf = (portals.location_filter ?? {}) as Record<string, unknown>;
-    filters.positive = listFrom(tf.positive);
-    filters.negative = listFrom(tf.negative);
-    filters.allow = listFrom(lf.allow);
-    filters.block = listFrom(lf.block);
-    filters.alwaysAllow = listFrom(lf.always_allow);
-    if (filters.positive.length || filters.allow.length || filters.block.length) seededFrom.push("portals.yml");
-  }
-
-  if (filters.positive.length === 0) {
-    const roles = (profile?.target_roles ?? {}) as Record<string, unknown>;
-    const fromRoles = listFrom([
-      ...(typeof roles.primary === "string" ? [roles.primary] : []),
-      ...(Array.isArray(roles.archetypes) ? roles.archetypes : []),
-    ]);
-    if (fromRoles.length) {
-      filters.positive = fromRoles;
-      seededFrom.push("profile.yml");
-    }
-  }
-
-  // Agent-confirmed profile data seeds a safe, non-exclusive location default
-  // only when the user has not already saved explicit location rules. Current
-  // city belongs in alwaysAllow: it avoids losing multi-location roles without
-  // silently restricting the search to that city or inventing relocation rules.
-  if (filters.allow.length === 0 && filters.block.length === 0 && filters.alwaysAllow.length === 0) {
-    const profileLocation = (profile?.location ?? {}) as Record<string, unknown>;
-    const rawCity = typeof profileLocation.city === "string" ? profileLocation.city.trim() : "";
-    const profileCity = /^(?:tbd|待确认|未知|unknown)$/i.test(rawCity) ? "" : rawCity;
-    if (profileCity) filters.alwaysAllow = [profileCity];
-  }
+  const merged = mergeProfileSearchConfig(profile, portals);
+  Object.assign(filters, merged.filters);
+  seededFrom.push(...merged.seededFrom);
 
   return { filters, seededFrom };
 }

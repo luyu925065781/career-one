@@ -32,6 +32,7 @@ export function CvEditor() {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [nextStepVisible, setNextStepVisible] = useState(false);
 
   useEffect(() => {
     fetch("/api/cv")
@@ -55,6 +56,7 @@ export function CvEditor() {
         setDirty(false);
         setExists(true);
         setSaved(true);
+        setNextStepVisible(true);
         setTimeout(() => setSaved(false), 2000);
       }
     } finally {
@@ -79,7 +81,7 @@ export function CvEditor() {
         </div>
         <Button
           type="button"
-          variant={dirty ? "primary" : "tertiary"}
+          variant="primary"
           onClick={save}
           disabled={saving || !dirty}
         >
@@ -87,6 +89,18 @@ export function CvEditor() {
           {saved ? "已保存" : "保存"}
         </Button>
       </div>
+
+      {nextStepVisible && (
+        <div
+          role="status"
+          className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-brand/20 bg-brand-soft px-4 py-3 text-sm text-brand-text"
+        >
+          <span>简历已保存，可以继续完善求职画像。</span>
+          <Link href="/profile" className={cn(buttonVariants({ variant: "tertiary", size: "sm" }), "min-h-11")}>
+            继续完善求职画像 <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        </div>
+      )}
 
       {!exists && loaded && <CvAgentOnboarding />}
       {!loaded ? (
@@ -163,9 +177,7 @@ const JOURNEY_HANDOFF_CONTENT = {
   NextIcon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 }>;
 
-export function JourneyHandoffCard({
-  stage,
-}: {
+export function JourneyHandoffCard({ stage }: {
   stage: JourneyHandoffStage;
 }) {
   const content = JOURNEY_HANDOFF_CONTENT[stage];
@@ -180,7 +192,7 @@ export function JourneyHandoffCard({
       aria-labelledby={titleId}
       className="mt-6 overflow-hidden"
     >
-      <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+      <div className="px-5 py-5 sm:px-6">
         <div className="min-w-0">
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
             新用户教程 · {content.eyebrow}
@@ -192,9 +204,6 @@ export function JourneyHandoffCard({
             {content.description}
           </p>
         </div>
-        <span className="w-fit shrink-0 rounded-full bg-surface-hover px-3 py-1.5 text-sm font-semibold tabular-nums text-foreground">
-          {content.progress} / 5
-        </span>
       </div>
 
       <div className="grid gap-5 border-t border-border px-5 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
@@ -216,7 +225,11 @@ export function JourneyHandoffCard({
 
           <li className="flex min-w-0 items-center gap-3 rounded-card bg-surface-hover px-4 py-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-soft text-sm font-semibold tabular-nums text-brand-text">
-              {content.progress + 1}
+              {stage === "story-complete" ? (
+                <ArrowRight className="size-4" aria-hidden="true" />
+              ) : (
+                content.progress + 1
+              )}
             </span>
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-text">{content.nextStatus}</p>

@@ -272,15 +272,23 @@ test("the CV editor stops repeating onboarding after the CV handoff", () => {
 });
 
 test("journey handoff advances after the first story without a readiness gate", () => {
+  const page = readWeb("./src/app/interview/page.tsx");
   const manager = readWeb("./src/components/cv-editor.tsx");
   const taskPage = readWeb("./src/app/jobs/[id]/page.tsx");
 
+  assert.doesNotMatch(page, /storyCount=\{stories\.length\}/);
+  assert.doesNotMatch(manager, /storyCount:\s*number/);
+  assert.doesNotMatch(manager, /第 \{content\.progress\} 步（共 3 步）/);
+  assert.doesNotMatch(manager, /\{storyCount\} 个故事/);
+  assert.doesNotMatch(manager, /\{content\.progress\} \/ 5/);
   assert.match(manager, /data-journey-handoff=\{stage\}[\s\S]*?data-ui-card="solid"/);
   assert.doesNotMatch(manager, /rounded-card border border-border bg-surface/);
   assert.doesNotMatch(manager, /data-journey-handoff[^>]+border-brand/);
   assert.match(manager, /整理面试故事库/);
   assert.match(manager, /岗位评估/);
   assert.match(manager, /href="\/cn-diagnose"/);
+  assert.match(manager, /stage === "story-complete"/);
+  assert.doesNotMatch(manager, /\{content\.progress \+ 1\}/);
   assert.doesNotMatch(manager, /发现岗位|href="\/explore"/);
   assert.match(manager, /Web 只保存 Agent 待办/);
   assert.match(manager, /根据目标岗位优先选择最有说服力的真实经历/);

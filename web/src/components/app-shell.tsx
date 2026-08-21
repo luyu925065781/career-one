@@ -11,7 +11,6 @@ import { PipelineProvider } from "@/components/pipeline/pipeline-provider";
 import { ApplyProvider } from "@/components/apply/apply-provider";
 import { ExploreProvider } from "@/components/explore/explore-provider";
 import { FirstScoreView } from "@/components/explore/first-score-view";
-import { BetaBanner } from "@/components/beta/beta-banner";
 import { WorkerPills } from "@/components/jobs/worker-pills";
 import { NAV_ITEMS, isActivePath } from "@/lib/nav-items";
 
@@ -26,7 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen">
         <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col overflow-hidden border-r border-border bg-surface/30 p-4 md:flex">
           <Link href="/" className="mb-8 flex items-center gap-2.5 px-1">
-            <CoMark size={32} />
+            <CoMark size={28} />
             <span className="font-sans text-xl font-semibold tracking-normal text-landing">
               择程AI
             </span>
@@ -63,7 +62,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
         <main className="flex-1 overflow-x-hidden">{children}</main>
         <FirstScoreView />
-        <BetaBanner />
       </div>
       </ExploreProvider>
       </ApplyProvider>

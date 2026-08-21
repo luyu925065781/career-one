@@ -75,11 +75,27 @@ function loadDocument(root: string): Record<string, unknown> {
     if (!isObj(parsed)) throw new Error("portals.yml 必须是 YAML 对象，已拒绝覆盖。");
     return parsed;
   }
+  // Optional means optional: never materialize the 100+ company example as a
+  // user's personal source list merely because they opened this page.
+  return {};
+}
+
+function writeDocument(root: string, doc: Record<string, unknown>): void {
+  atomicWriteWithBackup(path.join(root, "portals.yml"), yaml.dump(doc, { lineWidth: 120, noRefs: true }));
+}
+
+function loadProfileDocument(root: string): Record<string, unknown> {
+  const file = path.join(root, "config", "profile.yml");
+  if (fs.existsSync(file)) {
+    const parsed = yaml.load(fs.readFileSync(file, "utf8"));
+    if (!isObj(parsed)) throw new Error("config/profile.yml 必须是 YAML 对象，已拒绝覆盖。");
+    return parsed;
+  }
+  const systemExample = path.join(root, "system", "config", "profile.example.yml");
+  const examplePath = fs.existsSync(systemExample)
+    ? systemExample
+    : path.join(root, "config", "profile.example.yml");
   try {
-    const systemExample = path.join(root, "system", "templates", "portals.example.yml");
-    const examplePath = fs.existsSync(systemExample)
-      ? systemExample
-      : path.join(root, "templates", "portals.example.yml");
     const parsed = yaml.load(fs.readFileSync(examplePath, "utf8"));
     return isObj(parsed) ? parsed : {};
   } catch {
@@ -87,8 +103,60 @@ function loadDocument(root: string): Record<string, unknown> {
   }
 }
 
-function writeDocument(root: string, doc: Record<string, unknown>): void {
-  atomicWriteWithBackup(path.join(root, "portals.yml"), yaml.dump(doc, { lineWidth: 120, noRefs: true }));
+function profileSearchRules(root: string, portals: Record<string, unknown>) {
+  const profile = loadProfileDocument(root);
+  const roles = isObj(profile.target_roles) ? profile.target_roles : {};
+  const search = isObj(profile.job_search) ? profile.job_search : {};
+  const location = isObj(profile.location) ? profile.location : {};
+  const title = isObj(portals.title_filter) ? portals.title_filter : {};
+  const legacyLocation = isObj(portals.location_filter) ? portals.location_filter : {};
+  const primary = strings(roles.primary);
+  const city = typeof location.city === "string" && !/^(?:待填写|待确认|未知|unknown|tbd)$/i.test(location.city.trim())
+    ? location.city.trim()
+    : "";
+  const has = (key: string) => Object.prototype.hasOwnProperty.call(search, key);
+  return {
+    positive: primary.length ? primary : strings(title.positive),
+    negative: has("excluded_titles") ? strings(search.excluded_titles) : strings(title.negative),
+    allow: has("preferred_locations") ? strings(search.preferred_locations) : strings(legacyLocation.allow),
+    block: has("excluded_locations") ? strings(search.excluded_locations) : strings(legacyLocation.block),
+    alwaysAllow: has("always_include_locations")
+      ? strings([...(Array.isArray(search.always_include_locations) ? search.always_include_locations : []), ...(city ? [city] : [])])
+      : strings([...(Array.isArray(legacyLocation.always_allow) ? legacyLocation.always_allow : []), ...(city ? [city] : [])]),
+  };
+}
+
+function writeProfileSearchRules(root: string, rules: Record<string, unknown>): void {
+  const file = path.join(root, "config", "profile.yml");
+  const profile = loadProfileDocument(root);
+  const targetRoles = isObj(profile.target_roles) ? { ...profile.target_roles } : {};
+  targetRoles.primary = strings(rules.positive, 24);
+  const jobSearch = isObj(profile.job_search) ? { ...profile.job_search } : {};
+  jobSearch.excluded_titles = strings(rules.negative);
+  jobSearch.preferred_locations = strings(rules.allow);
+  jobSearch.excluded_locations = strings(rules.block);
+  jobSearch.always_include_locations = strings(rules.alwaysAllow);
+  atomicWriteWithBackup(file, yaml.dump({ ...profile, target_roles: targetRoles, job_search: jobSearch }, { lineWidth: 100, noRefs: true }));
+}
+
+/** Remove only the generic filters that were migrated to the profile. Preserve
+ * source plumbing and any unrelated advanced keys in the same blocks. */
+function removeMigratedSearchRules(doc: Record<string, unknown>): void {
+  if (isObj(doc.title_filter)) {
+    const title = { ...doc.title_filter };
+    delete title.positive;
+    delete title.negative;
+    if (Object.keys(title).length > 0) doc.title_filter = title;
+    else delete doc.title_filter;
+  }
+  if (isObj(doc.location_filter)) {
+    const location = { ...doc.location_filter };
+    delete location.allow;
+    delete location.block;
+    delete location.always_allow;
+    if (Object.keys(location).length > 0) doc.location_filter = location;
+    else delete doc.location_filter;
+  }
 }
 
 function normalizedPlatforms(doc: Record<string, unknown>) {
@@ -161,8 +229,7 @@ export async function GET() {
   const root = careerOneRoot();
   try {
     const doc = loadDocument(root);
-    const title = isObj(doc.title_filter) ? doc.title_filter : {};
-    const location = isObj(doc.location_filter) ? doc.location_filter : {};
+    const profileRules = profileSearchRules(root, doc);
     const content = isObj(doc.content_filter) ? doc.content_filter : {};
     const byTitle = isObj(content.by_title_keyword) ? content.by_title_keyword : {};
     const boards = Array.isArray(doc.job_boards) ? doc.job_boards.filter(isObj) : [];
@@ -172,11 +239,11 @@ export async function GET() {
       companies: normalizedCompanies(doc),
       recommendations: recommendedCompanies(root, doc),
       rules: {
-        positive: strings(title.positive),
-        negative: strings(title.negative),
-        allow: strings(location.allow),
-        block: strings(location.block),
-        alwaysAllow: strings(location.always_allow),
+        positive: profileRules.positive,
+        negative: profileRules.negative,
+        allow: profileRules.allow,
+        block: profileRules.block,
+        alwaysAllow: profileRules.alwaysAllow,
         queries: searchQueries(doc),
         contentFilterGroups: Object.keys(byTitle).length,
         automatedBoards: boards.map((board) => ({
@@ -208,6 +275,7 @@ export async function POST(req: Request) {
   }
 
   const action = typeof body.action === "string" ? body.action : "seed-rules";
+  let shouldWritePortals = true;
 
   if (action === "save-platforms") {
     const choices = Array.isArray(body.platforms) ? body.platforms.filter(isObj) : [];
@@ -259,37 +327,34 @@ export async function POST(req: Request) {
     if (!isObj(body.rules)) return Response.json({ error: "缺少搜索规则" }, { status: 400 });
     const positive = strings(body.rules.positive);
     if (positive.length === 0) return Response.json({ error: "至少保留一个目标岗位关键词" }, { status: 400 });
-    const title = isObj(doc.title_filter) ? { ...doc.title_filter } : {};
-    title.positive = positive;
-    title.negative = strings(body.rules.negative);
-    doc.title_filter = title;
-    const location = isObj(doc.location_filter) ? { ...doc.location_filter } : {};
-    location.allow = strings(body.rules.allow);
-    location.block = strings(body.rules.block);
-    location.always_allow = strings(body.rules.alwaysAllow);
-    doc.location_filter = location;
+    try {
+      writeProfileSearchRules(root, { ...body.rules, positive });
+    } catch (error) {
+      return Response.json({ error: error instanceof Error ? error.message : "求职画像保存失败" }, { status: 409 });
+    }
+    removeMigratedSearchRules(doc);
     const queries = Array.isArray(body.rules.queries) ? body.rules.queries.filter(isObj) : [];
-    doc.search_queries = queries.map((query) => ({
+    const searchQueries = queries.map((query) => ({
       name: String(query.name || "").trim().slice(0, 100),
       query: String(query.query || "").trim().slice(0, 800),
       enabled: query.enabled !== false,
     })).filter((query) => query.name && query.query).slice(0, 24);
+    doc.search_queries = searchQueries;
+    shouldWritePortals = fs.existsSync(path.join(root, "portals.yml")) || searchQueries.length > 0;
   } else {
-    // Back-compatible onboarding path used by setProfile/setPortals actions.
+    // Back-compatible action envelopes now update the profile-owned intent.
     const roles = strings(body.roles, 24);
     if (roles.length === 0) return Response.json({ error: "请至少填写一个目标岗位" }, { status: 400 });
-    const title = isObj(doc.title_filter) ? { ...doc.title_filter } : {};
-    title.positive = roles;
-    doc.title_filter = title;
-    if (Array.isArray(body.location) && body.location.length) {
-      const location = isObj(doc.location_filter) ? { ...doc.location_filter } : {};
-      location.allow = strings(body.location);
-      doc.location_filter = location;
+    try {
+      writeProfileSearchRules(root, { positive: roles, allow: strings(body.location) });
+    } catch (error) {
+      return Response.json({ error: error instanceof Error ? error.message : "求职画像保存失败" }, { status: 409 });
     }
+    shouldWritePortals = false;
   }
 
   try {
-    writeDocument(root, doc);
+    if (shouldWritePortals) writeDocument(root, doc);
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : "岗位来源设置保存失败" }, { status: 500 });
   }

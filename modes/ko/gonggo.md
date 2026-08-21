@@ -81,7 +81,7 @@ WebSearch를 사용합니다.
 
 **Reflection** 열은 무엇을 배웠는지 또는 다시 한다면 무엇을 다르게 할지를 담습니다. 이는 seniority를 보여주는 신호입니다. junior는 무슨 일이 있었는지를 설명하고, senior는 그 경험에서 무엇을 배웠는지까지 설명합니다.
 
-**Story Bank:** `interview-prep/story-bank.md`가 있으면 해당 story들이 이미 있는지 확인합니다. 없으면 새 story를 추가합니다. 시간이 지나면 어떤 면접 질문에도 재사용 가능한 5-10개의 master story bank가 만들어집니다.
+**Story Bank:** 먼저 `interview-prep/story-bank.md`의 기존 스토리를 매칭해 재사용합니다. 허용된 사용자 사실에서 아직 기록되지 않았고 여러 직무에 재사용할 수 있는 검증된 실제 경험이 확인된 경우에만 추가 후보를 제안합니다. 직무별 표현, 질문, 대화 포인트는 현재 보고서 또는 `interview-prep/{company}-{role}.md`에만 둡니다. 조건을 충족하는 새 경험이 없으면 스토리 뱅크를 변경하지 않으며, 평가가 끝났다는 이유만으로 파일을 만들지 않습니다. 모든 추가는 사용자의 명시적 승인 전까지 제안 상태로 유지합니다.
 
 **Archetype에 맞춰 선택하고 framing합니다:**
 - FDE -> delivery 속도와 고객 접점을 강조

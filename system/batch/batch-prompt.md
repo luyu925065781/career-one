@@ -20,7 +20,7 @@ Eres un worker de evaluación de ofertas de empleo for the candidate (read name 
 | llms.txt | `llms.txt (if exists)` | SIEMPRE |
 | article-digest.md | `article-digest.md (project root)` | SIEMPRE (proof points) |
 | i18n.ts | `i18n.ts (if exists, optional)` | Solo entrevistas/deep |
-| cv-template.html | `templates/cv-template.html` | Para PDF |
+| cv-template.html | `system/templates/cv-template.html` | Para PDF |
 | generate-pdf.mjs | `generate-pdf.mjs` | Para PDF |
 
 **REGLA: NUNCA escribir en cv.md ni i18n.ts.** Son read-only.
@@ -315,7 +315,7 @@ advertised_comp: {verbatim JD salary/range as a quoted string (e.g. "80-90k EUR"
 8. Reordena bullets de experiencia por relevancia al JD
 9. Construye competency grid (6-8 keyword phrases)
 10. Inyecta keywords en logros existentes (**NUNCA inventa**)
-11. Genera HTML completo desde template (lee `templates/cv-template.html`)
+11. Genera HTML completo desde template (lee `system/templates/cv-template.html`)
 12. Escribe HTML a `output/cv-candidate-{company-slug}.html` (NO en /tmp — el HTML registrado es la fuente de regeneración del dashboard)
 13. Ejecuta:
 ```bash
@@ -339,7 +339,7 @@ On success, in Paso 5 use `pdf_emoji` = `✅` and in Paso 6 set `"pdf"` to the o
 
 **Diseño:**
 - Fonts: Space Grotesk (headings, 600-700) + DM Sans (body, 400-500)
-- Fonts self-hosted: `fonts/`
+- Fonts self-hosted: `system/fonts/`
 - Header: Space Grotesk 24px bold + gradiente cyan→purple 2px + contacto
 - Section headers: Space Grotesk 13px uppercase, color cyan `hsl(187,74%,32%)`
 - Body: DM Sans 11px, line-height 1.5

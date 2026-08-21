@@ -9,7 +9,7 @@ These files contain your personal data, customizations, and work product. Update
 | File | Purpose |
 |------|---------|
 | `cv.md` | Your CV in markdown |
-| `config/profile.yml` | Your identity, targets, comp range |
+| `config/profile.yml` | Your identity, targets, comp range, and reusable job-search intent |
 | `modes/_profile.md` | Your archetypes, narrative, negotiation scripts |
 | `modes/_custom.md` | Your house rules, custom workflows & output preferences (procedural — survives updates) |
 | `voice-dna.md` | Your writing voice guardrail — banned words, anti-AI-slop rules, tone (optional) |
@@ -17,7 +17,7 @@ These files contain your personal data, customizations, and work product. Update
 | `interview-prep/story-bank.md` | Your accumulated STAR+R stories |
 | `interview-prep/{company}-{role}.md` | Company-specific interview prep reports (written by `/career-one interview-prep`) |
 | `interview-prep/sessions/*.md` | Interview sessions — real transcripts + mock sessions (sensitive: real names/companies; gitignored). Drives `patterns` Step 1b targeting signal and `interview-redflag` analysis. |
-| `portals.yml` | Your customized company list |
+| `portals.yml` | Optional advanced job sources: platforms, company career pages, ATS providers, and source-specific rules |
 | `config/plugins.yml` | Your plugin activation toggles (opt-in; seeded from `config/plugins.example.yml`) |
 | `plugins.local/` | Your own / private plugins (never auto-updated) |
 | `plugins.lock` | Integrity pins + recorded consent for your enabled plugins (generated; never auto-updated) |
@@ -35,6 +35,8 @@ These files contain your personal data, customizations, and work product. Update
 | `reports/*` | Your evaluation reports |
 | `output/*` | Your generated PDFs and local pending-change proposal drafts |
 | `jds/*` | Your saved job descriptions |
+
+The visible setup journey is `cv.md` → `config/profile.yml` / `modes/_profile.md` → `interview-prep/story-bank.md`, followed by direct job evaluation. The story bank is guided but does not block evaluation of a JD the user already supplied. `portals.yml` is optional and must not be treated as an onboarding prerequisite.
 
 ## System Layer (safe to auto-update)
 

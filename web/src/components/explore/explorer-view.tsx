@@ -101,6 +101,7 @@ export function ExplorerView({
           </div>
         </div>
         <ScreenshotEvaluate />
+        <JobInputEvaluate page="/explore" />
         <div className="mt-4 flex items-start gap-2 text-xs leading-5 text-faint">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-icon-success" aria-hidden="true" />
           <span>评估报告会写入本地求职进度；是否投递始终由你决定。</span>
@@ -146,6 +147,7 @@ export function ScreenshotEvaluate({ page = "/cn-diagnose" }: { page?: string })
   const [handoffOpen, setHandoffOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const queuingRef = useRef(false);
   const screenshotKey = screenshots.map((screenshot) => screenshot.name).join(" | ");
   const taskOpts = useMemo(() => ({
@@ -264,17 +266,36 @@ export function ScreenshotEvaluate({ page = "/cn-diagnose" }: { page?: string })
           </div>
           <p className="mt-1 text-xs leading-5 text-muted">上传或粘贴截图后，将保存到当前本地工作区并随任务交给 Agent；不会上传到外部服务。</p>
         </div>
-        {screenshots.length > 0 && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand-text">已选 {screenshots.length} 张</span>}
+        {screenshots.length > 0 && <span role="status" aria-live="polite" className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand-text">已选 {screenshots.length} 张</span>}
       </div>
 
-      <label className={cn(
-        "mt-4 flex min-h-28 flex-col items-center justify-center rounded-card border border-dashed border-outline-border bg-background/45 p-4 text-center transition-colors",
-        screenshots.length < MAX_SCREENSHOTS ? "cursor-pointer hover:border-outline-border-hover hover:bg-surface-hover" : "cursor-not-allowed opacity-60",
-      )}>
+      <div
+        role="group"
+        aria-label="上传招聘截图"
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          void addScreenshotFiles(Array.from(event.dataTransfer.files ?? []));
+        }}
+        className={cn(
+          "mt-4 flex min-h-28 flex-col items-center justify-center rounded-card border border-dashed border-outline-border bg-background/45 p-4 text-center transition-colors",
+          screenshots.length < MAX_SCREENSHOTS ? "hover:border-outline-border-hover hover:bg-surface-hover" : "opacity-60",
+        )}
+      >
         <UploadCloud className="size-5 text-icon-brand" aria-hidden="true" />
-        <span className="mt-2 text-sm font-medium text-foreground">{screenshots.length < MAX_SCREENSHOTS ? "上传或粘贴招聘截图" : "已选择 3 张截图"}</span>
+        <Button
+          type="button"
+          variant="tertiary"
+          size="sm"
+          disabled={screenshots.length >= MAX_SCREENSHOTS}
+          onClick={() => fileRef.current?.click()}
+          className="mt-2"
+        >
+          {screenshots.length < MAX_SCREENSHOTS ? "上传或粘贴招聘截图" : "已选择 3 张截图"}
+        </Button>
         <span className="mt-1 text-xs text-faint">⌘V / Ctrl+V · PNG / JPG / WebP · 最多 3 张 · 单张不超过 8 MB</span>
         <input
+          ref={fileRef}
           type="file"
           multiple
           accept="image/png,image/jpeg,image/webp"
@@ -285,7 +306,7 @@ export function ScreenshotEvaluate({ page = "/cn-diagnose" }: { page?: string })
             event.currentTarget.value = "";
           }}
         />
-      </label>
+      </div>
 
       {screenshots.length > 0 && (
         <div className="mt-3 grid grid-cols-3 gap-2" aria-label={`已选择 ${screenshots.length} 张招聘截图`}>
@@ -318,7 +339,7 @@ export function ScreenshotEvaluate({ page = "/cn-diagnose" }: { page?: string })
         </Button>
         <span className="text-xs leading-5 text-faint">本地保存位置：data/task-attachments/&lt;任务ID&gt;/；评估报告会保留截图和路径。</span>
       </div>
-      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-xs text-danger">{error}</p>}
 
       <AgentTaskHandoffDialog
         handoff={handoff}
@@ -327,6 +348,122 @@ export function ScreenshotEvaluate({ page = "/cn-diagnose" }: { page?: string })
         returnFocusRef={triggerRef}
       />
     </div>
+  );
+}
+
+export function JobInputEvaluate({ page = "/cn-diagnose" }: { page?: string }) {
+  const { jobs, queueAgentTaskWithAttachments } = useJobs();
+  const [inputMode, setInputMode] = useState<"url" | "jd">("url");
+  const [url, setUrl] = useState("");
+  const [jd, setJd] = useState("");
+  const [error, setError] = useState("");
+  const [handoff, setHandoff] = useState<AgentTaskHandoff | null>(null);
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const input = inputMode === "url" ? url.trim() : "jd:attachment";
+  const taskOpts = useMemo(() => ({
+    title: inputMode === "url" ? "评估 · 招聘链接" : "评估 · 完整 JD",
+    subtitle: "等待用户自己的 Agent 处理",
+    kind: "evaluate",
+    input,
+    page,
+    textAttachment: inputMode === "jd" ? { name: "job-description.txt", text: jd.trim() } : undefined,
+  }), [input, inputMode, jd, page]);
+  const job = useMemo(
+    () => jobs
+      .filter((item) => item.kind === "evaluate" && item.input === input)
+      .sort((a, b) => b.startedAt - a.startedAt)[0],
+    [input, jobs],
+  );
+
+  function showExistingHandoff() {
+    if (!job) return;
+    setHandoff({
+      id: job.id,
+      instruction: job.instruction || buildQueuedTaskInstruction(taskOpts, job.id),
+      attachmentPaths: job.artifacts?.map((artifact) => artifact.path).filter((path) => path.includes("task-attachments/")),
+    });
+    setHandoffOpen(true);
+  }
+
+  async function beginHandoff() {
+    setError("");
+    if (inputMode === "url") {
+      try {
+        const parsed = new URL(url.trim());
+        if (!/^https?:$/.test(parsed.protocol)) throw new Error();
+      } catch {
+        setError("请输入以 http:// 或 https:// 开头的招聘链接");
+        return;
+      }
+    } else if (jd.trim().length < 20) {
+      setError("请粘贴至少 20 个字符的完整 JD");
+      return;
+    }
+    if (isSaving) return;
+    if (job && (job.status === "running" || job.runStatus === "queued" || job.runStatus === "waiting_input" || job.runStatus === "waiting_approval")) {
+      showExistingHandoff();
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const next = await queueAgentTaskWithAttachments(taskOpts);
+      setHandoff(next);
+      setHandoffOpen(true);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "保存岗位输入失败");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <section data-ui-card="subtle" className="mt-4 p-4 sm:p-5" aria-label="招聘链接或完整 JD">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <ExternalLink className="size-4 text-icon-brand" aria-hidden="true" />
+            招聘链接或完整 JD
+          </div>
+          <p className="mt-1 text-xs leading-5 text-muted">可选补充入口；截图仍是国内招聘平台的首选。链接可能受登录或风控影响，访问不通时请改用截图。</p>
+        </div>
+        <div className="flex rounded-button border border-border bg-background/50 p-0.5" role="tablist" aria-label="岗位输入类型">
+          <button type="button" role="tab" data-button-shape="container" data-ui-structural="segment" aria-selected={inputMode === "url"} className="rounded-button px-3 py-1.5 text-xs font-medium" onClick={() => { setInputMode("url"); setError(""); }}>招聘链接</button>
+          <button type="button" role="tab" data-button-shape="container" data-ui-structural="segment" aria-selected={inputMode === "jd"} className="rounded-button px-3 py-1.5 text-xs font-medium" onClick={() => { setInputMode("jd"); setError(""); }}>完整 JD</button>
+        </div>
+      </div>
+      {inputMode === "url" ? (
+        <input
+          data-ui-control
+          type="url"
+          value={url}
+          onChange={(event) => setUrl(event.target.value)}
+          placeholder="粘贴招聘详情页链接，例如 https://…"
+          aria-label="招聘详情页链接"
+          className="mt-4 h-11 w-full rounded-button border border-border bg-background/70 px-3 text-sm text-foreground outline-none placeholder:text-faint focus:border-outline-border-hover focus:ring-2 focus:ring-brand/30"
+        />
+      ) : (
+        <textarea
+          data-ui-control
+          value={jd}
+          onChange={(event) => setJd(event.target.value)}
+          placeholder="粘贴完整岗位描述；文本只会保存为当前工作区的本地任务附件。"
+          aria-label="完整岗位 JD"
+          rows={6}
+          className="mt-4 w-full resize-y rounded-button border border-border bg-background/70 px-3 py-2.5 text-sm leading-6 text-foreground outline-none placeholder:text-faint focus:border-outline-border-hover focus:ring-2 focus:ring-brand/30"
+        />
+      )}
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <Button ref={triggerRef} type="button" disabled={isSaving || (inputMode === "url" ? !url.trim() : !jd.trim())} onClick={() => void beginHandoff()} aria-haspopup="dialog" aria-expanded={handoffOpen}>
+          <Bot className="size-4" aria-hidden="true" />
+          {isSaving ? "正在保存到本地…" : "保存并交给 Agent 评估"}
+        </Button>
+        <span className="text-xs leading-5 text-faint">完整 JD 会保存到 data/task-attachments/&lt;任务ID&gt;/job-description.txt。</span>
+      </div>
+      {error && <p role="alert" className="mt-2 text-xs text-danger">{error}</p>}
+      <AgentTaskHandoffDialog handoff={handoff} open={handoffOpen} onClose={() => setHandoffOpen(false)} returnFocusRef={triggerRef} />
+    </section>
   );
 }
 

@@ -126,7 +126,7 @@ export function AgentTaskHandoffDialog({
           </span>
           <div className="min-w-0 flex-1">
             <h2 id={titleId} className="text-lg font-semibold text-foreground">
-              {handoff.attachmentPaths?.length ? "截图和任务已保存" : "任务已加入 Agent 待办"}
+              {handoff.attachmentPaths?.length ? "任务和本地附件已保存" : "任务已加入 Agent 待办"}
             </h2>
             <p id={descriptionId} className="mt-2 text-sm leading-6 text-muted">
               Web 已保存{handoff.attachmentPaths?.length ? "任务与本地附件" : "任务"}，但不会替你启动模型。请回到 Codex、WorkBuddy 或其他 Agent，
@@ -152,8 +152,8 @@ export function AgentTaskHandoffDialog({
 
         {handoff.attachmentPaths && handoff.attachmentPaths.length > 0 && (
           <div className="mt-3 rounded-xl border border-success-border bg-success-surface px-4 py-3">
-            <p className="text-xs font-semibold text-success">招聘截图已保存在当前工作区</p>
-            <ul className="mt-2 space-y-1 text-xs text-muted" aria-label="招聘截图本地保存位置">
+            <p className="text-xs font-semibold text-success">本地附件已保存在当前工作区</p>
+            <ul className="mt-2 space-y-1 text-xs text-muted" aria-label="本地附件保存位置">
               {handoff.attachmentPaths.map((attachmentPath) => (
                 <li key={attachmentPath}><code className="break-all text-foreground">{attachmentPath}</code></li>
               ))}

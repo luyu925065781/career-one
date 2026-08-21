@@ -43,7 +43,7 @@ export async function GET() {
     runtime: { node: process.version, platform: process.platform, arch: process.arch },
     setup: {
       phase: doctor.phase,
-      missing: doctor.missing, // system prereq FILENAMES only (cv.md, portals.yml…)
+      missing: doctor.missing, // system prerequisite filenames only (CV + profile)
       hasCv: doctor.hasCv,
       hasData: doctor.hasData,
     },

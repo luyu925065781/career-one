@@ -58,7 +58,7 @@ Auto-memory **never** holds content claims about the user's work, technical acco
 
 ### Where rules live
 
-Rules belong in files the harness reads automatically — `CLAUDE.md`, `CODEX.md`, `AGENTS.md`, `modes/*.md`, `MEMORY.md`. Do not create sidecar documentation that requires manual loading. Reinforcement-without-enforcement decays.
+Rules belong in files the harness reads automatically — `AGENTS.md`, `CLAUDE.md`, `system/compat/agents/*`, `modes/*.md`, `MEMORY.md`. Do not create sidecar documentation that requires manual loading. Reinforcement-without-enforcement decays.
 
 ## Update Check
 
@@ -115,13 +115,13 @@ To rollback: `node update-system.mjs rollback`
 | `data/applications.md` | Application tracker |
 | `data/pipeline.md` | Inbox of pending URLs |
 | `data/scan-history.tsv` | Scanner dedup history |
-| `portals.yml` | Query and company config |
+| `portals.yml` | Optional advanced source config (platforms, company career pages, ATS providers) |
 | `system/templates/cv-template.html` | HTML template for CVs |
 | `system/templates/cv-template.tex` | LaTeX/Overleaf template for CVs |
 | `scripts/generate/generate-pdf.mjs` | Playwright: HTML to PDF |
 | `scripts/generate/generate-latex.mjs` | LaTeX CV validator + pdflatex compiler |
 | `article-digest.md` | Compact proof points from portfolio (optional) |
-| `interview-prep/story-bank.md` | Accumulated STAR+R stories across evaluations |
+| `interview-prep/story-bank.md` | Reusable verified STAR+R stories; initialized during onboarding, then extended only through approved cross-role proposals |
 | `interview-prep/{company}-{role}.md` | Company-specific interview intel reports |
 | `scripts/analysis/analyze-patterns.mjs` | Pattern analysis script (JSON output). Includes ATS channel analysis (per-vendor advance rate; motivated by Bommasani et al., Algorithmic Monocultures in Hiring, FAccT 2026). |
 | `scripts/analysis/stats.mjs` | Lifetime pipeline stats aggregator (JSON or `--summary`) — tracker roll-up, canonical `ever*` funnel, lifetime scan totals, portal coverage, follow-up compliance, scan-run trends |
@@ -147,15 +147,15 @@ Some users enable plugins (external integrations). If an enabled plugin ships a 
 
 ### First Run — Onboarding (IMPORTANT)
 
-**Before doing ANYTHING else, check if the system is set up.** On the first message of each session, run the cold-start check — one deterministic source of truth (this doc and `doctor.mjs` share the same prerequisite list, so they can never drift):
+**Before doing ANYTHING else, check if the system is set up.** On the first message of each session, run the cold-start check through the stable CLI — one deterministic source of truth (this doc and the doctor command share the same prerequisite list, so they can never drift):
 
 ```bash
-node doctor.mjs --json
+node career-one.mjs doctor --json
 ```
 
-Output: `{"onboardingNeeded": <bool>, "missing": [...], "warnings": [...], "autoCopied": [...]}`, where `missing` lists whichever of `cv.md`, `config/profile.yml`, `modes/_profile.md`, `portals.yml` are absent. `warnings` is reserved for non-blocking setup signals, and `autoCopied` lists user customization files (`modes/_profile.md` or `modes/_custom.md`) that `doctor.mjs` automatically copied from their `.template.md` equivalents during the check.
+Output: `{"onboardingNeeded": <bool>, "missing": [...], "warnings": [...], "autoCopied": [...]}`, where `missing` lists whichever of `cv.md`, `config/profile.yml`, `modes/_profile.md` are absent. `warnings` is reserved for non-blocking setup signals, and `autoCopied` lists user customization files (`modes/_profile.md` or `modes/_custom.md`) that the doctor command automatically copied from their `.template.md` equivalents during the check.
 
-- **If `onboardingNeeded` is true (any of `cv.md` / `config/profile.yml` / `modes/_profile.md` / `portals.yml` is missing), enter onboarding mode.** Do NOT proceed with evaluations, scans, or any other mode until the basics are in place. Guide the user step by step:
+- **If `onboardingNeeded` is true (any of `cv.md` / `config/profile.yml` / `modes/_profile.md` is missing), enter onboarding mode.** Do NOT proceed with evaluations, scans, or any other mode until the basics are in place. Guide the user step by step:
 
 #### Step 0: Free Tier Check
 
@@ -193,15 +193,21 @@ If `config/profile.yml` is missing, copy from `system/config/profile.example.yml
 
 Before asking, read the allowed user-layer sources and prefill every unambiguous fact. Ask this checklist once; do not split it into serial field-by-field follow-ups. A skipped item remains `待确认` and must not block the proposal.
 
-Fill in `config/profile.yml` with their answers. For archetypes and targeting narrative, store the user-specific mapping in `modes/_profile.md` or `config/profile.yml` rather than editing `modes/_shared.md`.
+Fill in `config/profile.yml` with their answers. Reusable search intent — target and excluded titles plus preferred/excluded locations — belongs under `target_roles` and `job_search` in this profile. For archetypes and targeting narrative, store the user-specific mapping in `modes/_profile.md` or `config/profile.yml` rather than editing `modes/_shared.md`.
 
-#### Step 3: Portals (recommended)
-If `portals.yml` is missing:
-> "我可以根据你的目标岗位配置中国大陆招聘渠道和搜索关键词。是否现在设置？"
+#### Step 3: Interview story bank (guided, non-blocking)
 
-Copy `system/templates/portals.example.yml` → `portals.yml`. If they gave target roles in Step 2, update `title_filter.positive` to match.
+After the CV and profile are ready, guide the user to organize verified experience into `interview-prep/story-bank.md`. Build STAR+Reflection stories only from the allowed user-layer facts and statements confirmed in the current conversation. The story bank is the third visible onboarding step, but it is not a technical prerequisite for evaluating a pasted JD, URL, or screenshot.
 
-#### Step 4: Tracker
+Job evaluation is reuse-first: match existing stories to the JD before proposing anything new. Only a verified experience that is absent from the bank and reusable across roles may become a story-bank proposal. Role-specific framing stays in the evaluation report or `interview-prep/{company}-{role}.md`; if there is no reusable addition, leave the story bank unchanged, and never create or edit it without explicit user approval through the proposal flow.
+
+Once the CV, profile, and at least one interview story are present, the guided setup is complete and the primary next action is direct job evaluation. Do not insert a separate portal-configuration or progress-tracker step into this onboarding journey.
+
+#### Optional: Advanced job sources
+
+`portals.yml` is not an onboarding prerequisite and must not block evaluation. Create it only when the user asks to configure recruitment-platform toggles, company career pages, ATS providers, advanced content filters, or custom search queries. Common role and location preferences remain in `config/profile.yml`; do not mirror them into both files.
+
+#### Tracker initialization (background setup)
 If `data/applications.md` doesn't exist, create it:
 ```markdown
 # Applications Tracker
@@ -210,14 +216,14 @@ If `data/applications.md` doesn't exist, create it:
 |---|------|---------|------|-------|--------|-----|--------|-------|
 ```
 
-#### Step 5: Keep learning without a second questionnaire
+#### Continuous learning (background)
 
 The quality fields previously collected after setup — distinctive strengths, motivating or draining work, red lines, preferred achievements, and public work — are now part of the single Step 2 checklist. Do not launch a second onboarding questionnaire or split skipped fields into serial follow-ups. If the user voluntarily shares additional context later, store confirmed insights in `config/profile.yml` (under narrative), `modes/_profile.md`, or `article-digest.md` for proof points. Do not put user-specific archetypes or framing into `modes/_shared.md`.
 
 **After every evaluation, learn.** If the user says "this score is too high, I wouldn't apply here" or "you missed that I have experience in X", update your understanding in `modes/_profile.md`, `config/profile.yml`, or `article-digest.md`. The system should get smarter with every interaction without putting personalization into system-layer files.
 
-#### Step 6: Ready
-Once all files exist, confirm:
+#### Ready
+Once the required baseline files exist, confirm:
 > "择程AI已设置完成。现在可以：
 > - 粘贴岗位 URL、JD 或招聘截图进行评估
 > - 使用 `/career-one scan` 或直接告诉 Agent 扫描新岗位
@@ -239,7 +245,7 @@ This system is designed to be customized by YOU (AI Agent). When the user asks y
 - "Add these companies to my portals" → edit `portals.yml`
 - "Update my profile" → edit `config/profile.yml`
 - "Change the CV template design" → edit `system/templates/cv-template.html`
-- "Adjust the scoring weights" → edit `modes/_profile.md` for user-specific weighting, or edit `modes/_shared.md` and `batch/batch-prompt.md` only when changing the shared system defaults for everyone
+- "Adjust the scoring weights" → edit `modes/_profile.md` for user-specific weighting, or edit `modes/_shared.md` and `system/batch/batch-prompt.md` only when changing the shared system defaults for everyone
 
 ### Language Modes
 
@@ -382,7 +388,7 @@ When spawning headless workers for batch processing, use the appropriate command
 - Scripts in `.mjs`, configuration in YAML
 - Output in `output/` (gitignored), Reports in `reports/`
 - JDs in `jds/` (referenced as `local:jds/{file}` in pipeline.md)
-- Batch in `batch/` (gitignored except scripts and prompt)
+- Batch runtime data in `batch/` (gitignored); the maintained runner and prompt live in `system/batch/`
 - Report numbering: sequential 3-digit zero-padded, max existing + 1
 - **RULE: After each batch of evaluations, run `node career-one.mjs merge`** to merge tracker additions and avoid duplications.
 - **RULE: NEVER create new entries in applications.md if company+role already exists.** Update the existing entry.

@@ -83,7 +83,7 @@ Offer की requirements पर mapped 6-10 STAR+R stories (STAR + **Reflection
 
 **Reflection** column वह capture करता है जो सीखा गया या अलग किया जाता। यह seniority signal करता है — juniors describe करते हैं क्या हुआ, seniors उससे lessons लेते हैं।
 
-**Story Bank:** यदि `interview-prep/story-bank.md` मौजूद है, check करें कि ये stories पहले से वहाँ हैं या नहीं। यदि नहीं, तो नई stories add करें। समय के साथ, यह 5-10 master stories का reusable bank बन जाता है।
+**Story Bank:** पहले `interview-prep/story-bank.md` की मौजूदा stories को match करके reuse करें। नया candidate तभी propose करें जब verified user facts ऐसी वास्तविक experience दिखाएँ जो bank में नहीं है और कई roles में reuse हो सकती है। Role-specific framing, questions और talking points current report या `interview-prep/{company}-{role}.md` में ही रखें। योग्य नई experience न हो तो bank को unchanged छोड़ें और केवल evaluation पूरा होने पर missing file न बनाएँ। User की explicit approval से पहले कोई addition write न करें।
 
 **Archetype के अनुसार selected और framed:**
 - FDE → delivery speed और client proximity highlight करें

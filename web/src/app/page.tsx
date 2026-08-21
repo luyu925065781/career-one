@@ -22,7 +22,7 @@ export default async function Home() {
     (followupSnapshot.metadata?.overdue ?? 0)
     + (followupSnapshot.metadata?.urgent ?? 0);
   // Every lifecycle phase shares the same Dashboard. A truly empty workspace
-  // starts at 0/6 in the onboarding card instead of being diverted to a separate
+  // starts at 0/3 in the onboarding card instead of being diverted to a separate
   // first-run page; the explicit profile step precedes interview stories.
   return (
     <TodayDashboard

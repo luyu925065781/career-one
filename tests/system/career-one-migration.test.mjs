@@ -46,7 +46,7 @@ const untrackedWorkingTreeFiles = execFileSync(
 const trackedRootEntries = [...new Set(
   [...trackedWorkingTreeFiles, ...untrackedWorkingTreeFiles].map((rel) => rel.split("/")[0]),
 )].sort();
-const expectedTrackedRootEntries = [
+const requiredTrackedRootEntries = [
   ".agents",
   ".dockerignore",
   ".github",
@@ -68,11 +68,126 @@ const expectedTrackedRootEntries = [
   "update-system.mjs",
   "web",
 ].sort();
+const optionalTrackedRootEntries = [".workbuddy", "Logo"];
+const allowedTrackedRootEntries = new Set([
+  ...requiredTrackedRootEntries,
+  ...optionalTrackedRootEntries,
+]);
+const missingRequiredRootEntries = requiredTrackedRootEntries.filter((entry) => !trackedRootEntries.includes(entry));
+const unexpectedTrackedRootEntries = trackedRootEntries.filter((entry) => !allowedTrackedRootEntries.has(entry));
+assert.deepEqual(missingRequiredRootEntries, [], `GitHub 根目录缺少核心入口：${missingRequiredRootEntries.join("、")}`);
 assert.deepEqual(
-  trackedRootEntries,
-  expectedTrackedRootEntries,
-  `GitHub 根目录必须精确收敛为 ${expectedTrackedRootEntries.length} 项；当前为 ${trackedRootEntries.length} 项`,
+  unexpectedTrackedRootEntries,
+  [],
+  `GitHub 根目录包含未声明入口：${unexpectedTrackedRootEntries.join("、")}；可选入口为 ${optionalTrackedRootEntries.join("、")}`,
 );
+
+const sourceCheckoutDocs = new Map([
+  ["AGENTS.md", read("AGENTS.md")],
+  ["CLAUDE.md", read("CLAUDE.md")],
+  ["career-one Skill", read(".agents/skills/career-one/SKILL.md")],
+  ["titles mode", read("modes/titles.md")],
+  ["interview mode", read("modes/interview.md")],
+  ["update mode", read("modes/update.md")],
+  ["plugin docs", read("system/docs/PLUGINS.md")],
+  ["plugin config example", read("system/config/plugins.example.yml")],
+]);
+for (const [label, content] of sourceCheckoutDocs) {
+  assert.doesNotMatch(
+    content,
+    /node doctor\.mjs(?:\s|`)/,
+    `${label} 必须使用 node career-one.mjs doctor，不能依赖已移出根目录的 doctor.mjs`,
+  );
+}
+
+const sourceSkillDoc = sourceCheckoutDocs.get("career-one Skill");
+assert.match(
+  sourceSkillDoc,
+  /AGENTS\.md[^\n]+career-one\.mjs/,
+  "Skill 必须用稳定根入口识别源码检出工作区",
+);
+assert.match(
+  sourceSkillDoc,
+  /node career-one\.mjs doctor --json/,
+  "Skill 首次使用必须通过稳定根入口执行 doctor",
+);
+
+const updateMode = sourceCheckoutDocs.get("update mode");
+for (const sourcePath of [".agents/", "modes/", "scripts/", "system/", "web/"]) {
+  assert.match(updateMode, new RegExp(sourcePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `更新预览必须覆盖 ${sourcePath}`);
+}
+
+const codeowners = read(".github/CODEOWNERS");
+for (const protectedPath of [
+  "/.agents/skills/career-one/",
+  "/system/compat/",
+  "/system/docs/DATA_CONTRACT.md",
+  "/system/plugins-registry/",
+]) {
+  assert.ok(codeowners.includes(protectedPath), `CODEOWNERS 必须保护迁移后的 ${protectedPath}`);
+}
+const codeownerLines = codeowners.split("\n").map((line) => line.trim());
+for (const obsoletePath of ["/CODEX.md", "/OPENCODE.md", "/GEMINI.md", "/docs/DATA_CONTRACT.md", "/plugins-registry.json"]) {
+  assert.equal(
+    codeownerLines.some((line) => line === obsoletePath || line.startsWith(`${obsoletePath} `)),
+    false,
+    `CODEOWNERS 不得继续引用不存在的 ${obsoletePath}`,
+  );
+}
+
+const batchRunnerSource = read("system/batch/batch-runner.sh");
+assert.match(
+  batchRunnerSource,
+  /SOURCE_LAYOUT=.*system\/batch/,
+  "批处理脚本必须显式区分源码布局与安装后兼容布局",
+);
+assert.match(
+  batchRunnerSource,
+  /BATCH_DIR="\$PROJECT_DIR\/batch"/,
+  "源码布局的批处理运行时文件必须继续写入根目录 batch/ 用户层",
+);
+assert.match(
+  batchRunnerSource,
+  /PROMPT_FILE="\$SCRIPT_DIR\/batch-prompt\.md"/,
+  "源码布局必须从 system/batch 读取系统提示词",
+);
+const sourceBatchFixture = fs.mkdtempSync(path.join(os.tmpdir(), "career-one-source-batch-"));
+try {
+  fs.mkdirSync(path.join(sourceBatchFixture, "system", "batch"), { recursive: true });
+  fs.mkdirSync(path.join(sourceBatchFixture, "batch"), { recursive: true });
+  fs.mkdirSync(path.join(sourceBatchFixture, "bin"), { recursive: true });
+  fs.writeFileSync(path.join(sourceBatchFixture, "career-one.mjs"), "// stable source entry\n");
+  fs.writeFileSync(path.join(sourceBatchFixture, "system", "batch", "batch-runner.sh"), batchRunnerSource);
+  fs.writeFileSync(path.join(sourceBatchFixture, "system", "batch", "batch-prompt.md"), "URL={{URL}}\n");
+  fs.writeFileSync(
+    path.join(sourceBatchFixture, "batch", "batch-input.tsv"),
+    "id\turl\tsource\tnotes\n1\thttps://example.com/job\ttest\tdirect clone\n",
+  );
+  const fakeCodex = path.join(sourceBatchFixture, "bin", "codex");
+  fs.writeFileSync(fakeCodex, "#!/bin/sh\nexit 0\n");
+  fs.chmodSync(fakeCodex, 0o755);
+  const batchDryRun = execFileSync(
+    "bash",
+    [path.join(sourceBatchFixture, "system", "batch", "batch-runner.sh"), "--dry-run"],
+    {
+      cwd: sourceBatchFixture,
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${path.join(sourceBatchFixture, "bin")}:${process.env.PATH || ""}` },
+    },
+  );
+  assert.match(batchDryRun, /Input: 1 offers/, "源码布局的 batch runner 必须读取根目录 batch/batch-input.tsv");
+  assert.ok(
+    fs.existsSync(path.join(sourceBatchFixture, "batch", "batch-state.tsv")),
+    "源码布局的 batch runner 必须把状态写入根目录 batch/ 用户层",
+  );
+  assert.equal(
+    fs.existsSync(path.join(sourceBatchFixture, "system", "batch", "batch-state.tsv")),
+    false,
+    "源码布局的 batch runner 不得污染 system/batch 系统层",
+  );
+} finally {
+  fs.rmSync(sourceBatchFixture, { recursive: true, force: true });
+}
 for (const compatibilitySource of [
   "system/compat/doctor.mjs",
   "system/compat/start-web.mjs",
@@ -227,6 +342,11 @@ assert.match(canonicalSkill, /G「职位真实性评估」独立评级，不参�
 assert.match(canonicalSkill, /最终建议.*综合匹配分.*真实性评级/, "岗位评估 Skill 必须说明最终建议同时参考匹配分和真实性评级");
 assert.match(canonicalSkill, /A-G 是内部稳定模块 ID/, "岗位评估 Skill 必须明确 A-G 仅用于内部报告兼容");
 assert.match(canonicalSkill, /用户界面.*连续数字/, "岗位评估 Skill 必须明确用户界面使用连续数字序号");
+assert.match(canonicalSkill, /优先复用已有故事/, "岗位评估 Skill 必须先复用已有面试故事");
+assert.match(canonicalSkill, /跨岗位复用价值/, "岗位评估 Skill 只能沉淀可跨岗位复用的新故事");
+assert.match(canonicalSkill, /没有可复用的新经历时，不修改故事库/, "岗位评估 Skill 不得为每次评估机械改写故事库");
+assert.match(canonicalSkill, /用户明确批准后才能写入/, "岗位评估 Skill 必须把故事库候选变更留给用户确认");
+assert.doesNotMatch(canonicalSkill, /完成岗位评估后必须同步/, "岗位评估 Skill 不得继续强制同步故事库");
 assert.match(canonicalSkill, /career-one\.mjs web/, "Skill 必须提供打开 Web 工作台的稳定命令");
 assert.match(canonicalSkill, /http:\/\/localhost:3301\/jobs/, "Skill 必须向用户展示 3301 工作台入口");
 assert.match(canonicalSkill, /\/jobs\/<任务ID>/, "Skill 必须向用户展示当前任务入口");
@@ -237,6 +357,17 @@ assert.doesNotMatch(read("modes/zh/oferta.md"), /^## 面试开场话术$/m, "中
 assert.match(read("modes/zh/oferta.md"), /^## 向招聘方追问$/m, "中文岗位评估模板必须使用通用招聘方追问标题");
 assert.doesNotMatch(read("modes/zh/oferta.md"), /^## (?:建议向招聘方追问|建议向猎头追问|必须追问)$/m, "中文岗位评估模板不得继续生成旧追问标题");
 const chineseOfferMode = read("modes/zh/oferta.md");
+assert.match(chineseOfferMode, /优先匹配并复用已有故事/, "中文岗位评估模式必须先复用故事库");
+assert.match(chineseOfferMode, /跨岗位复用价值/, "中文岗位评估模式只能建议可复用的新故事");
+assert.match(chineseOfferMode, /没有符合条件的新经历时，不创建或修改故事库/, "中文岗位评估模式不得机械创建故事库");
+assert.match(chineseOfferMode, /待确认提案/, "中文岗位评估模式必须通过提案确认故事库变更");
+assert.doesNotMatch(chineseOfferMode, /故事库同步（必须执行）|文件不存在时创建/, "中文岗位评估模式不得继续强制创建或同步故事库");
+const englishOfferMode = read("modes/oferta.md");
+assert.match(englishOfferMode, /reuse existing stories first/i, "英文岗位评估模式必须先复用故事库");
+assert.match(englishOfferMode, /reusable across roles/i, "英文岗位评估模式只能建议可复用的新故事");
+assert.match(englishOfferMode, /leave the story bank unchanged/i, "英文岗位评估模式不得机械改写故事库");
+assert.match(englishOfferMode, /explicit approval/i, "英文岗位评估模式必须等待用户明确批准");
+assert.doesNotMatch(englishOfferMode, /If not, append new ones/, "英文岗位评估模式不得继续自动追加故事");
 const chineseOfferTemplate = chineseOfferMode.slice(chineseOfferMode.indexOf("**报告文件格式模板：**"));
 let previousOfferSectionIndex = -1;
 for (const sectionTitle of [
@@ -496,8 +627,17 @@ assert.match(read("AGENTS.md"), /docs\/DESIGN_SYSTEM\.md/, "AGENTS 必须声明�
 assert.match(read("CLAUDE.md"), /docs\/DESIGN_SYSTEM\.md/, "CLAUDE 必须声明前端设计 source of truth");
 
 const webIcon = read("web/src/app/icon.svg");
-assert.match(webIcon, /<linearGradient[^>]*id="brand-gradient"/, "择程AI图标必须使用品牌渐变");
-assert.match(webIcon, /fill="url\(#brand-gradient\)"/, "择程AI图标背景必须引用品牌渐变");
+const hasLegacyGradientIcon =
+  /<linearGradient[^>]*id="brand-gradient"/.test(webIcon) &&
+  /fill="url\(#brand-gradient\)"/.test(webIcon);
+const hasCanonicalSpiralIcon =
+  /viewBox="0 0 440 400"/.test(webIcon) &&
+  /stroke="#FACC15"/.test(webIcon) &&
+  /<circle cx="112" cy="298" r="21" fill="#111827"\/>/.test(webIcon);
+assert.ok(
+  hasLegacyGradientIcon || hasCanonicalSpiralIcon,
+  "择程AI图标必须使用已登记的品牌图标契约",
+);
 
 const portalsView = read("web/src/components/portals-view.tsx");
 assert.match(
@@ -595,7 +735,7 @@ const screenshotEvaluationPosition = diagnoseView.indexOf('<ScreenshotEvaluate p
 const reportsPosition = diagnoseView.indexOf('id="evaluation-reports-title"');
 assert.ok(screenshotEvaluationPosition >= 0 && reportsPosition > screenshotEvaluationPosition, "招聘截图评估必须位于评估报告列表上方");
 assert.doesNotMatch(diagnoseView, /正式 Agent 评估|统一正式评估模式/, "岗位评估页不得保留顶部模式组件");
-assert.doesNotMatch(diagnoseView, /startJob|evaluationInput|role="tablist"|岗位描述 JD|AI 岗位评估/, "岗位评估页不得恢复旧的 Web 内执行或文本评估入口");
+assert.doesNotMatch(diagnoseView, /startJob|evaluationInput|role="tablist"|AI 岗位评估/, "岗位评估页不得恢复旧的 Web 内执行或旧文本评估入口");
 assert.doesNotMatch(diagnoseView, /\/api\/cn-diagnose|DiagnosisHistory|ResultPanel|诊断记录|HTML 报告|htmlUrl|htmlRel/, "岗位评估页面不得保留旧诊断 API、即时结果或 HTML 历史");
 assert.equal(fs.existsSync(path.join(root, "web/src/app/api/cn-diagnose/route.ts")), false, "旧 cn-diagnose API 必须移除");
 assert.equal(fs.existsSync(path.join(root, "web/src/lib/cn-diagnose.ts")), false, "旧 HTML 报告渲染器必须移除");

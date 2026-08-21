@@ -79,7 +79,7 @@ Top 5 mudanças no currículo + Top 5 mudanças no LinkedIn para maximizar o mat
 
 A coluna **Reflection** captura o que foi aprendido ou o que seria feito diferente. Isso sinaliza senioridade — candidatos juniores descrevem o que aconteceu, candidatos seniores extraem lições.
 
-**Story Bank:** Se `interview-prep/story-bank.md` existir, verificar se alguma dessas histórias já está lá. Se não, adicionar as novas. Com o tempo, isso constrói um banco reutilizável de 5-10 histórias-mestre que podem ser adaptadas para qualquer pergunta de entrevista.
+**Story Bank:** Primeiro, combinar e reutilizar as histórias existentes em `interview-prep/story-bank.md`. Propor uma adição apenas quando fatos verificados do usuário revelarem uma experiência real ainda não registrada e reutilizável entre diferentes funções. O enquadramento, as perguntas e os pontos de conversa específicos da vaga permanecem no relatório atual ou em `interview-prep/{company}-{role}.md`. Se não houver nova experiência qualificada, deixar o banco inalterado e não criar o arquivo ausente apenas porque a avaliação terminou. Toda adição permanece como proposta até a aprovação explícita do usuário.
 
 **Selecionadas e enquadradas conforme o arquétipo:**
 - FDE → enfatizar velocidade de entrega e proximidade com cliente

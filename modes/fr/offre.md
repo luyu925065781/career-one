@@ -79,7 +79,7 @@ Top 5 modifications du CV + Top 5 modifications LinkedIn pour maximiser le match
 
 La colonne **Reflection** capture ce qui a ete appris ou ce qui serait fait differemment. Cela signale la seniorite -- les juniors decrivent ce qui s'est passe, les seniors en tirent des enseignements.
 
-**Story Bank :** Si `interview-prep/story-bank.md` existe, verifier si ces stories y sont deja. Sinon, ajouter les nouvelles. Avec le temps, cela construit une banque reutilisable de 5-10 stories maitre adaptables a n'importe quelle question d'entretien.
+**Story Bank :** Réutiliser d'abord les histoires existantes dans `interview-prep/story-bank.md`. Ne proposer un ajout que si des faits utilisateur vérifiés révèlent une expérience absente de la banque et réutilisable pour plusieurs postes. Les formulations, questions et arguments propres au poste restent dans le rapport courant ou `interview-prep/{company}-{role}.md`. Sans nouvelle expérience admissible, laisser la banque inchangée et ne pas la créer uniquement parce qu'une évaluation est terminée. Tout ajout reste une proposition jusqu'à l'approbation explicite de l'utilisateur.
 
 **Selectionnees et cadrees selon l'archetype :**
 - FDE -> mettre en avant la vitesse de livraison et la proximite client

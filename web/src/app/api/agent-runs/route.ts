@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 type Artifact = { path?: unknown; label?: unknown; page?: unknown; available?: unknown };
 type ScreenshotAttachment = { name?: unknown; type?: unknown; dataUrl?: unknown };
+type TextAttachment = { name?: unknown; text?: unknown };
 type Body = {
   action?: unknown;
   id?: unknown;
@@ -28,17 +29,19 @@ type Body = {
   proposalId?: unknown;
   instruction?: unknown;
   attachments?: unknown;
+  textAttachment?: unknown;
 };
 
 const MAX_SCREENSHOTS = 3;
 const MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024;
+const MAX_TEXT_ATTACHMENT_BYTES = 512 * 1024;
 const MAX_TASK_INSTRUCTION_CHARS = 1_000;
 const SCREENSHOT_MIME_EXTENSIONS = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
 } as const;
-const TASK_ATTACHMENT_PATTERN = /^data\/task-attachments\/([a-zA-Z0-9][a-zA-Z0-9_-]{2,96})\/(0[1-3]-[a-f0-9]{12}\.(?:png|jpg|webp))$/;
+const TASK_ATTACHMENT_PATTERN = /^data\/task-attachments\/([a-zA-Z0-9][a-zA-Z0-9_-]{2,96})\/(?:0[1-3]-[a-f0-9]{12}\.(?:png|jpg|webp)|job-description\.txt)$/;
 
 class TaskAttachmentNotFoundError extends Error {
   constructor() {
@@ -161,7 +164,7 @@ function attachmentAbsolutePath(relativePath: string): { absolute: string; conte
   const absolute = fs.realpathSync(candidate);
   if (path.dirname(absolute) !== taskDir) throw new Error("任务附件路径超出允许范围");
   const extension = path.extname(absolute).slice(1);
-  const contentType = extension === "png" ? "image/png" : extension === "jpg" ? "image/jpeg" : "image/webp";
+  const contentType = extension === "png" ? "image/png" : extension === "jpg" ? "image/jpeg" : extension === "webp" ? "image/webp" : "text/plain; charset=utf-8";
   return { absolute, contentType };
 }
 
@@ -197,12 +200,44 @@ function storeScreenshotAttachments(taskId: string, rawAttachments: unknown): Ar
   });
 }
 
+function storeTextAttachment(taskId: string, rawAttachment: unknown): Artifact[] {
+  if (!rawAttachment || typeof rawAttachment !== "object" || Array.isArray(rawAttachment)) return [];
+  const attachment = rawAttachment as TextAttachment;
+  const value = typeof attachment.text === "string" ? attachment.text.trim() : "";
+  if (!value) return [];
+  const bytes = Buffer.from(value, "utf8");
+  if (bytes.length > MAX_TEXT_ATTACHMENT_BYTES) throw new Error("完整 JD 不能超过 512 KB");
+
+  const { id, taskDir } = taskAttachmentDirectory(taskId, true);
+  const fileName = "job-description.txt";
+  const absolute = path.join(taskDir, fileName);
+  const temp = path.join(taskDir, `.${randomUUID()}.tmp`);
+  fs.writeFileSync(temp, bytes, { flag: "wx", mode: 0o600 });
+  fs.renameSync(temp, absolute);
+  return [{
+    path: path.posix.join("data", "task-attachments", id, fileName),
+    label: text(attachment.name) || "完整岗位 JD",
+  }];
+}
+
 function instructionWithAttachments(instruction: string, attachments: Artifact[]): string {
   if (attachments.length === 0 || instruction.includes("**Screenshots:**")) {
     return instruction.slice(0, MAX_TASK_INSTRUCTION_CHARS);
   }
-  const paths = attachments.map((attachment) => String(attachment.path));
-  const suffix = `截图已保存在当前工作区：${paths.join("、")}。请直接读取这些本地文件；生成报告时在报告头加入“**Screenshots:** ${paths.join(" | ")}”，让 Web 报告展示原始岗位截图。`;
+  const screenshotPaths = attachments
+    .map((attachment) => String(attachment.path))
+    .filter((attachmentPath) => /\.(?:png|jpg|webp)$/i.test(attachmentPath));
+  const textPaths = attachments
+    .map((attachment) => String(attachment.path))
+    .filter((attachmentPath) => attachmentPath.endsWith(".txt"));
+  const suffixParts = [];
+  if (screenshotPaths.length > 0) {
+    suffixParts.push(`截图已保存在当前工作区：${screenshotPaths.join("、")}。请直接读取这些本地文件；生成报告时在报告头加入“**Screenshots:** ${screenshotPaths.join(" | ")}”，让 Web 报告展示原始岗位截图。`);
+  }
+  if (textPaths.length > 0) {
+    suffixParts.push(`完整岗位 JD 已保存在当前工作区：${textPaths.join("、")}。请直接读取这些本地文本附件。`);
+  }
+  const suffix = suffixParts.join(" ");
   const baseBudget = Math.max(0, MAX_TASK_INSTRUCTION_CHARS - suffix.length - 1);
   return `${instruction.slice(0, baseBudget).trimEnd()} ${suffix}`.trim();
 }
@@ -296,7 +331,11 @@ export async function POST(req: Request) {
       if (!baseInstruction) {
         return NextResponse.json({ error: "缺少交给 Agent 的任务指令" }, { status: 400 });
       }
-      const attachments = storeScreenshotAttachments(validateTaskId(id), body.attachments);
+      const taskId = validateTaskId(id);
+      const attachments = [
+        ...storeScreenshotAttachments(taskId, body.attachments),
+        ...storeTextAttachment(taskId, body.textAttachment),
+      ];
       const instruction = instructionWithAttachments(baseInstruction, attachments);
       const args = ["queue"];
       pushOption(args, "--id", id);
@@ -311,7 +350,10 @@ export async function POST(req: Request) {
       if (!run.id) throw new Error("Agent 待办任务创建失败");
       const runId = run.id;
       if (attachments.length > 0) {
-        const attachArgs = ["attach", runId, "--label", "招聘截图已保存到本地附件目录", "--instruction", instruction];
+        const attachLabel = attachments.some((attachment) => String(attachment.path).endsWith(".txt"))
+          ? "岗位输入已保存到本地附件目录"
+          : "招聘截图已保存到本地附件目录";
+        const attachArgs = ["attach", runId, "--label", attachLabel, "--instruction", instruction];
         appendArtifacts(attachArgs, attachments);
         run = runContract(attachArgs) as { id?: string };
       }
@@ -345,10 +387,16 @@ export async function POST(req: Request) {
       const baseInstruction = text(body.instruction)?.slice(0, 1_000);
       if (!baseInstruction) return NextResponse.json({ error: "缺少交给 Agent 的任务指令" }, { status: 400 });
       runContract(["get", validateTaskId(id)]);
-      const attachments = storeScreenshotAttachments(id, body.attachments);
-      if (attachments.length === 0) return NextResponse.json({ error: "没有可保存的招聘截图" }, { status: 400 });
+      const attachments = [
+        ...storeScreenshotAttachments(id, body.attachments),
+        ...storeTextAttachment(id, body.textAttachment),
+      ];
+      if (attachments.length === 0) return NextResponse.json({ error: "没有可保存的岗位输入" }, { status: 400 });
       const instruction = instructionWithAttachments(baseInstruction, attachments);
-      const args = ["attach", id, "--label", "招聘截图已保存到本地附件目录", "--instruction", instruction];
+      const attachLabel = attachments.some((attachment) => String(attachment.path).endsWith(".txt"))
+        ? "岗位输入已保存到本地附件目录"
+        : "招聘截图已保存到本地附件目录";
+      const args = ["attach", id, "--label", attachLabel, "--instruction", instruction];
       appendArtifacts(args, attachments);
       const run = runContract(args);
       return NextResponse.json({ ...run as object, instruction, attachmentPaths: attachments.map((attachment) => attachment.path) });

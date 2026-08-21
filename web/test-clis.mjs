@@ -86,6 +86,12 @@ const badgeSource = readSource("./src/components/ui/badge.tsx");
 const buttonSource = readSource("./src/components/ui/button.tsx");
 const cardSource = readSource("./src/components/ui/card.tsx");
 const portalsViewSource = readSource("./src/components/portals-view.tsx");
+const profileApiSource = readSource("./src/app/api/profile/route.ts");
+const portalsApiSource = readSource("./src/app/api/portals/route.ts");
+const actionRegistrySource = readSource("./src/app/actions/registry.ts");
+const portalsCoreSource = readSource("./src/lib/core/portals.ts");
+const scanSource = readSource("../scripts/scan/scan.mjs");
+const fullScanSource = readSource("../scripts/scan/scan-ats-full.mjs");
 const deleteFromTrackerSource = readSource("./src/components/delete-from-tracker.tsx");
 const shortlistTraySource = readSource("./src/components/inbox/shortlist-tray.tsx");
 const inboxTriageSource = readSource("./src/components/inbox/inbox-triage.tsx");
@@ -160,6 +166,13 @@ test("evaluation artifacts use the canonical 岗位评估报告 label", () => {
   );
 });
 
+test("tailored CV PDF artifacts open the report-keyed inline PDF route", () => {
+  assert.match(workerPillsSource, /export function artifactHref\(artifact: JobArtifact\)/);
+  assert.match(workerPillsSource, /function isTailoredCvPdfArtifact\(artifact: JobArtifact\)/);
+  assert.match(workerPillsSource, /return `\/api\/cv-pdf\?report=\$\{encodeURIComponent\(reportNumber\)\}`/);
+  assert.match(workerPillsSource, /href=\{artifactHref\(artifact\)\}/);
+});
+
 test("all successfully completed Agent tasks use success chrome while score tone stays independent", () => {
   assert.match(
     workerCardSource,
@@ -225,6 +238,8 @@ test("evaluation report history only contains successful artifact-backed reports
     diagnosisViewSource,
     /evaluationJobs\s*\.map\(\(job\) => evaluationReportFromJob\(job, reportIdentities\)\)\s*\.filter\(isEvaluationReportRecord\)/,
   );
+  assert.match(diagnosisViewSource, /dedupeEvaluationReports/);
+  assert.match(diagnosisViewSource, /reportRecords\s*=\s*dedupeEvaluationReports/);
   assert.match(diagnosisViewSource, /data-evaluation-report-card/);
   assert.match(diagnosisViewSource, /href=\{report\.href\}/);
   assert.match(diagnosisViewSource, /aria-label=\{`打开评估报告：\$\{report\.title\}`\}/);
@@ -282,7 +297,7 @@ test("company placeholders use a neutral entity icon and semantic accessible nam
 test("pipeline prioritizes the role before the company in order and typography", () => {
   assert.match(
     pipelineViewSource,
-    /const SORT_KEYS = \["role", "company", "score", "status", "date"\] as const/,
+    /const SORT_KEYS = \["role", "company", "via", "score", "status", "date"\] as const/,
   );
 
   const rowStart = pipelineViewSource.indexOf('<tr key={`${r.n}-${i}`}');
@@ -299,6 +314,26 @@ test("pipeline prioritizes the role before the company in order and typography",
   assert.match(
     trackerRow,
     /<td className="px-4 py-3 text-muted">[\s\S]{0,240}<CompanyLogo name=\{r\.company\} size=\{28\}/,
+  );
+});
+
+test("isolated user data keeps tracker columns aligned and renders the recruiter channel separately", () => {
+  assert.match(
+    careerOneLibSource,
+    /return parseApplications\(md, careerOneSystemRoot\(\)\)/,
+    "tracker header aliases must come from the running system layer, not an isolated user-data root",
+  );
+  assert.match(
+    pipelineViewSource,
+    /const SORT_KEYS = \["role", "company", "via", "score", "status", "date"\] as const/,
+  );
+  assert.match(pipelineViewSource, /via: "猎头 \/ 渠道"/);
+  assert.match(pipelineViewSource, /function viaDisplayLabel\(via: string\)/);
+  assert.match(pipelineViewSource, /\{viaDisplayLabel\(r\.via\)\}/);
+  assert.match(
+    pipelineViewSource,
+    /\$\{companyIdentity\.label\} \$\{r\.company\} \$\{r\.via\} \$\{r\.role\}/,
+    "search must include the independently displayed recruiter channel",
   );
 });
 
@@ -338,7 +373,7 @@ test("Agent task detail stays on task pages while job evaluation starts with scr
 test("job diagnosis always exposes screenshot evaluation before loading or showing reports", () => {
   assert.match(explorerViewSource, /export function ScreenshotEvaluate/);
   assert.match(explorerViewSource, /page = "\/cn-diagnose"/);
-  assert.match(diagnosisViewSource, /import \{ ScreenshotEvaluate \} from "@\/components\/explore\/explorer-view"/);
+  assert.match(diagnosisViewSource, /import \{[^}]*ScreenshotEvaluate[^}]*\} from "@\/components\/explore\/explorer-view"/);
   assert.match(diagnosisViewSource, /const \{ jobs, jobsReady \} = useJobs\(\)/);
   assert.match(diagnosisViewSource, /<section className="mt-2" aria-label="招聘截图评估">\s*<ScreenshotEvaluate page="\/cn-diagnose" \/>/);
   assert.match(diagnosisViewSource, /!jobsReady\s*\?/);
@@ -353,7 +388,7 @@ test("Agent task detail removes a duplicate page shortcut when the artifact alre
     /const hasMatchingPageArtifact = job\.artifacts\?\.some\(\(artifact\) => artifact\.available !== false && artifact\.page === job\.page\) \?\? false/,
   );
   assert.match(workerPillsSource, /\{job\.page && !hasMatchingPageArtifact && \(/);
-  assert.match(workerPillsSource, /if \(artifact\.page && artifact\.available !== false\)[\s\S]*reportPageHref\(artifact\.page\)/);
+  assert.match(workerPillsSource, /if \(artifact\.page && artifact\.available !== false\)[\s\S]*href=\{artifactHref\(artifact\)\}/);
 });
 
 test("queued Agent tasks can be resumed from their detail page without creating a new task ID", () => {
@@ -462,6 +497,16 @@ test("product-authored user feedback is Chinese and historical English failures 
   assert.doesNotMatch(copyableCommandSource, /Copied to clipboard|Copy command|title=\{copied \? "Copied" : "Copy"\}/);
   assert.doesNotMatch(followUpCardSource, /note:\s*"Followed up"/);
   assert.doesNotMatch(applyViewSource, /f\.label \|\| "Yes"/);
+});
+
+test("the global shell temporarily hides the beta feedback entry", () => {
+  const desktopShellSource = readSource("./src/components/app-shell.tsx");
+  const betaBannerSource = readSource("./src/components/beta/beta-banner.tsx");
+
+  assert.doesNotMatch(desktopShellSource, /import \{ BetaBanner \}/);
+  assert.doesNotMatch(desktopShellSource, /<BetaBanner\s*\/>/);
+  assert.match(betaBannerSource, /export function BetaBanner\(\)/);
+  assert.match(betaBannerSource, /反馈问题/);
 });
 
 test("queued Agent tasks can be soft-deleted without losing their durable record", () => {
@@ -666,6 +711,8 @@ test("Web task entry points queue Agent handoffs and never start a configured CL
   assert.match(jobStoreSource, /opts\.kind === "evaluate"/);
   assert.match(jobStoreSource, /岗位有效性/);
   assert.match(jobStoreSource, /评估本次招聘截图/);
+  assert.match(jobStoreSource, /完整 JD/);
+  assert.match(jobStoreSource, /textAttachment/);
 
   assert.match(quickEvaluateSource, /queueAgentTask\(taskOpts\)/);
   assert.match(quickEvaluateSource, /<AgentTaskHandoffDialog/);
@@ -681,6 +728,40 @@ test("Web task entry points queue Agent handoffs and never start a configured CL
     "evaluating a discovery card must not implicitly write the posting into the pipeline",
   );
   assert.doesNotMatch(discoveryCardSource, /startJob\(|\/api\/run/);
+});
+
+test("job evaluation keeps screenshot-first entry while supporting URL and JD handoffs", () => {
+  assert.match(diagnosisViewSource, /<ScreenshotEvaluate page="\/cn-diagnose" \/>/);
+  assert.match(diagnosisViewSource, /<JobInputEvaluate page="\/cn-diagnose" \/>/);
+  assert.match(explorerViewSource, /export function JobInputEvaluate/);
+  assert.match(explorerViewSource, /招聘链接或完整 JD/);
+  assert.match(explorerViewSource, /queueAgentTaskWithAttachments\(taskOpts\)/);
+  assert.match(explorerViewSource, /textAttachment:/);
+  assert.match(jobStoreSource, /opts\.kind === "evaluate"/);
+  assert.match(jobStoreSource, /jd:attachment/);
+  assert.doesNotMatch(diagnosisViewSource, /startJob|evaluationInput|role="tablist"|AI 岗位评估/);
+});
+
+test("low-fit decisions require an explicit report review before applying", () => {
+  assert.match(decisionCardSource, /const lowFit = Number\.isFinite\(score\) && score < 4/);
+  assert.match(decisionCardSource, /低于 4\.0/);
+  assert.match(decisionCardSource, /查看报告/);
+  assert.match(decisionCardSource, /仍要投递/);
+});
+
+test("profile hides the next-step guide once every story is complete", () => {
+  assert.match(profilePageSource, /readStoryBank/);
+  assert.match(profilePageSource, /assessStoryReadiness/);
+  assert.match(profilePageSource, /storyBankComplete/);
+  assert.match(profilePageSource, /!storyBankComplete/);
+});
+
+test("screenshot upload is keyboard operable and announces validation feedback", () => {
+  assert.match(explorerViewSource, /fileRef = useRef<HTMLInputElement>/);
+  assert.match(explorerViewSource, /fileRef\.current\?\.click\(\)/);
+  assert.match(explorerViewSource, /role="alert"/);
+  assert.match(explorerViewSource, /role="status" aria-live="polite"/);
+  assert.doesNotMatch(explorerViewSource, /<label className=\{cn\(/);
 });
 
 test("evaluation handoffs let the Agent preflight onboarding and resume the same task", () => {
@@ -699,8 +780,8 @@ test("evaluation handoffs let the Agent preflight onboarding and resume the same
   );
   assert.equal(
     evaluationInstructionSource.match(/\$\{EVALUATION_PREFLIGHT\}/g)?.length,
-    2,
-    "both screenshot and URL evaluation handoffs must enforce the same Agent preflight",
+    3,
+    "screenshot, URL, and JD evaluation handoffs must enforce the same Agent preflight",
   );
 });
 
@@ -778,7 +859,7 @@ test("profile onboarding collects every confirmation in one response instead of 
   assert.match(profileInstruction, /姓名和联系方式/);
   assert.match(profileInstruction, /所在城市、时区/);
   assert.match(profileInstruction, /目标岗位与职级/);
-  assert.match(profileInstruction, /地点、工作方式与迁居意愿/);
+  assert.match(profileInstruction, /排除岗位、优先\/排除地区、工作方式与迁居意愿/);
   assert.match(profileInstruction, /目标薪资范围与最低接受值/);
   assert.match(profileInstruction, /核心优势与代表成果/);
   assert.match(profileInstruction, /动力来源、理想工作方式与求职红线/);
@@ -826,6 +907,17 @@ test("retired discovery links converge on profile or direct job evaluation", () 
   assert.doesNotMatch(assistantApiSource, /4\. DISCOVER AND SCORE/);
   assert.doesNotMatch(aiSearchApiSource, /请在“发现岗位”中/);
   assert.doesNotMatch(portalsPageSource, /当前请在“发现岗位”/);
+});
+
+test("CV save remains the page primary action before and after edits", () => {
+  assert.match(
+    cvEditorSource,
+    /<Button\s+type="button"\s+variant="primary"\s+onClick=\{save\}\s+disabled=\{saving \|\| !dirty\}/,
+  );
+  assert.doesNotMatch(cvEditorSource, /variant=\{dirty \? "primary" : "tertiary"\}/);
+  assert.match(cvEditorSource, /setNextStepVisible\(true\)/);
+  assert.match(cvEditorSource, /role="status"[\s\S]*继续完善求职画像/);
+  assert.match(cvEditorSource, /href="\/profile"/);
 });
 
 test("an empty CV guides new users into their own Agent without starting a model in Web", () => {
@@ -1087,6 +1179,20 @@ test("primary destination headings reuse the exact sidebar icon mapping", () => 
   );
 });
 
+test("the shared product mark uses the canonical brand SVG", () => {
+  const canonicalLogoSource = readSource("../Logo/logo.svg").trim();
+  const appIconSource = readSource("./src/app/icon.svg").trim();
+  const coMarkSource = readSource("./src/components/co-mark.tsx");
+  const appShellSource = readSource("./src/components/app-shell.tsx");
+
+  assert.equal(appIconSource, canonicalLogoSource);
+  assert.match(coMarkSource, /<img\s+src="\/icon\.svg"/);
+  assert.match(coMarkSource, /width=\{Math\.round\(size \* 1\.1\)\}/);
+  assert.match(coMarkSource, /height=\{size\}/);
+  assert.doesNotMatch(coMarkSource, />\s*择\s*</);
+  assert.match(appShellSource, /<CoMark size=\{28\} \/>/);
+});
+
 test("page title icons are vertically centered with their heading text", () => {
   for (const source of [
     diagnosisViewSource,
@@ -1333,7 +1439,7 @@ test("failed evaluation handoffs use explicit retry wording", () => {
   }
 });
 
-test("new users get one full-width responsive five-step progress indicator inside the Dashboard", () => {
+test("new users get one full-width responsive three-step profile-building indicator inside the Dashboard", () => {
   assert.match(todayDashboardSource, />新用户教程</);
   assert.doesNotMatch(todayDashboardSource, /新手流程/);
   assert.match(cvEditorSource, /新用户教程 · \{content\.eyebrow\}/);
@@ -1359,8 +1465,8 @@ test("new users get one full-width responsive five-step progress indicator insid
     /border-brand|bg-brand|bg-surface\/65/,
     "the onboarding aggregate must not invent a brand-coloured card treatment",
   );
-  assert.match(todayDashboardSource, /<ol[^>]*aria-label="新用户求职流程"[^>]*className="[^"]*lg:grid-cols-5[^"]*lg:gap-x-2/);
-  assert.doesNotMatch(todayDashboardSource, /(?:md|lg):grid-cols-6/);
+  assert.match(todayDashboardSource, /<ol[^>]*aria-label="新用户求职流程"[^>]*className="[^"]*lg:grid-cols-3[^"]*lg:gap-x-2/);
+  assert.doesNotMatch(todayDashboardSource, /(?:md|lg):grid-cols-(?:5|6)/);
   assert.match(todayDashboardSource, /data-step-connector/);
   assert.match(todayDashboardSource, /grid-cols-\[2\.5rem_minmax\(0,1fr\)\][^"]*lg:block[^"]*lg:px-3/);
   assert.match(todayDashboardSource, /aria-current=\{current \? "step" : undefined\}/);
@@ -1371,13 +1477,16 @@ test("new users get one full-width responsive five-step progress indicator insid
     /\{!guideComplete && \(\s*<GettingStartedCard[\s\S]*?<\/GettingStartedCard>\s*\)\}/,
     "the completed tutorial must leave the Dashboard entirely",
   );
-  assert.match(todayDashboardSource, /complete \? "求职流程已完成" : "完成你的求职闭环"/);
+  assert.match(todayDashboardSource, /complete \? "求职建档已完成" : "完成三步求职建档"/);
   assert.match(todayDashboardSource, /complete:\s*storyCount > 0/);
   assert.doesNotMatch(todayDashboardSource, /readyStoryCount|STORY_READY_TARGET/);
-  assert.match(todayDashboardSource, /五个关键环节可按需推进/);
-  assert.match(todayDashboardSource, /工作台只推荐当前动作，不限制您进入其他环节/);
-  assert.match(todayDashboardSource, /applications\.length > 0/);
-  assert.match(todayDashboardSource, /PROGRESS_STARTED_STATES\.has\(canonStatus\(application\.status\)\)/);
+  assert.match(todayDashboardSource, /简历、画像和故事库/);
+  assert.doesNotMatch(todayDashboardSource, /五个关键环节/);
+  const guideBlock = todayDashboardSource.slice(
+    todayDashboardSource.indexOf("const guideSteps ="),
+    todayDashboardSource.indexOf("const guideComplete ="),
+  );
+  assert.doesNotMatch(guideBlock, /岗位评估|求职进度|applications\.length|PROGRESS_STARTED_STATES/);
   assert.doesNotMatch(todayDashboardSource, /localStorage|sessionStorage/);
 
   const statsIndex = todayDashboardSource.indexOf("data-dashboard-stats");
@@ -1391,8 +1500,6 @@ test("new users get one full-width responsive five-step progress indicator insid
     ["智能编辑简历", "/cv"],
     ["完善求职画像", "/profile"],
     ["整理面试故事库", "/interview"],
-    ["岗位评估", "/cn-diagnose"],
-    ["求职进度", "/pipeline"],
   ];
   let previous = -1;
   for (const [label, href] of expectedSteps) {
@@ -1401,6 +1508,31 @@ test("new users get one full-width responsive five-step progress indicator insid
     assert.match(todayDashboardSource.slice(index), new RegExp(`href: "${href.replaceAll("/", "\\/")}"`));
     previous = index;
   }
+});
+
+test("profile owns reusable search intent while portals stay optional advanced sources", () => {
+  const doctorBlock = careerOneLibSource.slice(
+    careerOneLibSource.indexOf("export function doctorState"),
+    careerOneLibSource.indexOf("export type PipelineSummary"),
+  );
+  assert.doesNotMatch(doctorBlock, /\["portals\.yml", "portals\.yml"\]/);
+  assert.match(profileApiSource, /excludedTitles\?: string\[\]/);
+  assert.match(profileApiSource, /preferredLocations\?: string\[\]/);
+  assert.match(profileApiSource, /excludedLocations\?: string\[\]/);
+  assert.match(profileApiSource, /job_search/);
+  assert.doesNotMatch(actionRegistrySource, /ctx\.writePortals\?\.\(p\.roles/);
+  assert.doesNotMatch(assistantApiSource, /setProfile already does this|syncs reusable role-search tags/);
+  assert.match(portalsCoreSource, /mergeProfileSearchConfig/);
+  assert.match(portalsCoreSource, /profile\.yml/);
+  assert.match(scanSource, /loadSearchConfig/);
+  assert.doesNotMatch(scanSource, /portals\.yml not found\. Run onboarding first/);
+  assert.match(fullScanSource, /loadSearchConfig/);
+  assert.doesNotMatch(fullScanSource, /portals\.yml not found\. Run onboarding first/);
+  assert.match(portalsApiSource, /job_search/);
+  assert.match(portalsApiSource, /delete title\.positive/);
+  assert.match(portalsApiSource, /delete title\.negative/);
+  assert.match(portalsApiSource, /delete location\.always_allow/);
+  assert.doesNotMatch(portalsApiSource, /title\.positive = positive/);
 });
 
 test("career-one semantic tokens own status, radius, elevation, and controls", () => {
@@ -1981,6 +2113,15 @@ test("buttons expose one shared three-level action hierarchy", () => {
     globalsSource,
     /\.glass-secondary:not\(\[class~="fixed"\]\):not\(\[class~="absolute"\]\):not\(\[class~="sticky"\]\)\s*\{\s*position:\s*relative;/,
   );
+  for (const position of ["fixed", "absolute", "sticky"]) {
+    assert.match(
+      globalsSource,
+      new RegExp(`\\.glass-secondary\\[class~="${position}"\\]\\s*\\{\\s*position:\\s*${position};`),
+      `glass secondary actions must preserve ${position} positioning above the component layer`,
+    );
+  }
+  const betaBannerSource = readSource("./src/components/beta/beta-banner.tsx");
+  assert.match(betaBannerSource, /className="fixed bottom-3 right-3 z-\[70\]/);
   assert.match(globalsSource, /\.glass-secondary\s*\{[\s\S]*?background:\s*var\(--action-secondary\);[\s\S]*?border:\s*1px solid var\(--action-secondary-border\);[\s\S]*?backdrop-filter:\s*blur\(var\(--glass-blur\)\)/);
   assert.match(globalsSource, /\.glass-secondary::after\s*\{[\s\S]*?background:\s*var\(--action-secondary-hover\);[\s\S]*?transform:\s*translate\(-50%, -50%\) scale\(0\)/);
   assert.match(globalsSource, /\.glass-secondary:hover::after\s*\{[\s\S]*?scale\(1\)/);
@@ -2016,6 +2157,37 @@ test("buttons expose one shared three-level action hierarchy", () => {
   for (const source of [todayDashboardSource, followUpCardSource, jobDetailSource, designSystemShowcaseSource]) {
     assert.doesNotMatch(source, /variant(?::|=)\s*["{]outline/);
   }
+});
+
+test("secondary actions use a clean warm hover wash in both themes", () => {
+  const globalsSource = readSource("./src/app/globals.css");
+  const designSystemSource = readSource("../docs/DESIGN_SYSTEM.md");
+  const designTokenSource = readSource("../docs/DESIGN.md");
+
+  for (const declaration of [
+    "--action-secondary-hover: rgb(255 178 77 / 0.18);",
+    "--action-secondary-active: rgb(255 178 77 / 0.28);",
+    "--action-secondary-border-hover: rgb(202 138 4 / 0.38);",
+    "--action-secondary-hover: rgb(255 178 77 / 0.22);",
+    "--action-secondary-active: rgb(255 178 77 / 0.32);",
+    "--action-secondary-border-hover: rgb(250 204 21 / 0.46);",
+  ]) {
+    assert.ok(globalsSource.includes(declaration), `missing warm secondary action token ${declaration}`);
+  }
+
+  for (const declaration of [
+    '  action-secondary-hover: "rgb(255 178 77 / 0.18)"',
+    '  action-secondary-active: "rgb(255 178 77 / 0.28)"',
+    '  action-secondary-border-hover: "rgb(202 138 4 / 0.38)"',
+    '  dark-action-secondary-hover: "rgb(255 178 77 / 0.22)"',
+    '  dark-action-secondary-active: "rgb(255 178 77 / 0.32)"',
+    '  dark-action-secondary-border-hover: "rgb(250 204 21 / 0.46)"',
+  ]) {
+    assert.ok(designTokenSource.includes(declaration), `missing documented warm action token ${declaration}`);
+  }
+
+  assert.match(designSystemSource, /action-secondary-hover \| warm amber/);
+  assert.doesNotMatch(designSystemSource, /action-secondary-hover \| gray-900/);
 });
 
 test("shared Button owns destructive and icon action states", () => {

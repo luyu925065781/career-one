@@ -279,9 +279,6 @@ export function AssistantConsole() {
           .then(() => router.refresh())
           .catch(() => {});
       },
-      writePortals: (roles, location) => {
-        fetch("/api/portals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roles, location }) }).catch(() => {});
-      },
     };
   }
 

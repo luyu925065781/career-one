@@ -86,7 +86,7 @@ node career-one.mjs reserve-report-num --release 042-049
 ## Mode B: Standalone script
 
 ```bash
-batch/batch-runner.sh [OPTIONS]
+system/batch/batch-runner.sh [OPTIONS]
 ```
 
 Options:

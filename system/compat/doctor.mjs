@@ -159,7 +159,7 @@ function checkPlaywrightMcp(root) {
   };
 }
 
-// Single source of truth for the four user-layer prerequisites (the list
+// Single source of truth for the three user-layer prerequisites (the list
 // AGENTS.md "First Run" documents). BOTH the human checklist (`checkPrereq`)
 // and the machine-readable cold-start state (`onboardingState`) derive from
 // THIS array, so they cannot drift. Paths use "/" and are split for join().
@@ -183,13 +183,6 @@ const USER_LAYER_PREREQS = [
     fix: [
       'Run: cp modes/_profile.template.md modes/_profile.md',
       'Then customize your archetypes / targeting narrative',
-    ],
-  },
-  {
-    path: 'portals.yml',
-    fix: [
-      'Run: cp system/templates/portals.example.yml portals.yml',
-      'Then customize with your target companies',
     ],
   },
 ];

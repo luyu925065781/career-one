@@ -160,7 +160,7 @@ export type Application = {
 export function readApplications(): Application[] {
   const md = read("data/applications.md");
   if (!md) return [];
-  return parseApplications(md, careerOneRoot());
+  return parseApplications(md, careerOneSystemRoot());
 }
 
 export type InterviewStory = ReturnType<typeof parseStoryBank>["stories"][number];
@@ -216,7 +216,7 @@ export function readCareerProfileSnapshot(): CareerProfileSnapshot {
 
 /**
  * Server-side lifecycle of the user's setup — mirrors the prerequisite list that
- * doctor.mjs uses (cv.md, config/profile.yml, modes/_profile.md, portals.yml), by
+ * doctor.mjs uses (cv.md, config/profile.yml, modes/_profile.md), by
  * plain file-stat (no subprocess). Drives the home branch: first-run (no CV) →
  * the CV takeover; in-between (CV but no profile) → gentle nudges; established.
  */
@@ -224,13 +224,13 @@ export type LifecyclePhase = "first-run" | "in-between" | "established";
 /**
  * Server-side lifecycle, mirroring the core doctor.mjs prerequisite list with the
  * SAME existsSync semantics (the SSOT the OnboardingBanner already reads via
- * /api/doctor). The 4 user-layer prereqs: cv.md, config/profile.yml,
- * modes/_profile.md, portals.yml.
+ * /api/doctor). The 3 user-layer prereqs: cv.md, config/profile.yml,
+ * modes/_profile.md. portals.yml is an optional advanced source configuration.
  *   - first-run  → a TRULY empty install (no cv AND no data): the CV takeover.
  *     CRITICAL back-compat (maintainer): NEVER force onboarding on a user who
  *     already has data (a full pipeline/tracker with no cv.md is valid).
  *   - in-between → has cv/data but setup incomplete: dashboard + the nudge banner.
- *   - established → all 4 prereqs present.
+ *   - established → all 3 prereqs present.
  * onboardingNeeded mirrors doctor.mjs: true if ANY prereq is missing → show banner.
  */
 export function doctorState(): {
@@ -252,7 +252,6 @@ export function doctorState(): {
     ["cv.md", "cv.md"],
     ["config/profile.yml", "config/profile.yml"],
     ["modes/_profile.md", "modes/_profile.md"],
-    ["portals.yml", "portals.yml"],
   ];
   const missing = prereqs.filter(([rel]) => !has(rel)).map(([, label]) => label);
   const hasCv = has("cv.md");

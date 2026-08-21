@@ -12,12 +12,14 @@
  */
 
 import { readFileSync, existsSync } from 'fs';
-import { join, dirname, relative, sep } from 'path';
+import { join, dirname, relative, resolve, sep } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import * as yaml from 'js-yaml';
 import { resolveColumns, parseTrackerRow } from '../tracker/tracker-parse.mjs';
 
-const CAREER_ONE = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+const SYSTEM_ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+const configuredUserRoot = process.env.CAREER_ONE_ROOT?.trim();
+const CAREER_ONE = configuredUserRoot ? resolve(configuredUserRoot) : SYSTEM_ROOT;
 const APPS_FILE = existsSync(join(CAREER_ONE, 'data/applications.md'))
   ? join(CAREER_ONE, 'data/applications.md')
   : join(CAREER_ONE, 'applications.md');

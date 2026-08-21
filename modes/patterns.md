@@ -12,7 +12,8 @@ When interview sessions are available, it also reads *what the candidate actuall
 - `reports/` — Individual evaluation reports
 - `config/profile.yml` — User profile (for recommendation context)
 - `modes/_profile.md` — User archetypes and framing
-- `portals.yml` — Portal config (for filter update recommendations)
+- `config/profile.yml` — target roles and reusable search intent
+- `portals.yml` — optional source plumbing (companies, platforms, ATS providers)
 - `interview-prep/sessions/*.md` — Interview sessions (optional; drives Step 1b). Drop real-interview transcripts and mock-session files here.
 
 ## Minimum Threshold
@@ -117,7 +118,7 @@ Then aggregate across all sessions:
 - **Where do the fluent/specific answers cluster?** That competency cluster is the role-type the candidate is *actually* strongest at — regardless of the title on their résumé.
 - Compare that cluster against (a) the archetypes in `modes/_profile.md` and (b) the distribution of roles actually applied to in `data/applications.md`.
 - **Surface the misfit:** if the strongest cluster (X) is under-represented in the roles applied to (Y), that is a targeting-correction signal:
-  > "Your answers consistently light up around **X**, but you're mostly applying to **Y**. Consider adding archetype X and reweighting `portals.yml` `title_filter.positive` toward it."
+  > "Your answers consistently light up around **X**, but you're mostly applying to **Y**. Consider adding archetype X and broadening `config/profile.yml` `target_roles.primary` toward it."
 
 This is the difference between *"you're losing"* (Step 1, outcomes) and *"you're aiming at the wrong target"* (Step 1b, content). Feed the result into the Step 2 report and Step 4 recommendations.
 
@@ -184,7 +185,7 @@ State the data-driven minimum score and reasoning.
 *Include this section only if Step 1b ran.* Summarize, in competency terms only (no real names/companies):
 - Which competency cluster the candidate's answers are strongest at (X)
 - Which role-types they're actually applying to (Y)
-- The misfit gap and the suggested realignment (add archetype X / reweight `portals.yml`)
+- The misfit gap and the suggested realignment (add archetype X / broaden profile targeting)
 
 ## Recommendations
 
@@ -215,15 +216,16 @@ Example:
 Ask the user if they want to act on any recommendations:
 
 > "Want me to apply any of these recommendations? I can:
-> - Update `portals.yml` to filter out geo-restricted roles
+> - Update `config/profile.yml` job-search preferences to filter out geo-restricted roles
 > - Set a score threshold in `_profile.md` for PDF generation
 > - Adjust archetype targeting based on what's converting
-> - Realign targeting from the session signal — add the under-targeted archetype X to `modes/_profile.md` and reweight `portals.yml` `title_filter.positive` (if Step 1b ran)
+> - Realign targeting from the session signal — add the under-targeted archetype X to `modes/_profile.md` and broaden `config/profile.yml` `target_roles.primary` (if Step 1b ran)
 >
 > Just say which ones, or 'all' to apply everything."
 
 If the user agrees:
-- For portal filter changes: edit `portals.yml`
+- For role/location filter changes: edit `config/profile.yml`
+- For platform, company careers URL, or ATS source changes: edit optional `portals.yml`
 - For profile/archetype changes: edit `modes/_profile.md` (NEVER `_shared.md`)
 - For score threshold: add to `config/profile.yml` under a `patterns` key
 

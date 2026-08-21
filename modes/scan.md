@@ -18,15 +18,20 @@ Agent(
 )
 ```
 
-The spawned subagent is a **single-pass worker**: it runs the scan with the parsers/APIs/Playwright/WebSearch named below, directly. It must **not** spawn further subagents or invoke other skills (see `modes/_shared.md` → Subagent delegation). Scanning is bounded by `portals.yml`; it is never an open-ended research task.
+The spawned subagent is a **single-pass worker**: it runs the scan with the parsers/APIs/Playwright/WebSearch named below, directly. It must **not** spawn further subagents or invoke other skills (see `modes/_shared.md` → Subagent delegation). Scanning is bounded by confirmed intent in `config/profile.yml` plus any optional sources in `portals.yml`; it is never an open-ended research task.
 
 ## Configuration
 
-Read `portals.yml` which contains:
+Read `config/profile.yml` first:
+- `target_roles.primary`: positive title keywords
+- `job_search.excluded_titles`: excluded title keywords
+- `job_search.preferred_locations` / `excluded_locations` / `always_include_locations`: location intent
+
+Then read optional `portals.yml`, if present, for source plumbing:
 - `search_queries`: List of WebSearch queries with `site:` filters per portal (broad discovery)
 - `tracked_companies`: Specific companies with `careers_url` for direct navigation
 - `tracked_companies[].parser`: Optional local parser for SSR pages or stable HTML
-- `title_filter`: Keywords (positive/negative/seniority_boost) for filtering job titles
+- source-specific content filters and legacy title/location fallbacks
 
 ## Discovery Strategy (4 Levels)
 
@@ -161,7 +166,7 @@ Levels are additive — they are executed in order, and results are merged and d
 
 ## Workflow
 
-1. **Read Configuration**: `portals.yml`
+1. **Read Configuration**: `config/profile.yml` plus optional `portals.yml`
 2. **Read History**: `data/scan-history.tsv` → already seen URLs
 3. **Read Dedup Sources**: `data/applications.md` + `data/pipeline.md`
 
@@ -207,13 +212,13 @@ Levels are additive — they are executed in order, and results are merged and d
    c. **Skip** the result if the normalized `company` matches any name in `local_parser_ok`.
    d. Accumulate the rest in the candidates list (deduplicated against Levels 0+1+2).
 
-6. **Filter by Title** using `title_filter` from `portals.yml`:
+6. **Filter by Title** using `target_roles.primary` and `job_search.excluded_titles` from `config/profile.yml`:
    - At least 1 keyword from `positive` must appear in the title (case-insensitive).
    - 0 keywords from `negative` must appear.
    - `seniority_boost` keywords give priority but are not mandatory.
 
-6b. **Filter by Location (Optional)** using `location_filter` from `portals.yml`:
-   - If the `location_filter` block is absent, all locations pass (default behavior).
+6b. **Filter by Location (Optional)** using `job_search` from `config/profile.yml`:
+   - If the job-search location preferences are absent, all locations pass (default behavior).
    - Empty location on a posting → passes (do not penalize missing data).
    - Any keyword from `block` present → reject (precedes allow).
    - Empty `allow` → passes (already cleared block).
@@ -350,6 +355,6 @@ Fallback: if you only have the direct ATS URL, navigate first to the company's w
 - **ALWAYS save `careers_url`** when adding a new company.
 - Add new queries as interesting portals or roles are discovered.
 - Deactivate noisy queries with `enabled: false`.
-- Adjust filter keywords as target roles evolve.
+- Adjust target, exclusion and location preferences in `config/profile.yml` as the user's intent evolves.
 - Add companies to `tracked_companies` when you want to follow them closely.
 - Verify `careers_url` periodically — companies change ATS platforms.

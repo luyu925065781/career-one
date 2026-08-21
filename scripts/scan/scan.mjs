@@ -66,6 +66,101 @@ mkdirSync('data', { recursive: true });
 
 const CONCURRENCY = 10;
 
+function configObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function configStrings(value) {
+  const rows = Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
+  const seen = new Set();
+  return rows.flatMap((row) => {
+    const text = typeof row === 'string' ? row.trim() : '';
+    const key = text.toLowerCase();
+    if (!text || seen.has(key)) return [];
+    seen.add(key);
+    return [text];
+  });
+}
+
+function hasOwn(object, key) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+/** Convert the candidate's profile into the generic filters shared by discovery. */
+export function profileSearchConfig(profile) {
+  const doc = configObject(profile);
+  const roles = configObject(doc.target_roles);
+  const search = configObject(doc.job_search);
+  const location = configObject(doc.location);
+  const positive = configStrings(roles.primary);
+  const city = typeof location.city === 'string' && !/^(?:待填写|待确认|未知|unknown|tbd)$/i.test(location.city.trim())
+    ? location.city.trim()
+    : '';
+  return {
+    title_filter: {
+      positive,
+      negative: configStrings(search.excluded_titles),
+    },
+    location_filter: {
+      allow: configStrings(search.preferred_locations),
+      block: configStrings(search.excluded_locations),
+      always_allow: configStrings([...configStrings(search.always_include_locations), ...(city ? [city] : [])]),
+    },
+  };
+}
+
+/**
+ * Merge optional source plumbing with profile-owned search intent. Legacy
+ * portals filters remain a fallback until the corresponding profile key has
+ * been confirmed; target companies, providers and content rules stay intact.
+ */
+export function mergeProfileSearchConfig(portals, profile) {
+  const source = configObject(portals);
+  const doc = configObject(profile);
+  const search = configObject(doc.job_search);
+  const fromProfile = profileSearchConfig(doc);
+  const sourceTitle = configObject(source.title_filter);
+  const sourceLocation = configObject(source.location_filter);
+  const title = { ...sourceTitle };
+  const location = { ...sourceLocation };
+
+  if (fromProfile.title_filter.positive.length > 0) title.positive = fromProfile.title_filter.positive;
+  if (hasOwn(search, 'excluded_titles')) title.negative = fromProfile.title_filter.negative;
+  if (hasOwn(search, 'preferred_locations')) location.allow = fromProfile.location_filter.allow;
+  if (hasOwn(search, 'excluded_locations')) location.block = fromProfile.location_filter.block;
+  location.always_allow = configStrings([
+    ...(hasOwn(search, 'always_include_locations') ? [] : configStrings(sourceLocation.always_allow)),
+    ...fromProfile.location_filter.always_allow,
+  ]);
+
+  return { ...source, title_filter: title, location_filter: location };
+}
+
+/** Load optional portals.yml plus the canonical profile-owned search intent. */
+export function loadSearchConfig({
+  portalsPath = PORTALS_PATH,
+  profilePath = PROFILE_PATH,
+  preferPortals = false,
+  requirePortals = false,
+} = {}) {
+  if (requirePortals && !existsSync(portalsPath)) throw new Error(`${portalsPath} not found`);
+  const readConfig = (file) => {
+    if (!existsSync(file)) return {};
+    const parsed = parseYaml(readFileSync(file, 'utf-8'));
+    return configObject(parsed);
+  };
+  const portals = readConfig(portalsPath);
+  const profile = readConfig(profilePath);
+  const merged = mergeProfileSearchConfig(portals, profile);
+  if (!preferPortals || Object.keys(portals).length === 0) return merged;
+  return {
+    ...merged,
+    ...portals,
+    ...(hasOwn(portals, 'title_filter') ? { title_filter: configObject(portals.title_filter) } : {}),
+    ...(hasOwn(portals, 'location_filter') ? { location_filter: configObject(portals.location_filter) } : {}),
+  };
+}
+
 // Provider loading + routing live in providers/_registry.mjs so the portal
 // health check (verify-portals.mjs) can reuse the exact same layer without
 // importing this module.
@@ -1007,22 +1102,22 @@ async function main() {
     process.exit(1);
   }
 
-  // 2. Read portals.yml
-  if (!existsSync(PORTALS_PATH)) {
-    console.error('Error: portals.yml not found. Run onboarding first.');
-    process.exit(1);
-  }
-
-  let rawConfig;
+  // 2. Read optional source plumbing plus profile-owned search intent.
+  let config;
   try {
-    rawConfig = parseYaml(readFileSync(PORTALS_PATH, 'utf-8'));
+    config = loadSearchConfig({
+      preferPortals: Boolean(process.env.CAREER_ONE_PORTALS),
+      requirePortals: Boolean(process.env.CAREER_ONE_PORTALS),
+    });
   } catch (err) {
-    console.error(`Error: failed to parse ${PORTALS_PATH}: ${err.message}`);
+    console.error(`Error: failed to read job-search configuration: ${err.message}`);
     process.exit(1);
   }
-  const config = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
   const companies = Array.isArray(config.tracked_companies) ? config.tracked_companies : [];
   const boards = Array.isArray(config.job_boards) ? config.job_boards : [];
+  if (!existsSync(PORTALS_PATH) && companies.length === 0 && boards.length === 0) {
+    console.log('No advanced job sources configured; targeted portal scan will return no results. Use scan-full for public ATS discovery, or configure optional sources in the Web profile.');
+  }
   const titleFilter = buildTitleFilter(config.title_filter);
 
   // Seniority tier classifier integration

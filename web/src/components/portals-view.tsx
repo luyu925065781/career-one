@@ -241,7 +241,7 @@ export function PortalsView() {
         queries,
       },
     },
-    "搜索规则已保存，后续扫描将使用新规则",
+    "搜索偏好已保存到求职画像，后续扫描将使用新规则",
   );
 
   return (
@@ -496,7 +496,7 @@ function RulesPanel({ ruleText, onRuleText, queries, onQueries, meta, saving, on
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="rules-title" className="text-lg font-semibold text-foreground">搜索与筛选规则</h2>
-          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">这些规则已经由扫描内核使用。修改后会影响算法扫描、Agent 搜索和目标公司岗位筛选。</p>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">岗位、排除词和地点偏好保存到求职画像；这里只补充平台、公司和高级查询来源。</p>
         </div>
         <Badge tone="good" className="px-2 py-1">已接入扫描内核</Badge>
       </div>
@@ -536,11 +536,11 @@ function RulesPanel({ ruleText, onRuleText, queries, onQueries, meta, saving, on
       <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-y border-border py-3 text-xs text-muted">
         <span>内容过滤规则：{meta.contentFilterGroups} 组</span>
         <span>结构化国际数据源：{meta.automatedBoards.filter((board) => board.enabled).length}/{meta.automatedBoards.length} 已启用</span>
-        <span>高级内容过滤继续保存在 portals.yml 中</span>
+        <span>岗位与地点偏好保存在求职画像；高级内容过滤继续保存在 portals.yml</span>
       </div>
 
       <Button type="button" onClick={onSave} disabled={saving || parseList(ruleText.positive).length === 0} className="mt-5 px-4 font-semibold">
-        {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} 保存搜索规则
+        {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} 保存到求职画像
       </Button>
     </section>
   );

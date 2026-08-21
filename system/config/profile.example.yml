@@ -62,6 +62,15 @@ location:
   visa_status: "不适用"
   onsite_availability: "待填写"
 
+# Reusable job-search intent. These candidate preferences belong to the profile;
+# technical sources such as ATS URLs and platform switches remain optional in
+# portals.yml.
+job_search:
+  excluded_titles: []
+  preferred_locations: []
+  excluded_locations: []
+  always_include_locations: []
+
 # Optional follow-up cadence preferences for `node career-one.mjs followup-cadence`.
 # CLI flags still win for one-off runs (for example `--applied-days 10`).
 # followup_cadence:
@@ -175,7 +184,7 @@ cover_letter:
 # ── Auto-PDF threshold ──────────────────────────────────────────────────────
 #
 # Auto-PDF threshold during evaluation (used by `/career-one pipeline` and
-# `bash batch/batch-runner.sh`).
+# `bash system/batch/batch-runner.sh`).
 #
 # An offer's tailored CV PDF is auto-generated only when its score is
 # >= this threshold. Generating a PDF costs ~30-60s per offer (Playwright

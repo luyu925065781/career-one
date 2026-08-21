@@ -14,6 +14,11 @@ import {
   parseDate,
   DEFAULT_CADENCE,
 } from '../../scripts/analysis/followup-cadence.mjs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 let passed = 0;
 let failed = 0;
@@ -114,6 +119,34 @@ eq(
   groupedApplications[0].num,
   1,
 );
+
+const isolatedRoot = mkdtempSync(join(tmpdir(), 'career-one-followup-isolation-'));
+try {
+  mkdirSync(join(isolatedRoot, 'data'), { recursive: true });
+  writeFileSync(join(isolatedRoot, 'data', 'applications.md'), [
+    '# Applications Tracker',
+    '',
+    '| # | Date | Company | Role | Score | Status | PDF | Report | Notes |',
+    '|---|------|---------|------|-------|--------|-----|--------|-------|',
+    '| 91 | 2026-08-01 | Isolation Fixture Co | Test Role | 4.5/5 | Applied | no | - | Applied 2026-08-01 |',
+    '',
+  ].join('\n'));
+
+  const script = fileURLToPath(new URL('../../scripts/analysis/followup-cadence.mjs', import.meta.url));
+  const output = execFileSync(process.execPath, [script, '--json'], {
+    cwd: isolatedRoot,
+    env: { ...process.env, CAREER_ONE_ROOT: isolatedRoot },
+    encoding: 'utf8',
+  });
+  const result = JSON.parse(output);
+  eq(
+    'CAREER_ONE_ROOT keeps follow-up analysis inside the isolated user-data workspace',
+    result.entries?.map((entry) => [entry.num, entry.company]),
+    [[91, 'Isolation Fixture Co']],
+  );
+} finally {
+  rmSync(isolatedRoot, { recursive: true, force: true });
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {

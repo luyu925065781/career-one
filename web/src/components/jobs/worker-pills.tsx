@@ -64,6 +64,15 @@ function isEvaluationReportArtifact(artifact: JobArtifact) {
   );
 }
 
+function isTailoredCvPdfArtifact(artifact: JobArtifact) {
+  const searchable = `${artifact.label} ${artifact.path}`;
+  return (
+    artifact.path.startsWith("output/") &&
+    artifact.path.toLowerCase().endsWith(".pdf") &&
+    /简历|\bcv\b/i.test(searchable)
+  );
+}
+
 function artifactDisplayLabel(artifact: JobArtifact) {
   if (isEvaluationReportArtifact(artifact)) return "岗位评估报告";
   return artifact.label;
@@ -74,6 +83,20 @@ export function reportPageHref(page: string) {
     return page;
   }
   return `${page}${page.includes("?") ? "&" : "?"}view=report`;
+}
+
+export function artifactHref(artifact: JobArtifact) {
+  const page = artifact.page ?? "";
+  if (isEvaluationReportArtifact(artifact)) return reportPageHref(page);
+
+  if (isTailoredCvPdfArtifact(artifact)) {
+    const reportNumber = page.match(/^\/pipeline\/(\d+)(?:[?#]|$)/)?.[1];
+    if (reportNumber) {
+      return `/api/cv-pdf?report=${encodeURIComponent(reportNumber)}`;
+    }
+  }
+
+  return page;
 }
 
 export function findReportArtifact(job: Job) {
@@ -114,7 +137,7 @@ function ArtifactRows({
           return (
             <Link
               key={artifact.path}
-              href={isEvaluationReportArtifact(artifact) ? reportPageHref(artifact.page) : artifact.page}
+              href={artifactHref(artifact)}
               className={cn(
                 "group flex items-center gap-3 rounded-xl border border-border px-4 py-3 transition-colors hover:bg-surface-hover",
                 compact ? "min-h-12 bg-background/45" : "bg-surface/45",

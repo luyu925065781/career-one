@@ -28,7 +28,7 @@ Per-URL loop の前に、zero-token liveness checker で pending URLs をまと�
 
    **About the PDF gate (configurable):** `config/profile.yml` → `auto_pdf_score_threshold` を読む。Key がなければ default は `3.0`（この mode の original gate）。Evaluation score が threshold 未満なら PDF generation を skip する。Report は通常通り書き、header に `**PDF:** not generated -- run /career-one pdf {company-slug} to create on demand` と表示し、tracker では PDF ❌。Score が threshold 以上なら通常通り PDF を生成する。
 
-   **Tuning it:** Tailored PDF generation は entry あたり ~30-60s かかる（Playwright launch + HTML render）うえ、使われないことも多い。多くの roles は 2.x/3.x で application stage まで進まない。`auto_pdf_score_threshold` を上げる（例：`4.0`）と marginal offers では report のみを書き、PDF は `/career-one pdf {slug}` で on demand に作れる。`0` にするとすべての offers で PDF を生成する。Path A `/career-one pipeline` と Path B `batch/batch-runner.sh` は同じ key を読むため、どちらで処理しても behavior は同じ。
+   **Tuning it:** Tailored PDF generation は entry あたり ~30-60s かかる（Playwright launch + HTML render）うえ、使われないことも多い。多くの roles は 2.x/3.x で application stage まで進まない。`auto_pdf_score_threshold` を上げる（例：`4.0`）と marginal offers では report のみを書き、PDF は `/career-one pdf {slug}` で on demand に作れる。`0` にするとすべての offers で PDF を生成する。Path A `/career-one pipeline` と Path B `system/batch/batch-runner.sh` は同じ key を読むため、どちらで処理しても behavior は同じ。
 3. **If there are 3+ pending URLs**, speed を上げるため agents を並列起動する（Agent tool with `run_in_background`）。
 4. **At the end**, summary table を表示：
 

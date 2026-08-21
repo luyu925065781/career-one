@@ -77,7 +77,7 @@ CV için en etkili 5 değişiklik + LinkedIn profili için en etkili 5 değişik
 
 **Yansıma** sütunu: öğrenilen dersi veya bugün farklı yapılacak şeyi yakalar. Bu kıdemi gösterir — junior adaylar ne olduğunu anlatır, kıdemli adaylar ders çıkarır.
 
-**Story Bank:** `interview-prep/story-bank.md` varsa bu hikayelerin orada olup olmadığını kontrol et. Yoksa ekle. Zamanla her mülakat sorusuna uyarlanabilecek 5-10 ana hikayeden oluşan yeniden kullanılabilir bir banka oluşur.
+**Story Bank:** Önce `interview-prep/story-bank.md` içindeki mevcut hikâyeleri eşleştirip yeniden kullan. Yalnızca doğrulanmış kullanıcı gerçekleri bankada bulunmayan ve farklı roller arasında yeniden kullanılabilir bir deneyim gösteriyorsa ekleme öner. Role özgü çerçeveleme, sorular ve konuşma noktaları mevcut raporda veya `interview-prep/{company}-{role}.md` dosyasında kalır. Uygun yeni deneyim yoksa bankayı değiştirme ve sırf değerlendirme bitti diye eksik dosyayı oluşturma. Her ekleme, kullanıcı açıkça onaylayana kadar öneri olarak kalır.
 
 **Arketipe göre seçim ve çerçeveleme:**
 - FDE → teslimat hızı ve müşteri yönlü yaklaşım ön planda

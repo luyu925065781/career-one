@@ -20,7 +20,7 @@ node career-one.mjs plugins skill <id>    # print a plugin's how-to (if it ships
 
 Two gates must both be satisfied for a plugin to run: it must be **enabled**
 (`node career-one.mjs plugins enable <id> --confirm`, which records your consent) **and** its
-keys must be in your `.env`. `node doctor.mjs` shows what's missing.
+keys must be in your `.env`. `node career-one.mjs doctor` shows what's missing.
 
 ### Trust badges
 

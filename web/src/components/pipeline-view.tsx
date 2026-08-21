@@ -62,16 +62,24 @@ const TAB_LABELS: Record<Tab, string> = {
   SKIP: "跳过",
 };
 
-const SORT_KEYS = ["role", "company", "score", "status", "date"] as const;
+const SORT_KEYS = ["role", "company", "via", "score", "status", "date"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
 
 const SORT_LABELS: Record<SortKey, string> = {
   company: "公司",
   role: "岗位",
+  via: "猎头 / 渠道",
   score: "评分",
   status: "状态",
   date: "日期",
 };
+
+function viaDisplayLabel(via: string) {
+  const normalized = via.trim();
+  if (!normalized) return "未记录";
+  if (/^[-—–]+$/.test(normalized)) return "直投";
+  return normalized;
+}
 
 export function ReportBackButton() {
   const router = useRouter();
@@ -497,7 +505,7 @@ export function PipelineView({
       const needle = q.toLowerCase();
       rows = rows.filter((r) => {
         const companyIdentity = resolveCompanyIdentity(r.company, r.via);
-        return `${companyIdentity.label} ${r.company} ${r.role}`.toLowerCase().includes(needle);
+        return `${companyIdentity.label} ${r.company} ${r.via} ${r.role}`.toLowerCase().includes(needle);
       });
     }
     return [...rows].sort((a, b) => {
@@ -541,7 +549,7 @@ export function PipelineView({
               data-density="compact"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="搜索公司或岗位…"
+              placeholder="搜索公司、岗位或猎头…"
               className="w-full rounded-md border border-border bg-surface/60 py-2 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-faint focus:border-brand/50"
             />
           </div>
@@ -598,8 +606,8 @@ export function PipelineView({
         )
       ) : filtered.length > 0 ? (
         /* ── Tracker table ── */
-        <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-          <table className="w-full text-sm">
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
+          <table className="w-full min-w-[880px] text-sm">
             <thead className="bg-surface/60 text-left text-xs uppercase tracking-wide text-faint">
               <tr>
                 {SORT_KEYS.map((k) => (
@@ -634,6 +642,9 @@ export function PipelineView({
                         <CompanyLogo name={r.company} size={28} />
                         {companyIdentity.label}
                       </Link>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted">
+                      {viaDisplayLabel(r.via)}
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={scoreTone(r.score)}>{r.score || "—"}</Badge>

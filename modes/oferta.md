@@ -183,7 +183,7 @@ Top 5 changes to CV + Top 5 changes to LinkedIn to maximize match.
 
 The **Reflection** column captures what was learned or what would be done differently. This signals seniority — junior candidates describe what happened, senior candidates extract lessons.
 
-**Story Bank:** If `interview-prep/story-bank.md` exists, check if any of these stories are already there. If not, append new ones. Over time this builds a reusable bank of 5-10 master stories that can be adapted to any interview question.
+**Story Bank:** Read `interview-prep/story-bank.md` and reuse existing stories first. Propose an addition only when allowed user-layer evidence reveals a verified experience that is not already covered and is reusable across roles. Keep role-specific framing, questions, and talking points in the current report or `interview-prep/{company}-{role}.md`. If there is no qualifying reusable experience, leave the story bank unchanged; do not create a missing bank merely because an evaluation finished. Deduplicate candidates by real experience and core result, and never create duplicates from Chinese and English reports for the same role. Any addition must remain a preview proposal until the user gives explicit approval; mark unsupported details as `待完善` instead of inventing them.
 
 **Selected and framed according to the archetype:**
 - FDE → emphasize delivery speed and client-facing
@@ -398,7 +398,7 @@ Save full evaluation in `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
 
 When the task instruction supplies local screenshot paths, read every listed file and preserve those paths verbatim in the `Screenshots` header field. Never copy them into the system layer or convert them to absolute paths. The Web report uses this field to show the original posting screenshots.
 
-**Machine Summary (required):** every report carries a `## Machine Summary` YAML fence directly after the header — same schema, exact field names, and rules as the "Machine Summary" block in `batch/batch-prompt.md` (do not duplicate the schema here; that file is the source of truth). It includes `advertised_comp`: the JD's own salary figure **verbatim** (e.g. `"80-90k EUR"`), or `null` when the JD states nothing — never estimated, never replaced with researched market data. This key seeds the advertised salary observation read by `node career-one.mjs salary-gap`.
+**Machine Summary (required):** every report carries a `## Machine Summary` YAML fence directly after the header — same schema, exact field names, and rules as the "Machine Summary" block in `system/batch/batch-prompt.md` (do not duplicate the schema here; that file is the source of truth). It includes `advertised_comp`: the JD's own salary figure **verbatim** (e.g. `"80-90k EUR"`), or `null` when the JD states nothing — never estimated, never replaced with researched market data. This key seeds the advertised salary observation read by `node career-one.mjs salary-gap`.
 
 ### 2. Record in tracker
 

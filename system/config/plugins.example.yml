@@ -8,7 +8,7 @@
 #   1. Enable it here (enabled: true) + any non-secret settings.
 #   2. Put the SECRET values (API keys/tokens) in your .env — NEVER here.
 #      Each plugin declares which env vars it needs; see .env.example and
-#      `node doctor.mjs` (lists every plugin + whether its keys are present).
+#      `node career-one.mjs doctor` (lists every plugin + whether its keys are present).
 #
 # config/plugins.yml is yours: gitignored, never auto-updated. Bundled plugins
 # live in plugins/; your own private plugins go in plugins.local/.

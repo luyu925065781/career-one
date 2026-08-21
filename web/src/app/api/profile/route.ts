@@ -22,6 +22,10 @@ type ProfilePatch = {
   compMax?: number;
   currency?: string;
   remote?: string;
+  excludedTitles?: string[];
+  preferredLocations?: string[];
+  excludedLocations?: string[];
+  alwaysIncludeLocations?: string[];
 };
 
 function isObj(v: unknown): v is Record<string, unknown> {
@@ -50,6 +54,12 @@ function patchToProfile(p: ProfilePatch): Record<string, unknown> {
   if (p.currency) comp.currency = p.currency;
   if (p.remote) comp.location_flexibility = p.remote;
   if (Object.keys(comp).length) out.compensation = comp;
+  const jobSearch: Record<string, unknown> = {};
+  if (p.excludedTitles) jobSearch.excluded_titles = p.excludedTitles.slice(0, 24);
+  if (p.preferredLocations) jobSearch.preferred_locations = p.preferredLocations.slice(0, 24);
+  if (p.excludedLocations) jobSearch.excluded_locations = p.excludedLocations.slice(0, 24);
+  if (p.alwaysIncludeLocations) jobSearch.always_include_locations = p.alwaysIncludeLocations.slice(0, 24);
+  if (Object.keys(jobSearch).length) out.job_search = jobSearch;
   // seniority intentionally not written (no canonical home in profile.yml);
   // archetypes/narrative live in modes/_profile.md — this writer never touches them.
   return out;

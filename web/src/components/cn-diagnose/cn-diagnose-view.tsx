@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, FileText } from "lucide-react";
-import { ScreenshotEvaluate } from "@/components/explore/explorer-view";
+import { JobInputEvaluate, ScreenshotEvaluate } from "@/components/explore/explorer-view";
 import { type Job, useJobs } from "@/components/jobs/job-store";
 import {
   findReportArtifact,
@@ -83,6 +83,16 @@ function isEvaluationReportRecord(
   return report !== null;
 }
 
+function dedupeEvaluationReports(reports: EvaluationReportRecord[]): EvaluationReportRecord[] {
+  const seen = new Set<string>();
+  return reports.filter((report) => {
+    const reportKey = report.href.match(/^\/pipeline\/\d+/)?.[0] ?? report.path;
+    if (seen.has(reportKey)) return false;
+    seen.add(reportKey);
+    return true;
+  });
+}
+
 function formatReportTime(timestamp: number) {
   const date = new Date(timestamp);
   const twoDigits = (value: number) => String(value).padStart(2, "0");
@@ -146,9 +156,9 @@ export function CnDiagnoseView({
   const evaluationJobs = jobs
     .filter(isEvaluationJob)
     .sort((a, b) => b.startedAt - a.startedAt);
-  const reportRecords = evaluationJobs
+  const reportRecords = dedupeEvaluationReports(evaluationJobs
     .map((job) => evaluationReportFromJob(job, reportIdentities))
-    .filter(isEvaluationReportRecord);
+    .filter(isEvaluationReportRecord));
 
   return (
     <div className="min-h-screen bg-background">
@@ -168,6 +178,8 @@ export function CnDiagnoseView({
         <section className="mt-2" aria-label="招聘截图评估">
           <ScreenshotEvaluate page="/cn-diagnose" />
         </section>
+
+        <JobInputEvaluate page="/cn-diagnose" />
 
         <section className="mt-8" aria-labelledby="evaluation-reports-title">
           <div className="flex items-end justify-between gap-4">

@@ -45,7 +45,6 @@ export type ActionCtx = {
   setApplyField: (idOrLabel: string, value: string) => void; // edit an apply-proxy answer
   startApply: (url: string) => void; // open the apply form-proxy for a posting URL
   writeProfile?: (patch: Record<string, unknown>) => void; // merge-safe config/profile.yml write
-  writePortals?: (roles: string[], location?: string[]) => void; // merge-safe portals.yml title_filter write
 };
 
 export type ProfilePatch = {
@@ -58,6 +57,10 @@ export type ProfilePatch = {
   currency?: string;
   remote?: string;
   seniority?: string;
+  excludedTitles?: string[];
+  preferredLocations?: string[];
+  excludedLocations?: string[];
+  alwaysIncludeLocations?: string[];
 };
 
 // House-style hand validation (no zod). Keeps only well-formed, confident fields.
@@ -74,6 +77,10 @@ function coerceProfile(raw: Record<string, unknown>): ProfilePatch {
   out.compMin = num(raw.compMin);
   out.compMax = num(raw.compMax);
   if (Array.isArray(raw.roles)) out.roles = raw.roles.filter((r): r is string => typeof r === "string" && r.trim().length > 0).map((r) => r.trim()).slice(0, 6);
+  if (Array.isArray(raw.excludedTitles)) out.excludedTitles = raw.excludedTitles.filter((r): r is string => typeof r === "string" && r.trim().length > 0).map((r) => r.trim()).slice(0, 24);
+  if (Array.isArray(raw.preferredLocations)) out.preferredLocations = raw.preferredLocations.filter((r): r is string => typeof r === "string" && r.trim().length > 0).map((r) => r.trim()).slice(0, 24);
+  if (Array.isArray(raw.excludedLocations)) out.excludedLocations = raw.excludedLocations.filter((r): r is string => typeof r === "string" && r.trim().length > 0).map((r) => r.trim()).slice(0, 24);
+  if (Array.isArray(raw.alwaysIncludeLocations)) out.alwaysIncludeLocations = raw.alwaysIncludeLocations.filter((r): r is string => typeof r === "string" && r.trim().length > 0).map((r) => r.trim()).slice(0, 24);
   return out;
 }
 
@@ -298,8 +305,8 @@ const ACTIONS: Record<string, ActionDef> = {
     },
   },
 
-  // Propose the user's profile → on confirm, merge-safe write to config/profile.yml
-  // AND seed the scanner (portals.yml title_filter) so the very first scan has roles.
+  // Propose the user's profile → on confirm, merge-safe write to config/profile.yml.
+  // Search intent lives in the profile; portals.yml is optional source plumbing.
   // DATA_CONTRACT: deep-merge only proposed keys; never clobber archetypes/narrative.
   setProfile: {
     sideEffect: "write",
@@ -314,7 +321,6 @@ const ACTIONS: Record<string, ActionDef> = {
         summary: `保存个人配置？${bits ? `（${bits}）` : ""}`,
         run: () => {
           ctx.writeProfile!(p as Record<string, unknown>);
-          if (p.roles?.length) ctx.writePortals?.(p.roles, p.location ? [p.location] : undefined);
           return { note: "个人配置已保存，后续匹配会更准确。" };
         },
       };
@@ -324,16 +330,16 @@ const ACTIONS: Record<string, ActionDef> = {
   setPortals: {
     sideEffect: "write",
     run: (raw, ctx) => {
-      if (!ctx.writePortals) return { status: "ignored", note: "当前无法写入招聘渠道配置" };
+      if (!ctx.writeProfile) return { status: "ignored", note: "当前无法写入求职画像" };
       const roles = Array.isArray(raw.roles) ? raw.roles.filter((r): r is string => typeof r === "string" && r.trim().length > 0).map((r) => r.trim()) : [];
       if (roles.length === 0) return { status: "ignored", note: "没有目标岗位" };
       const location = Array.isArray(raw.location) ? raw.location.filter((l): l is string => typeof l === "string") : undefined;
       return {
         status: "confirm",
-        summary: `将扫描目标设为：${roles.join("、")}？`,
+        summary: `将画像中的目标岗位更新为：${roles.join("、")}？`,
         run: () => {
-          ctx.writePortals!(roles, location);
-          return { note: "扫描目标已更新。" };
+          ctx.writeProfile!({ roles, ...(location?.[0] ? { preferredLocations: location } : {}) });
+          return { note: "求职画像中的岗位筛选偏好已更新。" };
         },
       };
     },

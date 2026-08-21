@@ -16,13 +16,12 @@
 # Agent behavior & the multi-CLI contract (prompt layer — CI-blind)
 /CLAUDE.md             @luyu925065781
 /AGENTS.md             @luyu925065781
-/CODEX.md              @luyu925065781
-/OPENCODE.md           @luyu925065781
-/GEMINI.md             @luyu925065781
+/.agents/skills/career-one/ @luyu925065781
+/system/compat/        @luyu925065781
 
 # Scoring & the system/user data contract (CI-blind; silent-danger)
 /modes/_shared.md      @luyu925065781
-/docs/DATA_CONTRACT.md @luyu925065781
+/system/docs/DATA_CONTRACT.md @luyu925065781
 
 # The self-updater (catastrophic if wrong — touches user installs)
 /update-system.mjs     @luyu925065781
@@ -30,7 +29,7 @@
 
 # Plugin governance chokepoint (a bad change here ships unreviewed code to
 # every user — the registry pin, the gates, and the CI must stay single-owner).
-/plugins-registry.json         @luyu925065781
+/system/plugins-registry/      @luyu925065781
 /scripts/plugins/validate-plugin-registry.mjs @luyu925065781
 /scripts/plugins/plugin-install.mjs @luyu925065781
 /scripts/plugins/plugin-audit.mjs @luyu925065781
