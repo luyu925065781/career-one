@@ -42,7 +42,7 @@ test("Node.js runtime requirement matches Next.js 16 across every public entrypo
 
 test("runtime manifest includes system essentials and excludes user data", async () => {
   const { RUNTIME_PATHS, USER_DATA_PATHS } = await import(pathToFileURL(MANIFEST_MODULE).href);
-  for (const required of ["AGENTS.md", "docs/PRIVACY.md", "docs/TERMS.md", "docs/DESIGN.md", "doctor.mjs", "package.json", "package-lock.json", "release.config.json", "scripts/", "modes/", "templates/", "start-web.mjs", "启动择程AI.command", "web/src/", "web/package.json"]) {
+  for (const required of ["AGENTS.md", "docs/PRIVACY.md", "docs/TERMS.md", "docs/DESIGN.md", "doctor.mjs", "package.json", "package-lock.json", "release.config.json", "scripts/", "modes/", "templates/", "Logo/", "start-web.mjs", "启动择程AI.command", "web/src/", "web/package.json"]) {
     assert.ok(RUNTIME_PATHS.includes(required), `runtime must include ${required}`);
   }
   for (const forbidden of USER_DATA_PATHS) {
@@ -77,6 +77,7 @@ test("Codex and WorkBuddy builds share one Skill and initialize a clean workspac
       assert.ok(existsSync(join(skillRoot, "assets", "runtime", "package-lock.json")));
       assert.ok(existsSync(join(skillRoot, "assets", "runtime", "web", "package.json")));
       assert.ok(existsSync(join(skillRoot, "assets", "runtime", "web", "src", "app", "jobs", "page.tsx")));
+      assert.ok(existsSync(join(skillRoot, "assets", "runtime", "Logo", "logo.svg")));
       assert.ok(!existsSync(join(skillRoot, "assets", "runtime", "cv.md")));
       assert.ok(!existsSync(join(skillRoot, "assets", "runtime", "config", "profile.yml")));
       assert.ok(!existsSync(join(skillRoot, "assets", "runtime", "portals.yml")));
@@ -97,6 +98,7 @@ test("Codex and WorkBuddy builds share one Skill and initialize a clean workspac
     assert.ok((statSync(join(workspace, "启动择程AI.command")).mode & 0o111) !== 0);
     assert.ok(existsSync(join(workspace, "web", "package.json")));
     assert.ok(existsSync(join(workspace, "web", "src", "app", "jobs", "page.tsx")));
+    assert.ok(existsSync(join(workspace, "Logo", "logo.svg")));
     assert.ok(existsSync(join(workspace, ".agents", "skills", "career-one", "SKILL.md")));
     assert.ok(!existsSync(join(workspace, "cv.md")));
     assert.ok(!existsSync(join(workspace, "config", "profile.yml")));

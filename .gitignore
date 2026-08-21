@@ -105,6 +105,7 @@ data/model-blacklist.json
 *.mp4
 
 # CLI-specific local config
+.workbuddy/
 .claude/settings.local.json
 .claude/memory/
 .opencode/settings.local.json

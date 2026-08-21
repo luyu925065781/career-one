@@ -23,6 +23,7 @@ export const RUNTIME_PATHS = [
   "启动择程AI.command",
   "system/",
   "scripts/",
+  "Logo/",
   "web/src/",
   "web/public/",
   "web/package.json",

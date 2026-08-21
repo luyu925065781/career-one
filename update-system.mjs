@@ -112,6 +112,7 @@ const SYSTEM_PATHS = [
   'AGENTS.md',
   'career-one.mjs',
   'scripts/',
+  'Logo/',
   'web/src/',
   'web/public/',
   'web/package.json',
