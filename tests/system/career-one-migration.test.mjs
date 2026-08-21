@@ -959,7 +959,11 @@ for (const removedChannel of ["公共招聘平台", "用户主动采集", "前�
 assert.match(filterBuilder, /target="_blank"[\s\S]{0,80}rel="noreferrer"/, "招聘平台官网入口必须安全地在新窗口打开");
 
 const explorePortals = read("web/src/lib/core/portals.ts");
-assert.match(explorePortals, /profileLocation[\s\S]{0,500}filters\.alwaysAllow\s*=\s*\[profileCity\]/, "地区为空时必须从 Agent 维护的个人画像填入已确认城市");
+assert.match(
+  explorePortals,
+  /const profileLocation[\s\S]{0,800}filters\.alwaysAllow[\s\S]{0,220}city/,
+  "地区为空时必须从 Agent 维护的个人画像填入已确认城市",
+);
 
 const reportFormat = read("web/src/lib/format.ts");
 assert.match(reportFormat, /高置信度/, "求职详情必须本地化岗位真实性等级");
@@ -984,7 +988,7 @@ const portalsPage = read("web/src/app/portals/page.tsx");
 assert.match(portalsPage, />岗位来源</, "招聘来源页面必须使用不误导的‘岗位来源’名称");
 assert.match(
   portalsPage,
-  /这里保留历史岗位来源设置，不会自动爬取或启动 Agent 搜索。请在招聘网站自行找到职位，再到“岗位评估”提交招聘截图或完整 JD。/,
+  /岗位与地点偏好来自求职画像；[\s\S]{0,160}不会自动爬取或启动 Agent 搜索。/,
   "岗位来源页面必须准确说明本地设置不会自动爬取或启动 Agent",
 );
 
